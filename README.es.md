@@ -2,7 +2,7 @@
 
 **Evidence-First Network Diagnostics CLI | Herramienta de diagnóstico de red basada en pruebas**
 
-**Idiomas:** [简体中文](README.md) · [English](README.en.md) · **Español**
+**Idiomas:** [简体中文](README.md) · [English](README.en.md) · **Español** · [Русский](README.ru.md)
 
 > **Versión de prueba pública (Release Candidate) — v1.3.0-rc.1**
 >
@@ -239,6 +239,8 @@ La plantilla de GitHub puede tener campos en chino, pero puedes enviar el inform
 **Nota sobre idiomas:** estas traducciones se refieren a la **documentación README**. No significa que toda la salida de la herramienta o los informes generados estén traducidos al español o al inglés.
 
 ## Para desarrolladores — Compilar desde el código fuente
+
+**Para lectores de IA y agentes de programación:** [llms.txt](llms.txt) reúne los documentos y esquemas; [AGENTS.md](AGENTS.md) establece las reglas de desarrollo y de uso de pruebas.
 
 Solo necesitas Rust estable **si compilas desde el código fuente**, no si utilizas los paquetes precompilados. Para reproducir la versión publicada:
 
