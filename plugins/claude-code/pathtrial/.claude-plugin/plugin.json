@@ -1,7 +1,7 @@
 {
   "name": "pathtrial",
   "displayName": "PathTrial Network Diagnostics",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Evidence-first local network diagnostics for Claude Code, backed by the PathTrial CLI and MCP server.",
   "author": {
     "name": "gaochenyang666-droid",

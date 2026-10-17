@@ -177,18 +177,22 @@ macOS Intel 三个 Job 全部通过。
 剩余缺口：Windows 尚未实现；当前 Mac 的 UDP 443 路径对公共 HTTP/3 目标超时，
 公共 HTTP/3 验证仍需在可用 UDP 出口上重复。
 
-## AI Plugins v0.1（独立验收）
+## AI Plugins v0.2（独立验收）
 
 AI 插件不计入上面的 94.25% 核心 CLI 评分，单独记录如下：
 
 | 项目 | 状态 | 证据 |
 | --- | --- | --- |
-| MCP stdio 初始化、tools/list、tools/call | VERIFIED | 8 项 MCP 协议测试 |
-| 目标允许列表与私有地址拒绝 | VERIFIED | 未授权目标与 localhost 私有解析测试 |
-| 扫描、HTTP、报告解释、报告比较 | VERIFIED | MCP 本地协议集成测试 |
+| MCP stdio 初始化、tools/list、tools/call | VERIFIED | 21 项 MCP 协议测试 |
+| DNS 授权、确定性 IP 绑定与代理双端授权 | VERIFIED | 12 项安全与子进程单元测试和 MCP 集成测试 |
+| 客户端断开取消、授权摘要脱敏、重定向脱敏 | VERIFIED | 断开测试、capabilities 隐私测试、查询参数和重定向测试 |
+| 扫描、HTTP、QUIC、HTTP/3、代理、UDP、报告解释、报告比较 | VERIFIED | 9 个工具的 MCP 级本地协议测试 |
 | 共享 Skills 一致性 | VERIFIED | 5 项插件结构测试与同步检查脚本 |
 | Codex marketplace 与插件安装 | VERIFIED | 临时 `CODEX_HOME` 实际安装，`codex mcp list` 可见 |
-| Codex 模型会话内真实工具调用 | UNVERIFIED | 未启动真实模型会话 |
-| Claude Code 清单校验与加载 | UNVERIFIED | 本机未安装 `claude` CLI |
-| 含 MCP 的预编译发行包 | UNVERIFIED | `v1.3.0-rc.1` 早于 MCP，需要后续构建 |
+| Codex 模型会话内真实工具调用 | VERIFIED | capabilities、未授权拒绝、授权扫描和 `tcp_ipv4_001` 解释 |
+| Claude Code 清单校验与加载 | UNVERIFIED | 官方安装器下载停滞，未完成 CLI 验证 |
+| 含 MCP 的预编译发行包 | PARTIAL | Release 工作流已加固，尚未公开发布 1.4.0 包 |
 | Windows 插件 | UNVERIFIED | Windows 核心尚未实现 |
+
+AI Plugins 独立权重与当前 74.0% 计算见
+[ai-plugin-completeness.md](ai-plugin-completeness.md)。

@@ -29,6 +29,7 @@ For specific options: `pathtrial --help` or `pathtrial <command> --help`.
 ## AI plugins and MCP
 
 - [AI integration guide](https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/ai-integrations.md): Codex and Claude Code installation, authorization, tools and limits.
+- [AI Plugins completeness](https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/ai-plugin-completeness.md): independent security, client and distribution score.
 - Codex package: `plugins/codex/pathtrial/` with root `plugin.json`, `mcp.json` and `skills/`.
 - Claude Code package: `plugins/claude-code/pathtrial/` with `.claude-plugin/plugin.json`, `.mcp.json` and `skills/`.
 - MCP launch: `pathtrial mcp --allow-target example.com:443`.

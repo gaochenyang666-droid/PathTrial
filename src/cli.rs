@@ -243,6 +243,15 @@ pub struct ProxyArgs {
     #[arg(long)]
     pub insecure: bool,
 
+    /// Pre-authorized literal target IP. The URL host is retained for TLS SNI
+    /// and the HTTP Host header.
+    #[arg(long)]
+    pub target_ip: Option<String>,
+
+    /// TLS server name override for the proxied target.
+    #[arg(long)]
+    pub sni: Option<String>,
+
     /// Alternate direct and proxied requests against the same URL.
     #[arg(long)]
     pub compare_direct: bool,
@@ -538,6 +547,14 @@ pub struct HttpArgs {
     /// Diagnostic only: accept any certificate.
     #[arg(long)]
     pub insecure: bool,
+
+    /// TLS server name override when the URL uses a literal IP.
+    #[arg(long)]
+    pub sni: Option<String>,
+
+    /// HTTP Host header override when the URL uses a literal IP.
+    #[arg(long)]
+    pub host: Option<String>,
 
     /// Output format on stdout.
     #[arg(long, value_enum, default_value_t = OutputFormat::Summary)]

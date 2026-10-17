@@ -5,7 +5,7 @@ project uses semantic versioning for both the binary and the report schema.
 
 ## [1.4.0-rc.1] - 2026-10-17
 
-PathTrial AI Plugins v0.1: Codex and Claude Code integration.
+PathTrial AI Plugins v0.2: Codex and Claude Code integration and hardening.
 
 ### Added
 
@@ -22,17 +22,36 @@ PathTrial AI Plugins v0.1: Codex and Claude Code integration.
 - Codex and Claude Code marketplace manifests.
 - MCP protocol tests, plugin structural tests, AI integration guide and
   four-language entry pages.
+- DNS-safe target binding: every resolved candidate is checked, and scan, HTTP,
+  QUIC, HTTP/3 and UDP probes run against the exact authorized IP while keeping
+  the original SNI and Host header. Proxy target and proxy endpoint are bound
+  independently.
+- Independent child-process wall-clock timeout, concurrent bounded stdout and
+  stderr readers, output-size limit, and JSON-RPC input-size limit.
+- Report validation now checks schema shape, probe IDs, finding evidence
+  references, nesting depth and node count. Missing evidence is an explicit
+  tool error.
+- MCP-level tests for all nine tools, including local QUIC/HTTP3, UDP Echo,
+  HTTP CONNECT 200/403/407/502, redaction, malformed input and oversized input.
+- Capabilities now return an address-free authorization summary instead of the
+  raw allowlist, so local interface and private target addresses stay private.
+- Redirect locations and MCP-measured URL displays drop query strings,
+  fragments and URL user information before reaching reports or tool results.
+- MCP reads client input on a separate thread and kills a running probe child
+  when the client disconnects.
 
 ### Verified
 
-- 147 tests: 65 unit, 41 CLI, 5 collect, 13 golden, 8 MCP, 5 plugin,
+- 173 tests: 78 unit, 41 CLI, 5 collect, 13 golden, 21 MCP, 5 plugin,
   8 QUIC and 2 schema.
 - Codex marketplace add and `pathtrial@pathtrial` install verified with a
   temporary `CODEX_HOME`; `codex mcp list` shows the bundled server enabled.
-- MCP initialize, tools/list, authorized scan, HTTP, report explanation,
-  report comparison, allowlist denial and JSON-only stdout verified locally.
-- Claude Code manifest loading and live tool calls remain UNVERIFIED because
-  the `claude` CLI is not installed on this machine.
+- Real Codex model sessions verified `pathtrial_capabilities`, unauthorized
+  target denial (`target_not_allowed`), an authorized local scan, and
+  `pathtrial_explain_report` with evidence ID `tcp_ipv4_001`.
+- Claude Code manifest loading and live tool calls remain UNVERIFIED. The
+  official installer was attempted in a temporary HOME but the native binary
+  download stalled.
 
 ### Security
 
@@ -41,6 +60,13 @@ PathTrial AI Plugins v0.1: Codex and Claude Code integration.
 - Rounds, timeout, total budget, payload size and port ranges are bounded.
 - The MCP server exposes no generic shell or file-reading tool and writes only
   JSON-RPC messages to stdout.
+- DNS authorization checks every candidate IP and the probe uses the returned
+  literal address, closing the check/resolve gap.
+- Child processes have an independent 65-second hard stop and 8 MiB per-stream
+  output cap; MCP input is capped at 12 MiB. A client disconnect terminates a
+  running probe child and reaps it.
+- `pathtrial_capabilities` reports authorization rule counts and rule classes
+  without exposing hostnames, private addresses or ports.
 
 ## [1.3.0-rc.1] - 2026-10-17
 

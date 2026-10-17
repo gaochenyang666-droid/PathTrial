@@ -209,7 +209,7 @@ Esto relaciona **eventos de conexiones TCP**, no capturas de paquetes. Sin captu
 
 ## Plugins de IA para Codex y Claude Code
 
-PathTrial AI Plugins v0.1 conecta ambos clientes con un único servidor MCP local
+PathTrial AI Plugins v0.2 conecta ambos clientes con un único servidor MCP local
 y un conjunto compartido de skills. Las pruebas de red se deniegan salvo que el
 destino esté autorizado explícitamente.
 

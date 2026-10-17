@@ -1,6 +1,6 @@
 # PathTrial AI Plugins
 
-PathTrial AI Plugins v0.1 connects Codex and Claude Code to the existing
+PathTrial AI Plugins v0.2 connects Codex and Claude Code to the existing
 PathTrial diagnostic engine through one local MCP stdio server.
 
 ## Architecture
@@ -14,10 +14,11 @@ Claude plugin ┘
 - **PathTrial Core** performs DNS, TCP, TLS, HTTP, UDP Echo, QUIC, HTTP/3 and
   proxy measurements with the existing Rust implementation.
 - **PathTrial MCP** exposes validated tool calls over stdio. Probe tools are
-  blocked unless the target matches a startup allowlist.
+  blocked unless the target matches a startup allowlist. Capabilities reports
+  only an address-free summary of that allowlist.
 - **AI Plugins** contain client-specific manifests and the same shared Skills.
 
-The plugin version is `0.1.0`. It is independent of the PathTrial CLI version.
+The plugin version is `0.2.0`. It is independent of the PathTrial CLI version.
 
 ## Requirements
 
@@ -57,9 +58,17 @@ The server also enforces:
 
 - Maximum 50 rounds and 60 seconds per tool call.
 - Ports limited to `1..65535`.
+- DNS is resolved once, every candidate is validated, and the probe uses the
+  returned literal IP. The original domain remains the TLS SNI and HTTP Host.
+- Child probes have a separate hard timeout and bounded stdout/stderr readers.
+  A client disconnect cancels and reaps the running probe child.
+- MCP input messages are capped at 12 MiB; child output is capped at 8 MiB per
+  stream.
 - No CIDR, range scan, port enumeration or credential attempt.
 - No shell execution, sudo, SSH login, firewall, DNS, route or proxy changes.
 - No long-running listener, background service or report upload.
+- Query strings, redirect query strings, URL user information and fragments are
+  removed from reports and MCP tool results.
 
 ## Codex plugin
 
@@ -137,7 +146,7 @@ same way as the Codex plugin.
 
 | Tool | Network access | Purpose |
 | --- | --- | --- |
-| `pathtrial_capabilities` | No | Version, platform, modules, schemas, limits and allowlist |
+| `pathtrial_capabilities` | No | Version, platform, modules, schemas, limits and an address-free authorization summary |
 | `pathtrial_scan` | Authorized target only | Fixed five-stage scan |
 | `pathtrial_http` | Authorized target only | Real HTTP/HTTPS request with phase timings |
 | `pathtrial_quic` | Authorized target only | QUIC handshake, certificate, ALPN and timing |
@@ -149,6 +158,16 @@ same way as the Codex plugin.
 
 All tool results include text content for the model and a `structuredContent`
 object for deterministic downstream use.
+
+`pathtrial_capabilities` reports the number of allow rules and whether the
+configuration contains a hostname rule, a non-public literal address or a
+portless rule. It does not return the configured hosts, addresses or ports.
+
+`redact_ips=true` masks target and result IP literals in the MCP summary and
+structured object. `insecure=true` is available only for explicit local
+diagnostic tests; use normal certificate verification for real targets.
+`compare_direct` requires a literal IP target in MCP so both paths remain bound
+to the same authorized address.
 
 ## Examples
 
@@ -198,9 +217,10 @@ separate TCP, TLS and HTTP evidence, and do not claim a packet-loss location.
 2. Confirm `pathtrial mcp --help` lists `--allow-target`.
 3. Add one exact target to the plugin MCP arguments.
 4. Restart the AI client.
-5. Call `pathtrial_capabilities` and confirm the allowlist.
-6. Run one low-round scan.
-7. Review the structured report before requesting broader tests.
+5. Call `pathtrial_capabilities` and review the authorization summary.
+6. Try one target outside the allowlist and confirm `target_not_allowed`.
+7. Run one low-round scan against the authorized target.
+8. Review the structured report before requesting broader tests.
 
 ## Updates and removal
 
@@ -239,13 +259,13 @@ The PathTrial CLI can remain installed after plugin removal.
 
 | Item | Status |
 | --- | --- |
-| MCP initialize, tools/list, tools/call | Verified by local protocol tests |
+| MCP initialize, tools/list, tools/call | Verified by 21 local protocol tests |
 | Target allowlist rejection | Verified |
 | Local scan, HTTP and report analysis through MCP | Verified |
 | Shared skills identical in both plugins | Verified |
 | Codex marketplace add and plugin install | Verified with a temporary `CODEX_HOME` |
 | Codex MCP registration visible in `codex mcp list` | Verified |
-| Codex model-driven tool call in a live session | UNVERIFIED |
+| Codex model-driven tool calls in a live session | VERIFIED: capabilities, unauthorized denial, authorized scan and report explanation |
 | Claude Code manifest validation and live tool call | UNVERIFIED, `claude` CLI is not installed on this machine |
 | Precompiled release containing `pathtrial mcp` | UNVERIFIED for `v1.3.0-rc.1`; build from this branch |
 | Windows plugin support | UNVERIFIED, Windows core support is not implemented |

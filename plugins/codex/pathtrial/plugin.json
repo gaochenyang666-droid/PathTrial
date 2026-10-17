@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "pathtrial",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Evidence-first local network diagnostics for Codex, backed by the PathTrial CLI and MCP server.",
   "author": {
     "name": "gaochenyang666-droid",
