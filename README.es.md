@@ -10,6 +10,8 @@
 >
 > [**Descargar la beta**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.3.0-rc.1) · [**Informar de un error**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**Ver incidencias**](https://github.com/gaochenyang666-droid/PathTrial/issues) · [**Caso real**](https://github.com/gaochenyang666-droid/racknerd-ipv6-troubleshooting)
 
+> **¿Qué versión debo instalar?** La beta pública [v1.3.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.3.0-rc.1) permite utilizar el CLI sin compilar. La versión **v1.4.0-rc.1 / AI Plugins v0.2.0**, con MCP, sigue en desarrollo en el [PR #2](https://github.com/gaochenyang666-droid/PathTrial/pull/2): **todavía no existe un paquete precompilado público de v1.4**. El binario v1.3 no admite `pathtrial mcp`.
+
 ## ¿Qué es PathTrial y para quién sirve?
 
 ¿Por qué una web no funciona aunque responda al Ping? ¿Por qué un VPS acepta conexiones TCP, pero el proxy falla? ¿Por qué IPv6 funciona y IPv4 es lento?
@@ -23,6 +25,46 @@
 - **Solo terminal (CLI):** todavía no hay interfaz gráfica. Utiliza la herramienta únicamente con sistemas propios o para los que tengas autorización.
 
 Por ejemplo, si TCP conecta, pero falla el intercambio TLS, PathTrial registra ambos resultados por separado.
+
+## Plugins de IA para Codex y Claude Code (vista previa para desarrolladores)
+
+PathTrial AI Plugins v0.2.0 permite que **Codex y Claude Code** utilicen el mismo servidor MCP local y las mismas Skills. El núcleo Rust realiza las mediciones reales; la IA interpreta las pruebas guardadas. **El servidor de diagnóstico no requiere una clave de API de IA, pero sí necesitas acceso a cada cliente de IA.**
+
+**Verificación:** v1.4.0-rc.1 pasó 173 pruebas y CI nativo en Ubuntu 24.04, macOS ARM y macOS Intel. Las nueve herramientas MCP tienen pruebas locales de protocolo. **Codex v0.1 realizó llamadas reales desde un modelo, pero no se repitió la sesión con v0.2; Claude Code sigue sin validación de carga ni llamadas reales.** La [evaluación independiente de los plugins es del 74 %](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/docs/ai-plugin-completeness.md), no una tasa de éxito de las pruebas de red.
+
+**Compilar la vista previa (requiere Rust 1.84+; para usar solamente el CLI, instala v1.3):**
+
+~~~sh
+git clone https://github.com/gaochenyang666-droid/PathTrial.git
+cd PathTrial
+git checkout codex/ai-plugins-v0.1
+cargo build --release --locked
+export PATH="$PWD/target/release:$PATH"
+pathtrial --version
+pathtrial mcp --help
+~~~
+
+**Plugin de Codex:** comprueba que el PATH de Codex incluya el nuevo ejecutable y después:
+
+~~~sh
+codex plugin marketplace add gaochenyang666-droid/PathTrial --ref codex/ai-plugins-v0.1
+codex plugin add pathtrial@pathtrial
+codex plugin list
+codex mcp list
+~~~
+
+**Plugin de Claude Code:** su funcionamiento real **todavía no está verificado**. Con Claude Code instalado, desde la raíz del repositorio:
+
+~~~sh
+claude plugin validate ./plugins/claude-code/pathtrial
+claude --plugin-dir ./plugins/claude-code/pathtrial
+~~~
+
+**Autorización explícita:** `pathtrial mcp` bloquea por defecto todas las pruebas de red, pero permite analizar y comparar informes sin conexión. Para un destino autorizado, configura `args` en el `mcp.json` de Codex o el `.mcp.json` de Claude Code como `["mcp", "--allow-target", "example.com:443"]` y reinicia el cliente. No utilices comodines ni pruebes sistemas sin permiso. Lee antes la guía completa.
+
+**Ejemplos:** «¿Por qué mi web tarda demasiado?» «Compara IPv4 e IPv6 de mi VPS». «Analiza este informe JSON y cita los identificadores de prueba reales».
+
+**Enlaces:** [guía completa de instalación y resolución de problemas](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/docs/ai-integrations.md) · [plugin Codex](https://github.com/gaochenyang666-droid/PathTrial/tree/codex/ai-plugins-v0.1/plugins/codex/pathtrial) · [plugin Claude Code](https://github.com/gaochenyang666-droid/PathTrial/tree/codex/ai-plugins-v0.1/plugins/claude-code/pathtrial) · [PR #2](https://github.com/gaochenyang666-droid/PathTrial/pull/2)
 
 ## Paso 1 — Descargar PathTrial
 
@@ -206,21 +248,6 @@ pathtrial correlate client.json server.json
 ~~~
 
 Esto relaciona **eventos de conexiones TCP**, no capturas de paquetes. Sin capturas y sincronización de relojes, no permite saber qué dispositivo perdió los paquetes.
-
-## Plugins de IA para Codex y Claude Code
-
-PathTrial AI Plugins v0.2 conecta ambos clientes con un único servidor MCP local
-y un conjunto compartido de skills. Las pruebas de red se deniegan salvo que el
-destino esté autorizado explícitamente.
-
-- Guía de integración: [docs/ai-integrations.md](docs/ai-integrations.md)
-- Plugin de Codex: [plugins/codex/pathtrial](plugins/codex/pathtrial)
-- Plugin de Claude Code: [plugins/claude-code/pathtrial](plugins/claude-code/pathtrial)
-- Ejemplo: `pathtrial mcp --allow-target example.com:443`
-
-El binario público `v1.3.0-rc.1` es anterior a MCP. Para validar los plugins,
-usa una compilación `1.4.0-rc.1` de esta rama. La validación de Claude Code sigue
-pendiente; consulta la guía de integración.
 
 ## ¿Has encontrado un error? ¡Cuéntanoslo!
 
