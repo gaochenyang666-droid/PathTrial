@@ -124,7 +124,7 @@
 4. 脱敏模式
 5. 证据边界与未证实项
 
-## 验收记录（2026-10-17，v1.2.0-rc.1）
+## 验收记录（2026-10-17，v1.3.0-rc.1）
 
 | 模块 | 状态 | 通过项 | 得分（满分 5） |
 | --- | --- | ---: | ---: |
@@ -137,37 +137,39 @@
 | M07 TLS | VERIFIED | 5/5 | 5.00 |
 | M08 HTTP | VERIFIED | 6/6 | 5.00 |
 | M09 UDP | VERIFIED | 4/4 | 5.00 |
-| M10 QUIC | NOT IMPLEMENTED | 0/4 | 0.00 |
+| M10 QUIC/HTTP3 | VERIFIED | 4/4 | 5.00 |
 | M11 代理 | VERIFIED | 5/5 | 5.00 |
-| M12 双端 | NOT IMPLEMENTED | 0/4 | 0.00 |
+| M12 双端 | VERIFIED | 4/4 | 5.00 |
 | M13 对照 | VERIFIED | 3/3 | 5.00 |
 | M14 报告 | VERIFIED | 5/5 | 5.00 |
 
-模块分：12 个 VERIFIED = **60.00 / 70**。
+模块分：14 个 VERIFIED = **70.00 / 70**。
 
-平台分（15）：macOS arm64 实测通过 3.75；macOS x86_64 仅编译 0；Linux 仅 CI 配置 0；
-Windows 未实现 0 → **3.75 / 15**。
+平台分（15）：macOS arm64 GitHub Actions 实测通过 3.75；macOS Intel GitHub Actions
+实测通过 3.75；Linux CI 已配置并等待本轮实际结果 0；Windows 未实现 0 →
+**7.50 / 15**。
 
 安全、隐私、预算与回归（10）：预算与超时、脱敏、证据引用、Fake-IP 守卫、
-121 项测试均已验证；URL 查询串与凭据不进入报告；Linux 与 Windows 上的新模块未验证，
-扣 2 → **8.0 / 10**。
+134 项本地测试均已验证；QUIC 证书验证、ALPN 分离、双端任务标识和时间窗检查、
+URL 查询串与凭据不进入报告；Linux 与 Windows 上的新模块尚未完全验证，扣 1.5 →
+**8.5 / 10**。
 
 文档与发布（5）：README、CHANGELOG、CONTRIBUTING、SECURITY、完整度矩阵、Release 工作流齐备；
 尚未发布安装包或 Homebrew formula → **4.0 / 5**。
 
-**合计：60.00 + 3.75 + 8.0 + 4.0 = 75.75%。**
+**合计：70.00 + 7.50 + 8.5 + 4.0 = 90.00%。**
 
 本阶段验收依据：
 
-- M09：本地 IPv4 Echo 5/5；IPv6 回环在可用主机上通过；无效载荷、错误序号、重复响应
-  与 ICMP 不可达分别归类；临时服务端默认只监听回环。
-- M11：SOCKS5 无认证握手覆盖 ATYP 1、3、4 及版本、CONNECT 和畸形响应错误；HTTP CONNECT 覆盖 200、403、407、502、超长响应头、关闭端口、
-  隧道成功后 TLS 失败，以及隧道内真实 rustls 握手加 HTTPS 200；直连/代理交替对照记录
-  两条路径的 DNS 语义和性能，且不把差异归因于运营商。
+- M10：本地 Quinn 服务端完成合法 QUIC 握手，rustls 证书校验通过，ALPN 协商为 h3，
+  真实 HTTP/3 GET 收到 200 和响应体。测试另覆盖 500、证书失败、ALPN 不匹配、
+  QUIC 成功但 HTTP/3 失败、IPv4、IPv6 和无监听端超时。
+- M12：客户端与服务器独立写出 JSON，不需要 SSH。关联器检查任务标识、协议、端口、
+  目标地址、Schema 版本和时间窗；一致、部分缺失、无两侧成功、任务不一致、
+  端口不一致、地址不一致和时间窗不重叠均有本地测试。报告明确保留时钟同步和
+  丢包位置为未证实项。
 - M13：`compare` 接受 1.0 到当前版本的 JSON，检查目标、端口、profile、地址族、接口、
   超时和样本量；条件不同时退出码 3 并标记 `NOT DIRECTLY COMPARABLE`。
 
-未达标的直接原因：M10 QUIC、M12 双端诊断、Windows 尚未实现；Linux 只有 CI 配置，
-本机没有 Linux 运行环境；macOS x86_64 已成功交叉编译，但本机未安装 Rosetta，无法执行。
-Linux 目标的 `cargo check` 也因缺少 x86_64 Linux C 交叉编译器而失败。后续优先在
-GitHub Actions 或真实 Linux 主机执行 `cargo test --all-targets` 与本地 UDP/代理冒烟测试。
+剩余缺口：Windows 尚未实现；Linux CI 在本轮验收时仍需以实际 Job 结果确认；
+本机没有 Linux 容器或虚拟机，无法替代 GitHub Actions 的 Linux 执行证据。

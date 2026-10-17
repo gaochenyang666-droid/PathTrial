@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathtrial.dev/schemas/correlate-1.0.0.json",
+  "title": "PathTrial dual-end correlation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "kind",
+    "generated_at",
+    "task_id",
+    "comparability",
+    "client",
+    "server",
+    "finding"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "tool_version": {
+      "type": "string"
+    },
+    "kind": {
+      "const": "correlation"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "task_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "comparability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verdict",
+        "issues",
+        "limits"
+      ],
+      "properties": {
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "DIRECTLY COMPARABLE",
+            "NOT DIRECTLY COMPARABLE"
+          ]
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "limits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "client": {
+      "$ref": "#/$defs/side"
+    },
+    "server": {
+      "$ref": "#/$defs/side"
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claim",
+        "status",
+        "evidence",
+        "not_established",
+        "confidence",
+        "limits"
+      ],
+      "properties": {
+        "claim": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "WARN",
+            "FAIL",
+            "SKIP",
+            "INCONCLUSIVE"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "not_established": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "confidence": {
+          "type": "string"
+        },
+        "limits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "side": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "schema_version",
+        "events",
+        "success",
+        "task_matched",
+        "window"
+      ],
+      "properties": {
+        "role": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "events": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "success": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "task_matched": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "window": {
+          "type": "object",
+          "required": [
+            "started_at",
+            "finished_at"
+          ],
+          "properties": {
+            "started_at": {
+              "type": "string"
+            },
+            "finished_at": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

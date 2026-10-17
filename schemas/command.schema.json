@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pathtrial.dev/schemas/command-1.0.0.json",
+  "$id": "https://pathtrial.dev/schemas/command-1.1.0.json",
   "title": "PathTrial single-command report",
   "description": "Envelope emitted by http, ping, trace, dns, udp, proxy and compare-adjacent single commands. Probe detail types are documented by schemas/report.schema.json; this schema validates the envelope and the probe identity fields.",
   "type": "object",
@@ -33,7 +33,9 @@
         "trace",
         "dns",
         "udp",
-        "proxy"
+        "proxy",
+        "quic",
+        "http3"
       ]
     },
     "target": {
@@ -89,7 +91,8 @@
               "icmp",
               "trace",
               "udp_observation",
-              "proxy"
+              "proxy",
+              "quic"
             ]
           },
           "outcome": {
