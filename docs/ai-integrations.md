@@ -265,7 +265,7 @@ The PathTrial CLI can remain installed after plugin removal.
 | Shared skills identical in both plugins | Verified |
 | Codex marketplace add and plugin install | Verified with a temporary `CODEX_HOME` |
 | Codex MCP registration visible in `codex mcp list` | Verified |
-| Codex model-driven tool calls in a live session | VERIFIED: capabilities, unauthorized denial, authorized scan and report explanation |
+| Codex model-driven tool calls in a live session | VERIFIED on the v0.1.0 baseline: capabilities, unauthorized denial, authorized scan and report explanation. The v0.2.0 model session was not rerun |
 | Claude Code manifest validation and live tool call | UNVERIFIED, `claude` CLI is not installed on this machine |
 | Precompiled release containing `pathtrial mcp` | UNVERIFIED for `v1.3.0-rc.1`; build from this branch |
 | Windows plugin support | UNVERIFIED, Windows core support is not implemented |
