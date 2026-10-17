@@ -1,6 +1,6 @@
 # PathTrial
 
-**语言 / Languages / Idiomas:** **简体中文** · [English](README.en.md) · [Español](README.es.md)
+**语言 / Languages / Idiomas / Языки:** **简体中文** · [English](README.en.md) · [Español](README.es.md) · [Русский](README.ru.md)
 
 > **语言说明：** 目前多语言支持的是 README 文档；命令行界面及报告内容尚未全面翻译。
 
@@ -237,6 +237,8 @@ pathtrial correlate client.json server.json
 **版本与源码说明：** 下载安装包对应 [`v1.3.0-rc.1` 标签](https://github.com/gaochenyang666-droid/PathTrial/tree/v1.3.0-rc.1)。默认 `main` 的源码可能暂时滞后于该测试版；QUIC/HTTP3 与双端关联的开发记录见 [Milestone C PR #1](https://github.com/gaochenyang666-droid/PathTrial/pull/1)。如果要编译出与下载版相同的源码版本，请切换到该标签，而不是直接假设 `main` 相同。
 
 ## 给开发者：从源码构建与测试
+
+**AI 阅读与协作：** [llms.txt](llms.txt) 是项目与 Schema 索引；[AGENTS.md](AGENTS.md) 说明供 Codex 等编程 Agent 参考的开发及证据规则。
 
 需要 Rust 稳定工具链。请使用对应的发行标签：
 
