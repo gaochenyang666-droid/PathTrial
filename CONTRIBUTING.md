@@ -1,0 +1,56 @@
+# Contributing
+
+## Ground rules
+
+1. **No fabricated data.** Fixtures must come from real observations, or be
+   clearly labelled as synthetic input. Never edit a recorded result to make a
+   test pass.
+2. **Every conclusion needs evidence.** A new rule must cite probe IDs that the
+   run actually produced, and must state what it does *not* establish.
+3. **No silent fallbacks.** If interface binding, DNS or TLS cannot be done as
+   requested, report it. Do not degrade to a different measurement and keep the
+   original label.
+4. **Do not broaden scope in V1.** UDP, QUIC, proxy checks, remote agents and
+   Windows are explicitly out of scope for this release.
+
+## Development
+
+```bash
+cargo fmt --all
+cargo clippy --all-targets -- -D warnings
+cargo test --all-targets
+cargo build --release
+```
+
+All three checks must pass before a change is proposed. CI runs them on macOS
+and Linux.
+
+## Adding or changing a rule
+
+1. Pick the next `R0NN` identifier and document the threshold as a named
+   constant at the top of `src/analysis/mod.rs`.
+2. Give the finding a claim, evidence, `not_established`, confidence and limits.
+3. Add a fixture under `tests/fixtures/` and a test in `tests/golden.rs`.
+4. If the report shape changes, update `schemas/report.schema.json` and bump the
+   schema version. Additive changes are a minor bump; removed or renamed fields
+   require a major bump and a compatibility note in `CHANGELOG.md`.
+
+## Adding a probe
+
+- Record one `Probe` per attempt with a stable ID.
+- Classify errors into the existing `NetError` categories; add a new category
+  only when the distinction changes a conclusion.
+- Keep probes bounded: no scanning, no credential attempts, and respect
+  `--max-seconds`.
+- Never write to system configuration.
+
+## Fixtures
+
+`tests/fixtures/` is the regression contract. Each file is aggregate data with
+an explicit `provenance` field. When only aggregates exist, the analyser must
+not invent medians or percentiles, and the test must assert that limitation.
+
+## Commit messages
+
+Use conventional commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`). Keep the
+reason in the body when the change touches measurement semantics.

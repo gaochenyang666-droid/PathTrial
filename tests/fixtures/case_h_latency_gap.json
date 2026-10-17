@@ -1,0 +1,10 @@
+{
+  "case": "H",
+  "description": "Equal success rates but a large latency difference between families.",
+  "provenance": "aggregate",
+  "tcp": [
+    { "family": "ipv4", "total": 20, "success": 20, "mean_ms": 900.0 },
+    { "family": "ipv6", "total": 20, "success": 20, "mean_ms": 120.0 }
+  ],
+  "expected_rules": ["R007"]
+}

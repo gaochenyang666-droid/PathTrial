@@ -1,0 +1,14 @@
+//! PathTrial: evidence-first network diagnostics.
+//!
+//! The library exposes the probe pipeline, the deterministic analysis rules and
+//! the report renderer so they can be tested without invoking the binary.
+
+pub mod analysis;
+pub mod cli;
+pub mod models;
+pub mod net;
+pub mod platform;
+pub mod probes;
+pub mod report;
+pub mod scan;
+pub mod util;

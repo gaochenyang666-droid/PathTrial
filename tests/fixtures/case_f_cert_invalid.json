@@ -1,0 +1,8 @@
+{
+  "case": "F",
+  "description": "TLS transport completes for every attempt but certificate verification fails.",
+  "provenance": "aggregate",
+  "tcp": [{ "family": "ipv4", "total": 20, "success": 20, "mean_ms": 300.0 }],
+  "tls": [{ "family": "ipv4", "total": 20, "transport_ok": 20, "verified_ok": 0 }],
+  "expected_rules": ["R009"]
+}

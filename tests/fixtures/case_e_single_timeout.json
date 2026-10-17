@@ -1,0 +1,7 @@
+{
+  "case": "E",
+  "description": "A single TCP timeout must not become a root cause claim.",
+  "provenance": "aggregate",
+  "tcp": [{ "family": "ipv4", "total": 1, "success": 0 }],
+  "expected_rules": ["R011"]
+}

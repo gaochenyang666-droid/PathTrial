@@ -1,0 +1,7 @@
+{
+  "case": "G",
+  "description": "Only one of twenty attempts succeeded; latency must not be over-claimed.",
+  "provenance": "aggregate",
+  "tcp": [{ "family": "ipv4", "total": 20, "success": 1, "mean_ms": 4800.0 }],
+  "expected_rules": ["R005", "R006"]
+}
