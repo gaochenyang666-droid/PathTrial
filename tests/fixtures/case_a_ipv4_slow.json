@@ -1,0 +1,11 @@
+{
+  "case": "A",
+  "description": "IPv4 TCP 8/10 at 2476 ms mean; IPv6 10/10 at 323 ms. Aggregate data only.",
+  "provenance": "aggregate",
+  "tcp": [
+    { "family": "ipv4", "total": 10, "success": 8, "mean_ms": 2476.0 },
+    { "family": "ipv6", "total": 10, "success": 10, "mean_ms": 323.0 }
+  ],
+  "expected_rules": ["R007"],
+  "must_be_uncertain": ["具体丢包位置", "是否存在人为流量过滤"]
+}

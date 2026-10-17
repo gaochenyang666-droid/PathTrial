@@ -1,0 +1,8 @@
+{
+  "case": "B",
+  "description": "IPv6 TCP 18/20 succeeds but the TLS handshake never completes.",
+  "provenance": "aggregate",
+  "tcp": [{ "family": "ipv6", "total": 20, "success": 18, "mean_ms": 480.0 }],
+  "tls": [{ "family": "ipv6", "total": 20, "transport_ok": 0, "verified_ok": 0 }],
+  "expected_rules": ["R008"]
+}

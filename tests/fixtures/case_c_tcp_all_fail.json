@@ -1,0 +1,8 @@
+{
+  "case": "C",
+  "description": "IPv4 TCP 0/20. The report must not claim the IP is blocked.",
+  "provenance": "aggregate",
+  "tcp": [{ "family": "ipv4", "total": 20, "success": 0 }],
+  "expected_rules": ["R004"],
+  "must_be_uncertain": ["是否存在按目的地进行的流量过滤", "服务端是否在监听该端口"]
+}

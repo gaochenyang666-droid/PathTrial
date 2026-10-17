@@ -1,0 +1,14 @@
+{
+  "case": "I",
+  "description": "Every attempt was refused: the host answered and the port is closed.",
+  "provenance": "aggregate",
+  "tcp": [
+    {
+      "family": "ipv4",
+      "total": 20,
+      "success": 0,
+      "errors": { "connection_refused": 20 }
+    }
+  ],
+  "expected_rules": ["R015"]
+}

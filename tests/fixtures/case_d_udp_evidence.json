@@ -1,0 +1,24 @@
+{
+  "case": "D",
+  "description": "Three UDP observations that must never be conflated.",
+  "provenance": "aggregate",
+  "tcp": [],
+  "udp": [
+    {
+      "observation": "icmp_port_unreachable",
+      "implies_udp_session": false,
+      "note": "10/10 ICMP port unreachable replies to a closed port"
+    },
+    {
+      "observation": "application_echo_reply",
+      "implies_udp_session": true,
+      "note": "3/20 real application echo replies"
+    },
+    {
+      "observation": "no_response_to_invalid_payload",
+      "implies_udp_session": false,
+      "note": "12 probes with invalid QUIC payloads got no reply"
+    }
+  ],
+  "expected_rules": ["R013"]
+}

@@ -1,0 +1,426 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathtrial.dev/schemas/report-1.1.0.json",
+  "title": "PathTrial diagnostic report",
+  "description": "Machine readable output of `pathtrial scan`. Every finding references probe IDs that exist in this document. 1.1.0 adds the optional configuration.bind_interface field; older reports remain valid.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "run_id",
+    "started_at",
+    "finished_at",
+    "target",
+    "configuration",
+    "environment",
+    "stages",
+    "probes",
+    "summaries",
+    "findings",
+    "recommendations",
+    "limitations",
+    "redaction"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "tool_version": { "type": "string" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "started_at": { "type": "string", "format": "date-time" },
+    "finished_at": { "type": "string", "format": "date-time" },
+    "target": { "$ref": "#/$defs/target" },
+    "configuration": { "$ref": "#/$defs/configuration" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "stages": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/stage" } },
+    "probes": { "type": "array", "items": { "$ref": "#/$defs/probe" } },
+    "summaries": { "type": "array", "items": { "$ref": "#/$defs/summary" } },
+    "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "recommendations": { "type": "array", "items": { "$ref": "#/$defs/recommendation" } },
+    "limitations": { "type": "array", "items": { "type": "string" } },
+    "redaction": { "$ref": "#/$defs/redaction" }
+  },
+  "$defs": {
+    "status": {
+      "type": "string",
+      "enum": ["PASS", "WARN", "FAIL", "SKIP", "INCONCLUSIVE"]
+    },
+    "family": { "type": "string", "enum": ["ipv4", "ipv6"] },
+    "confidence": { "type": "string", "enum": ["low", "moderate", "high"] },
+    "severity": { "type": "string", "enum": ["info", "warn", "fail"] },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input", "port", "profile", "literal_ip"],
+      "properties": {
+        "input": { "type": "string" },
+        "host": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "profile": { "type": "string", "enum": ["web", "tcp", "ssh"] },
+        "literal_ip": { "type": "boolean" }
+      }
+    },
+    "configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rounds",
+        "timeout_ms",
+        "interval_ms",
+        "max_total_seconds",
+        "connect_budget",
+        "tls_enabled",
+        "allow_insecure_tls",
+        "output_format",
+        "redact_ips"
+      ],
+      "properties": {
+        "rounds": { "type": "integer", "minimum": 1, "maximum": 200 },
+        "timeout_ms": { "type": "integer", "minimum": 100 },
+        "interval_ms": { "type": "integer", "minimum": 0 },
+        "max_total_seconds": { "type": "integer", "minimum": 5 },
+        "connect_budget": { "type": "integer", "minimum": 1 },
+        "tls_enabled": { "type": "boolean" },
+        "allow_insecure_tls": { "type": "boolean" },
+        "output_format": { "type": "string", "enum": ["summary", "json", "markdown"] },
+        "redact_ips": { "type": "boolean" },
+        "bind_interface": { "type": ["string", "null"] }
+      }
+    },
+    "interface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "index", "up", "ipv4", "ipv6", "vpn_like"],
+      "properties": {
+        "name": { "type": "string" },
+        "index": { "type": "integer", "minimum": 0 },
+        "up": { "type": "boolean" },
+        "ipv4": { "type": "array", "items": { "type": "string" } },
+        "ipv6": { "type": "array", "items": { "type": "string" } },
+        "vpn_like": { "type": "boolean" }
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family"],
+      "properties": {
+        "family": { "type": "string", "enum": ["ipv4", "ipv6"] },
+        "gateway": { "type": ["string", "null"] },
+        "interface": { "type": ["string", "null"] },
+        "note": { "type": ["string", "null"] }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "os",
+        "arch",
+        "interfaces",
+        "ipv4_local",
+        "ipv6_local",
+        "has_global_ipv6",
+        "vpn_like_interfaces",
+        "proxy_env_names",
+        "notes"
+      ],
+      "properties": {
+        "os": { "type": "string" },
+        "arch": { "type": "string" },
+        "kernel": { "type": ["string", "null"] },
+        "interfaces": { "type": "array", "items": { "$ref": "#/$defs/interface" } },
+        "ipv4_local": { "type": "boolean" },
+        "ipv6_local": { "type": "boolean" },
+        "has_global_ipv6": { "type": "boolean" },
+        "vpn_like_interfaces": { "type": "array", "items": { "type": "string" } },
+        "default_route_v4": { "anyOf": [{ "$ref": "#/$defs/route" }, { "type": "null" }] },
+        "default_route_v6": { "anyOf": [{ "$ref": "#/$defs/route" }, { "type": "null" }] },
+        "target_route": { "anyOf": [{ "$ref": "#/$defs/route" }, { "type": "null" }] },
+        "proxy_env_names": { "type": "array", "items": { "type": "string" } },
+        "notes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "status", "summary", "evidence", "started_at", "finished_at"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "status": { "$ref": "#/$defs/status" },
+        "summary": { "type": "string" },
+        "reason": { "type": ["string", "null"] },
+        "evidence": { "type": "array", "items": { "type": "string" } },
+        "started_at": { "type": "string", "format": "date-time" },
+        "finished_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "net_error": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "timeout",
+            "connection_refused",
+            "network_unreachable",
+            "host_unreachable",
+            "connection_reset",
+            "dns_failure",
+            "tls_transport",
+            "certificate"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["other"],
+          "properties": { "other": { "type": "string" } }
+        }
+      ]
+    },
+    "cert": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sans", "chain_len"],
+      "properties": {
+        "subject": { "type": ["string", "null"] },
+        "issuer": { "type": ["string", "null"] },
+        "not_before": { "type": ["string", "null"] },
+        "not_after": { "type": ["string", "null"] },
+        "days_remaining": { "type": ["integer", "null"] },
+        "sans": { "type": "array", "items": { "type": "string" } },
+        "chain_len": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "probe_detail": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "tcp_connect" },
+            "connect_ms": { "type": ["number", "null"], "minimum": 0 },
+            "error": { "anyOf": [{ "$ref": "#/$defs/net_error" }, { "type": "null" }] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "transport_ok", "verification", "sni", "insecure_retry"],
+          "properties": {
+            "type": { "const": "tls_handshake" },
+            "handshake_ms": { "type": ["number", "null"], "minimum": 0 },
+            "transport_ok": { "type": "boolean" },
+            "verification": {
+              "oneOf": [
+                { "type": "string", "enum": ["verified", "not_checked"] },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["failed"],
+                  "properties": { "failed": { "type": "string" } }
+                }
+              ]
+            },
+            "protocol": { "type": ["string", "null"] },
+            "cipher_suite": { "type": ["string", "null"] },
+            "sni": { "type": "string" },
+            "cert": { "anyOf": [{ "$ref": "#/$defs/cert" }, { "type": "null" }] },
+            "error": { "anyOf": [{ "$ref": "#/$defs/net_error" }, { "type": "null" }] },
+            "insecure_retry": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "resolver",
+            "record_type",
+            "answers",
+            "cname_chain",
+            "query_ms",
+            "fake_ip_suspected"
+          ],
+          "properties": {
+            "type": { "const": "dns_query" },
+            "resolver": { "type": "string" },
+            "record_type": { "type": "string", "enum": ["A", "AAAA"] },
+            "answers": { "type": "array", "items": { "type": "string" } },
+            "cname_chain": { "type": "array", "items": { "type": "string" } },
+            "query_ms": { "type": "number", "minimum": 0 },
+            "rcode": { "type": ["string", "null"] },
+            "error": { "type": ["string", "null"] },
+            "fake_ip_suspected": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "family", "purpose"],
+          "properties": {
+            "type": { "const": "route" },
+            "family": { "type": "string", "enum": ["ipv4", "ipv6"] },
+            "purpose": { "type": "string" },
+            "gateway": { "type": ["string", "null"] },
+            "interface": { "type": ["string", "null"] },
+            "raw_error": { "type": ["string", "null"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "interface_count", "vpn_like_interfaces", "has_global_ipv6", "notes"],
+          "properties": {
+            "type": { "const": "system_inventory" },
+            "interface_count": { "type": "integer", "minimum": 0 },
+            "vpn_like_interfaces": { "type": "array", "items": { "type": "string" } },
+            "has_global_ipv6": { "type": "boolean" },
+            "notes": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "observation", "implies_udp_session", "note"],
+          "properties": {
+            "type": { "const": "udp_observation" },
+            "observation": {
+              "type": "string",
+              "enum": [
+                "icmp_port_unreachable",
+                "application_echo_reply",
+                "no_response_to_invalid_payload",
+                "quic_handshake_timeout",
+                "quic_handshake_complete"
+              ]
+            },
+            "implies_udp_session": { "type": "boolean" },
+            "note": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "total", "success", "aggregate_only"],
+          "properties": {
+            "type": { "const": "aggregate" },
+            "total": { "type": "integer", "minimum": 0 },
+            "success": { "type": "integer", "minimum": 0 },
+            "mean_ms": { "type": ["number", "null"], "minimum": 0 },
+            "aggregate_only": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "outcome", "started_at", "detail"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": {
+          "type": "string",
+          "enum": ["system", "route", "dns", "tcp", "tls", "udp_observation"]
+        },
+        "outcome": { "type": "string", "enum": ["ok", "fail", "not_applicable"] },
+        "family": { "$ref": "#/$defs/family" },
+        "target": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "started_at": { "type": "string", "format": "date-time" },
+        "duration_ms": { "type": ["number", "null"], "minimum": 0 },
+        "detail": { "$ref": "#/$defs/probe_detail" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family",
+        "address",
+        "tcp_total",
+        "tcp_success",
+        "tcp_success_rate",
+        "error_classes",
+        "samples_ms",
+        "aggregate_only",
+        "tls_total",
+        "tls_transport_ok",
+        "tls_verified_ok",
+        "window_started_at",
+        "window_finished_at",
+        "probe_ids"
+      ],
+      "properties": {
+        "family": { "$ref": "#/$defs/family" },
+        "address": { "type": "string" },
+        "tcp_total": { "type": "integer", "minimum": 0 },
+        "tcp_success": { "type": "integer", "minimum": 0 },
+        "tcp_success_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "tcp_mean_ms": { "type": ["number", "null"], "minimum": 0 },
+        "tcp_median_ms": { "type": ["number", "null"], "minimum": 0 },
+        "tcp_max_ms": { "type": ["number", "null"], "minimum": 0 },
+        "error_classes": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "samples_ms": { "type": "array", "items": { "type": "number", "minimum": 0 } },
+        "aggregate_only": { "type": "boolean" },
+        "tls_total": { "type": "integer", "minimum": 0 },
+        "tls_transport_ok": { "type": "integer", "minimum": 0 },
+        "tls_verified_ok": { "type": "integer", "minimum": 0 },
+        "window_started_at": { "type": "string", "format": "date-time" },
+        "window_finished_at": { "type": "string", "format": "date-time" },
+        "probe_ids": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "rule_id",
+        "claim",
+        "severity",
+        "status",
+        "evidence",
+        "not_established",
+        "confidence",
+        "limits"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "rule_id": { "type": "string", "pattern": "^R\\d{3}$" },
+        "claim": { "type": "string", "minLength": 1 },
+        "severity": { "$ref": "#/$defs/severity" },
+        "status": { "$ref": "#/$defs/status" },
+        "evidence": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "not_established": { "type": "array", "items": { "type": "string" } },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "limits": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "action", "rationale", "evidence"],
+      "properties": {
+        "id": { "type": "string" },
+        "action": { "type": "string" },
+        "rationale": { "type": "string" },
+        "evidence": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "redaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applied", "ips_masked", "notes"],
+      "properties": {
+        "applied": { "type": "boolean" },
+        "ips_masked": { "type": "integer", "minimum": 0 },
+        "notes": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}
