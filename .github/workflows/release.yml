@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -45,7 +45,48 @@ jobs:
           tar -C dist -czf "dist/${name}.tar.gz" "${name}"
           shasum -a 256 "dist/${name}.tar.gz" > "dist/${name}.tar.gz.sha256" 2>/dev/null \
             || sha256sum "dist/${name}.tar.gz" > "dist/${name}.tar.gz.sha256"
+          cp "dist/${name}.tar.gz" "dist/pathtrial-${{ matrix.target }}.tar.gz"
+          shasum -a 256 "dist/pathtrial-${{ matrix.target }}.tar.gz" \
+            > "dist/pathtrial-${{ matrix.target }}.tar.gz.sha256" 2>/dev/null \
+            || sha256sum "dist/pathtrial-${{ matrix.target }}.tar.gz" \
+              > "dist/pathtrial-${{ matrix.target }}.tar.gz.sha256"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
           path: dist/*
+  publish:
+    name: publish release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+      - name: Collect release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          find release -type f -exec cp {} assets/ \;
+          cp scripts/install.sh assets/install.sh
+          chmod +x assets/install.sh
+          sha256sum assets/install.sh > assets/install.sh.sha256
+      - name: Publish GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          prerelease=""
+          case "$tag" in
+            *-rc.*|*-beta.*|*-alpha.*) prerelease="--prerelease" ;;
+          esac
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" assets/* --clobber
+          else
+            gh release create "$tag" assets/* --title "$tag" \
+              --generate-notes $prerelease
+          fi
