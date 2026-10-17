@@ -1,0 +1,28 @@
+# PathTrial
+
+Evidence-first network diagnostics CLI and local MCP server.
+
+## Documentation
+
+- [README](README.md): full Chinese reference
+- [English entry](README.en.md)
+- [Spanish entry](README.es.md)
+- [Russian entry](README.ru.md)
+- [AI integrations](docs/ai-integrations.md)
+- [Completeness matrix](docs/completeness.md)
+- [Download page](docs/download.html)
+
+## Schemas
+
+- [Scan report](schemas/report.schema.json)
+- [Single-command report](schemas/command.schema.json)
+- [Collect report](schemas/collect.schema.json)
+- [Correlation report](schemas/correlate.schema.json)
+
+## AI Plugins
+
+- [Codex plugin](plugins/codex/pathtrial/plugin.json)
+- [Codex MCP config](plugins/codex/pathtrial/mcp.json)
+- [Claude Code plugin](plugins/claude-code/pathtrial/.claude-plugin/plugin.json)
+- [Claude Code MCP config](plugins/claude-code/pathtrial/.mcp.json)
+- [Shared Skills](plugins/shared/skills/)

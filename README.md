@@ -16,7 +16,7 @@ $ pathtrial scan example.com
 
 ## 当前状态
 
-本仓库是 **V1.3.0-rc.1**：五阶段固定检测、真实 HTTP、ICMP、traceroute、DNS 对照、
+本分支是 **V1.4.0-rc.1**：五阶段固定检测、真实 HTTP、ICMP、traceroute、DNS 对照、
 UDP Echo、SOCKS5、HTTP CONNECT、直连/代理对照、历史报告比较、QUIC/HTTP3 和双端离线
 关联均已实现。测试覆盖本地 QUIC 服务端、真实 HTTP/3 请求、协议桩、TLS 隧道和黄金数据集。
 
@@ -25,7 +25,8 @@ UDP Echo、SOCKS5、HTTP CONNECT、直连/代理对照、历史报告比较、QU
 ## 下载应用
 
 预编译版本发布在 [GitHub Releases](https://github.com/gaochenyang666-droid/PathTrial/releases)。
-当前候选版本为 `v1.3.0-rc.1`。
+当前可下载的预发布版本为 `v1.3.0-rc.1`。该二进制早于 AI Plugins 与 MCP 功能，
+插件验收请使用本分支构建的 `pathtrial`。
 
 macOS 与 Linux 可以用一条命令安装到 `~/.local/bin`，脚本会校验 SHA-256：
 
@@ -41,6 +42,21 @@ curl -fsSL https://github.com/gaochenyang666-droid/PathTrial/releases/download/v
 
 每个压缩包都有同名的 `.sha256` 文件。Windows 尚未支持。静态下载页见
 [`docs/download.html`](docs/download.html)。
+
+## AI Plugins
+
+PathTrial AI Plugins v0.1 让 Codex 和 Claude Code 通过同一个本地 MCP Server
+调用真实诊断功能。插件包含 `network-diagnostics`、`ipv4-ipv6-comparison`、
+`explain-report` 和 `setup` 四个共享 Skills。
+
+- 完整集成指南：[docs/ai-integrations.md](docs/ai-integrations.md)
+- Codex 插件：[plugins/codex/pathtrial](plugins/codex/pathtrial)
+- Claude Code 插件：[plugins/claude-code/pathtrial](plugins/claude-code/pathtrial)
+- MCP 启动：`pathtrial mcp --allow-target example.com:443`
+
+MCP 默认拒绝所有网络探测，必须在启动参数或
+`PATHTRIAL_MCP_ALLOW_TARGETS` 中显式加入目标。当前 `v1.3.0-rc.1` 发布包早于
+MCP 功能，插件验收需要使用本分支构建的 `pathtrial`。
 
 ## 安装与构建
 
@@ -365,13 +381,15 @@ QUIC 只负责加密传输和连接建立。HTTP/3 还需要双方协商 `h3` AL
 cargo test --locked --all-targets -- --test-threads=1
 cargo test --test quic     # 本地 QUIC/HTTP3 服务端
 cargo test --test collect  # 双端采集与离线关联
+cargo test --test mcp      # MCP stdio 协议
+cargo test --test plugins  # 两套插件清单与 Skills
 cargo test --test golden   # 黄金数据集回归
 cargo test --test schema   # JSON Schema 校验
 cargo clippy --all-targets -- -D warnings
 cargo fmt --all -- --check
 ```
 
-当前共有 134 项测试。黄金数据集在 `tests/fixtures/`，来自 2026 年 10 月一次真实的
+当前共有 147 项测试，包含 MCP 协议与插件结构验收。黄金数据集在 `tests/fixtures/`，来自 2026 年 10 月一次真实的
 跨境链路排障记录，包含：
 
 - 案例 A：IPv4 8/10 且平均 2476 ms，IPv6 10/10 且平均 323 ms，聚合数据，不得编造分布。

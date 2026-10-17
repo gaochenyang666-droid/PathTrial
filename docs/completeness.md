@@ -176,3 +176,19 @@ macOS Intel 三个 Job 全部通过。
 
 剩余缺口：Windows 尚未实现；当前 Mac 的 UDP 443 路径对公共 HTTP/3 目标超时，
 公共 HTTP/3 验证仍需在可用 UDP 出口上重复。
+
+## AI Plugins v0.1（独立验收）
+
+AI 插件不计入上面的 94.25% 核心 CLI 评分，单独记录如下：
+
+| 项目 | 状态 | 证据 |
+| --- | --- | --- |
+| MCP stdio 初始化、tools/list、tools/call | VERIFIED | 8 项 MCP 协议测试 |
+| 目标允许列表与私有地址拒绝 | VERIFIED | 未授权目标与 localhost 私有解析测试 |
+| 扫描、HTTP、报告解释、报告比较 | VERIFIED | MCP 本地协议集成测试 |
+| 共享 Skills 一致性 | VERIFIED | 5 项插件结构测试与同步检查脚本 |
+| Codex marketplace 与插件安装 | VERIFIED | 临时 `CODEX_HOME` 实际安装，`codex mcp list` 可见 |
+| Codex 模型会话内真实工具调用 | UNVERIFIED | 未启动真实模型会话 |
+| Claude Code 清单校验与加载 | UNVERIFIED | 本机未安装 `claude` CLI |
+| 含 MCP 的预编译发行包 | UNVERIFIED | `v1.3.0-rc.1` 早于 MCP，需要后续构建 |
+| Windows 插件 | UNVERIFIED | Windows 核心尚未实现 |

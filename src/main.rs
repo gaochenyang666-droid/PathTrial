@@ -106,6 +106,13 @@ fn main() -> ExitCode {
                 ExitCode::from(EXIT_TOOL_ERROR)
             }
         },
+        Command::Mcp(args) => match pathtrial::mcp::run(&args) {
+            Ok(()) => ExitCode::from(EXIT_OK),
+            Err(message) => {
+                eprintln!("error: {message}");
+                ExitCode::from(EXIT_TOOL_ERROR)
+            }
+        },
         Command::Compare(args) => match pathtrial::compare::run(&args) {
             Ok(code) => ExitCode::from(code),
             Err(message) => {
