@@ -28,6 +28,34 @@ fn main() -> ExitCode {
             print!("{}", include_str!("../schemas/report.schema.json"));
             ExitCode::from(EXIT_OK)
         }
+        Command::Http(args) => match pathtrial::commands::http(&args) {
+            Ok(code) => ExitCode::from(code),
+            Err(message) => {
+                eprintln!("error: {message}");
+                ExitCode::from(EXIT_TOOL_ERROR)
+            }
+        },
+        Command::Ping(args) => match pathtrial::commands::ping(&args) {
+            Ok(code) => ExitCode::from(code),
+            Err(message) => {
+                eprintln!("error: {message}");
+                ExitCode::from(EXIT_TOOL_ERROR)
+            }
+        },
+        Command::Trace(args) => match pathtrial::commands::trace(&args) {
+            Ok(code) => ExitCode::from(code),
+            Err(message) => {
+                eprintln!("error: {message}");
+                ExitCode::from(EXIT_TOOL_ERROR)
+            }
+        },
+        Command::Dns(args) => match pathtrial::commands::dns(&args) {
+            Ok(code) => ExitCode::from(code),
+            Err(message) => {
+                eprintln!("error: {message}");
+                ExitCode::from(EXIT_TOOL_ERROR)
+            }
+        },
         Command::Scan(args) => {
             if let Err(message) = args.validate() {
                 eprintln!("error: {message}");

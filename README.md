@@ -16,7 +16,7 @@ $ pathtrial scan example.com
 
 ## 当前状态
 
-本仓库是 **V1.0.0-rc.2**：五阶段固定检测已经可以实际运行，并通过单元测试、集成测试、
+本仓库是 **V1.1.0-rc.1**：五阶段固定检测已经可以实际运行，并通过单元测试、集成测试、
 JSON Schema 校验和黄金数据集回归测试。
 
 尚未实现（规划在 V1.1 及之后）：UDP Echo、QUIC 握手、代理业务检测、双端抓包关联。
@@ -47,9 +47,17 @@ pathtrial scan example.com --profile web
 pathtrial scan server.example.com --port 22 --profile tcp
 pathtrial scan example.com --format json
 pathtrial scan example.com --format markdown
+pathtrial http https://example.com/ --expect-status 200
+pathtrial ping 1.1.1.1 --count 5
+pathtrial trace example.com --max-hops 15
+pathtrial dns example.com --server 223.5.5.5
 pathtrial --version
 pathtrial --help
 ```
+
+单点命令（`http` / `ping` / `trace` / `dns`）各自输出一段摘要，`--format json` 输出结构化的
+`probes`，退出码语义与 `scan` 相同。它们**不会**输出 Markdown 报告文件；需要 Markdown 时
+用 `scan`。
 
 常用参数：
 
@@ -148,6 +156,18 @@ pathtrial --help
 - 默认每个地址族 20 次、单次超时 3 秒、间隔 200 毫秒，并受 `--max-seconds` 总预算约束。
 - 报告默认不含任何凭据。代理环境变量只记录「存在」这一事实，不记录值。
 - `--redact-ips` 会把 IP 替换成稳定的占位符，便于公开分享。
+
+## 单点命令说明
+
+| 命令 | 实际做什么 | 不做什么 |
+| --- | --- | --- |
+| `http URL` | 真实 GET 请求，记录 DNS/TCP/TLS/首字节/总耗时、状态码、协议版本、Location | 不跟随重定向；不下载大文件（默认最多 64 KB） |
+| `ping HOST` | 调用系统 `ping`，记录丢包、RTT、抖动 | 不用原始套接字；ICMP 被限制时判 FAIL 并注明不代表 TCP |
+| `trace HOST` | 调用系统 `traceroute -n`，解析逐跳地址与 RTT | 缺少工具时判 SKIP；中间节点不回应不等于业务丢包 |
+| `dns HOST` | 系统解析器 + `--server` 指定解析器，比较 A/AAAA | 结果不同不等于 DNS 污染；Fake-IP 会单独提示 |
+
+未实现的模块（UDP Echo、QUIC、SOCKS5/HTTP CONNECT 代理、双端关联、Windows）在本版本中
+**没有命令入口**，工具不会以任何形式报告它们通过。
 
 ## 已知限制
 

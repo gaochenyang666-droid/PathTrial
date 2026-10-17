@@ -3,6 +3,47 @@
 All notable changes to PathTrial. The format follows Keep a Changelog, and the
 project uses semantic versioning for both the binary and the report schema.
 
+## [1.1.0-rc.1] - 2026-10-17
+
+Feature increment: real application-layer checks land as new subcommands.
+
+### Added
+
+- **M08 HTTP/HTTPS**: real GET over the same interface/family logic as `scan`.
+  Records DNS, TCP, TLS, time-to-first-byte and total timings, status code,
+  HTTP version and Location. Redirects are recorded but not followed. 4xx/5xx
+  are HTTP answers, never reported as transport failure; `--expect-status`
+  turns a mismatch into FAIL.
+- **M05 ICMP**: `ping` drives the system `ping` binary (no root needed), records
+  loss, RTT min/avg/max and jitter, and states that ICMP silence does not imply
+  TCP failure.
+- **M04 traceroute**: `trace` drives `traceroute -n`, parses hops, per-hop RTT
+  and timeouts, and reports SKIP with a reason when the tool is missing.
+- **M02 DNS comparison**: `dns HOST --server ADDR...` compares the system
+  resolvers with explicit servers, and never equates a difference with
+  poisoning. Fake-IP answers are called out separately.
+- `CommandReport` envelope for single-purpose commands: status, summary, probes
+  and limitations in one JSON document.
+
+### Changed
+
+- Report schema **1.2.0** adds `http`, `icmp` and `trace` probe details. The
+  change is additive; existing fields and rules are unchanged.
+- DNS resolution is now bounded by two query timeouts and resolvers are
+  deduplicated globally (scutil lists one entry per DNS scope).
+- TLS probe timing now reports handshake time separately from total time.
+
+### Not implemented in this release
+
+- M09 UDP echo, M10 QUIC, M11 SOCKS5/HTTP CONNECT, M12 dual-end correlation and
+  Windows support. No command exposes them, so nothing can claim they passed.
+
+### Verified
+
+- 87 tests (52 unit, 20 CLI, 13 golden, 2 schema).
+- macOS arm64: real HTTP (local 200/404/refused), DNS, ICMP and traceroute runs.
+- macOS x86_64 and Linux: build/CI only in this increment.
+
 ## [1.0.0-rc.2] - 2026-10-17
 
 ### Fixed

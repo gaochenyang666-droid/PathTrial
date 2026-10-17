@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 /// Version of the report schema. 1.1.0 added the optional
 /// `configuration.bind_interface` field and the R014 rule; both are additive.
-pub const SCHEMA_VERSION: &str = "1.1.0";
+pub const SCHEMA_VERSION: &str = "1.2.0";
 
 /// Uniform status vocabulary for stages and findings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -94,6 +94,9 @@ pub enum ProbeKind {
     Dns,
     Tcp,
     Tls,
+    Http,
+    Icmp,
+    Trace,
     UdpObservation,
 }
 
@@ -202,6 +205,39 @@ pub enum ProbeDetail {
         has_global_ipv6: bool,
         notes: Vec<String>,
     },
+    Http {
+        url: String,
+        method: String,
+        status: Option<u16>,
+        expected_status: Option<u16>,
+        matches_expectation: Option<bool>,
+        http_version: Option<String>,
+        location: Option<String>,
+        body_bytes: usize,
+        dns_ms: f64,
+        connect_ms: f64,
+        tls_ms: f64,
+        ttfb_ms: f64,
+        total_ms: f64,
+        tls_verified: Option<bool>,
+        error: Option<NetError>,
+    },
+    Icmp {
+        sent: u32,
+        received: u32,
+        loss_pct: f64,
+        rtt_min: Option<f64>,
+        rtt_avg: Option<f64>,
+        rtt_max: Option<f64>,
+        jitter: Option<f64>,
+        error: Option<String>,
+    },
+    Trace {
+        hops: Vec<TraceHop>,
+        reached: bool,
+        protocol: String,
+        error: Option<String>,
+    },
     /// Evidence record for UDP observations. V1 does not probe UDP, but the
     /// model keeps the classification explicit so ICMP replies can never be
     /// counted as a successful UDP session.
@@ -230,6 +266,15 @@ pub enum UdpObservation {
     NoResponseToInvalidPayload,
     QuicHandshakeTimeout,
     QuicHandshakeComplete,
+}
+
+/// One hop in a traceroute run.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TraceHop {
+    pub hop: u32,
+    pub address: Option<String>,
+    pub rtt_ms: Vec<f64>,
+    pub timed_out: bool,
 }
 
 /// A single recorded probe.
