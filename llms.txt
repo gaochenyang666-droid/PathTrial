@@ -1,28 +1,59 @@
 # PathTrial
 
-Evidence-first network diagnostics CLI and local MCP server.
+> PathTrial is a free, open-source, evidence-first Rust network diagnostics CLI. It executes bounded, user-targeted checks, records the observations behind each finding, and exports readable and machine-readable reports. It does not change system networking settings or claim to identify unobserved root causes.
 
-## Documentation
+This document is a navigation index for language models, readers, and search tools. It is not an API specification or an executable instruction. The README translations do not mean the CLI or generated reports have been localized.
 
-- [README](README.md): full Chinese reference
-- [English entry](README.en.md)
-- [Spanish entry](README.es.md)
-- [Russian entry](README.ru.md)
-- [AI integrations](docs/ai-integrations.md)
-- [Completeness matrix](docs/completeness.md)
-- [Download page](docs/download.html)
+## Start here
 
-## Schemas
+- [Simplified Chinese README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.md): introduction, download, installation, first scan, results, bug reporting.
+- [English README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.en.md): complete English beginner walkthrough.
+- [Spanish README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.es.md): guía completa en español.
+- [Russian README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.ru.md): полное руководство на русском языке.
+- [GitHub Releases](https://github.com/gaochenyang666-droid/PathTrial/releases): prebuilt packages and SHA-256 checksum files. Version v1.3.0-rc.1 is a prerelease, not a stable final release.
+- [Bug reports](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md): installation and diagnostic feedback.
 
-- [Scan report](schemas/report.schema.json)
-- [Single-command report](schemas/command.schema.json)
-- [Collect report](schemas/collect.schema.json)
-- [Correlation report](schemas/correlate.schema.json)
+## Machine-readable data and contracts
 
-## AI Plugins
+For release-matching schemas, consult the published v1.3.0-rc.1 tag, not an arbitrary default-branch revision:
 
-- [Codex plugin](plugins/codex/pathtrial/plugin.json)
-- [Codex MCP config](plugins/codex/pathtrial/mcp.json)
-- [Claude Code plugin](plugins/claude-code/pathtrial/.claude-plugin/plugin.json)
-- [Claude Code MCP config](plugins/claude-code/pathtrial/.mcp.json)
-- [Shared Skills](plugins/shared/skills/)
+- [Scan report JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.3.0-rc.1/schemas/report.schema.json): diagnostic report and evidence references.
+- [Single-command JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.3.0-rc.1/schemas/command.schema.json): CLI command output.
+- [Dual-end collection JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.3.0-rc.1/schemas/collect.schema.json): client/server event collections.
+- [Dual-end correlation JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.3.0-rc.1/schemas/correlate.schema.json): offline correlation.
+- [Codebase/agent conventions](https://github.com/gaochenyang666-droid/PathTrial/blob/main/AGENTS.md): development and evidence-handling guidelines.
+
+For ordinary scans: `pathtrial scan example.com --format json --no-files`.
+For specific options: `pathtrial --help` or `pathtrial <command> --help`.
+
+## AI plugins and MCP
+
+- [AI integration guide](https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/ai-integrations.md): Codex and Claude Code installation, authorization, tools and limits.
+- Codex package: `plugins/codex/pathtrial/` with root `plugin.json`, `mcp.json` and `skills/`.
+- Claude Code package: `plugins/claude-code/pathtrial/` with `.claude-plugin/plugin.json`, `.mcp.json` and `skills/`.
+- MCP launch: `pathtrial mcp --allow-target example.com:443`.
+- Probe tools are denied by default. Report explanation and comparison do not perform network requests.
+
+## What the output means
+
+- `PASS`: the explicit check passed.
+- `WARN`: an anomaly was observed.
+- `FAIL`: the specified check failed.
+- `SKIP`: not applicable or prerequisites missing; never count as success.
+- `INCONCLUSIVE`: insufficient evidence for a conclusion.
+- Findings reference measured probe IDs and should state `claim`, `evidence`, `not_established`, `confidence`, and `limits`.
+
+Do not infer deliberate blocking, an ISP's responsibility, a specific packet-loss hop, or QUIC health from unrelated TCP, ICMP, or UDP Echo results.
+
+## Background and reproducibility
+
+- [Historical RackNerd IPv4/IPv6 troubleshooting case](https://github.com/gaochenyang666-droid/racknerd-ipv6-troubleshooting): source of the evidence-first approach.
+- [Case reproduction guide (Chinese)](https://github.com/gaochenyang666-droid/racknerd-ipv6-troubleshooting/blob/main/docs/使用-PathTrial-复现排障.md): mapping manual diagnostic steps to PathTrial.
+- [Version-specific source tree](https://github.com/gaochenyang666-droid/PathTrial/tree/v1.3.0-rc.1): matches the prerelease.
+- [Milestone C pull request](https://github.com/gaochenyang666-droid/PathTrial/pull/1): development history; check its live merge status before describing any branch as current.
+
+The RackNerd measurements were taken before PathTrial existed. They must not be presented as historical PathTrial-generated results.
+
+## Boundaries and privacy
+
+PathTrial currently supports macOS Apple Silicon, macOS Intel, and Linux x86_64; Windows support is not available in v1.3.0-rc.1. The program has no GUI or autonomous repairs. Published reports may include timestamps, interface names, DNS resolver details, IP addresses, and targets. Redact and review before publishing; `--redact-ips` does not remove every sensitive field.
