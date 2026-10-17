@@ -538,8 +538,9 @@ fn summarize_tcp_status(summaries: &[FamilySummary]) -> Status {
             let refused_only = summary.error_classes.len() == 1
                 && summary.error_classes.contains_key("connection_refused");
             status = if refused_only {
-                // The host answered; the port is simply closed.
-                Status::Pass
+                // The port answered with a refusal: the connection attempt
+                // failed, even though something replied.
+                Status::Fail
             } else if summary.tcp_total < analysis::MIN_SAMPLES_FOR_VERDICT {
                 Status::Inconclusive
             } else {

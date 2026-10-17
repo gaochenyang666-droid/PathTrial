@@ -70,6 +70,11 @@ fn markdown_body(report: &Report, masked: Option<usize>) -> String {
         "- 工具版本：{}　报告 schema：{}\n",
         report.tool_version, report.schema_version
     );
+    let _ = writeln!(
+        out,
+        "**总体判定：{}**（与退出码使用同一套优先级）\n",
+        report.worst_status().label()
+    );
 
     let _ = writeln!(out, "## 1. 系统与测试环境\n");
     let _ = writeln!(out, "| 项目 | 值 |\n| --- | --- |");
@@ -345,6 +350,8 @@ fn terminal_body(report: &Report) -> String {
             let _ = writeln!(out, "     ({reason})");
         }
     }
+    let _ = writeln!(out, "{}", "-".repeat(64));
+    let _ = writeln!(out, "Overall: {}", report.worst_status().label());
     let _ = writeln!(out, "{}", "-".repeat(64));
     for summary in &report.summaries {
         let _ = writeln!(out, "  {}", family_line(summary));

@@ -1,0 +1,14 @@
+{
+  "case": "J",
+  "description": "Refusals mixed with timeouts: no single clear cause, still a failed check.",
+  "provenance": "aggregate",
+  "tcp": [
+    {
+      "family": "ipv4",
+      "total": 20,
+      "success": 0,
+      "errors": { "timeout": 12, "connection_refused": 8 }
+    }
+  ],
+  "expected_rules": ["R004"]
+}
