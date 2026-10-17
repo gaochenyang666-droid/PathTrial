@@ -209,11 +209,12 @@ pathtrial correlate client.json server.json
 
 ## AI Plugins：Codex 与 Claude Code
 
-PathTrial AI Plugins v0.1 通过一个本地 MCP Server，把真实诊断能力接入 Codex
+PathTrial AI Plugins v0.2 通过一个本地 MCP Server，把真实诊断能力接入 Codex
 和 Claude Code。两套插件共用同一组 Skills，MCP 默认拒绝所有网络探测，必须显式
 加入目标允许列表。
 
 - 集成指南：[docs/ai-integrations.md](docs/ai-integrations.md)
+- 完成度矩阵：[docs/ai-plugin-completeness.md](docs/ai-plugin-completeness.md)
 - Codex 插件：[plugins/codex/pathtrial](plugins/codex/pathtrial)
 - Claude Code 插件：[plugins/claude-code/pathtrial](plugins/claude-code/pathtrial)
 - 启动示例：`pathtrial mcp --allow-target example.com:443`

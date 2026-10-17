@@ -215,7 +215,7 @@ pathtrial correlate client.json server.json
 
 ## AI-плагины для Codex и Claude Code
 
-PathTrial AI Plugins v0.1 подключает оба клиента к одному локальному MCP-серверу
+PathTrial AI Plugins v0.2 подключает оба клиента к одному локальному MCP-серверу
 и общим навыкам. Сетевые проверки запрещены, пока цель явно не добавлена в
 список разрешённых.
 

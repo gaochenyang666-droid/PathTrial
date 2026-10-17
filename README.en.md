@@ -209,7 +209,7 @@ This correlates **TCP connection events**, not packet captures. Without packet c
 
 ## AI Plugins for Codex and Claude Code
 
-PathTrial AI Plugins v0.1 connects both clients to one local MCP server and one
+PathTrial AI Plugins v0.2 connects both clients to one local MCP server and one
 shared set of skills. Probe tools are denied unless the target is explicitly
 allowlisted.
 

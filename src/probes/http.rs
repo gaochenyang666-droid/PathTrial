@@ -57,7 +57,7 @@ impl Url {
 pub fn parse_url(input: &str) -> Result<Url, String> {
     let (scheme, rest) = input
         .split_once("://")
-        .ok_or_else(|| format!("URL must start with http:// or https://: {input}"))?;
+        .ok_or_else(|| "URL must start with http:// or https://".to_string())?;
     let scheme = scheme.to_ascii_lowercase();
     if scheme != "http" && scheme != "https" {
         return Err(format!("unsupported scheme {scheme}"));
@@ -81,7 +81,7 @@ pub fn parse_url(input: &str) -> Result<Url, String> {
                 if tail.is_empty() {
                     default_port(&scheme)
                 } else {
-                    return Err(format!("invalid authority {authority}"));
+                    return Err("invalid URL authority".to_string());
                 }
             }
         };
@@ -158,6 +158,10 @@ pub struct HttpRequest<'a> {
     pub insecure: bool,
     /// Optional byte budget for the response body.
     pub max_body: usize,
+    /// TLS server name override, useful when connecting to a pre-authorized IP.
+    pub server_name: Option<&'a str>,
+    /// HTTP Host header override, useful when connecting to a pre-authorized IP.
+    pub host_header: Option<&'a str>,
 }
 
 enum Channel {
@@ -299,7 +303,8 @@ pub fn run(recorder: &mut Recorder, request: &HttpRequest<'_>) -> Result<HttpOut
         let tls_started = Instant::now();
         let _ = stream.set_read_timeout(Some(request.timeout));
         let _ = stream.set_write_timeout(Some(request.timeout));
-        match handshake(stream, &url.host, request.insecure) {
+        let server_name = request.server_name.unwrap_or(&url.host);
+        match handshake(stream, server_name, request.insecure) {
             Ok(session) => {
                 timings.tls_ms = round2(tls_started.elapsed().as_secs_f64() * 1000.0);
                 tls_verified = Some(!request.insecure);
@@ -356,11 +361,15 @@ pub fn run(recorder: &mut Recorder, request: &HttpRequest<'_>) -> Result<HttpOut
     };
 
     // 4. Request and response.
+    let host_header = request
+        .host_header
+        .map(str::to_string)
+        .unwrap_or_else(|| url.host_header());
     let request_bytes = format!(
         "{} {} HTTP/1.1\r\nHost: {}\r\nUser-Agent: pathtrial/{}\r\nAccept: */*\r\nConnection: close\r\n\r\n",
         request.method,
         url.path,
-        url.host_header(),
+        host_header,
         env!("CARGO_PKG_VERSION")
     );
     let write_started = Instant::now();
@@ -420,7 +429,7 @@ pub fn run(recorder: &mut Recorder, request: &HttpRequest<'_>) -> Result<HttpOut
             Ok(parsed) => {
                 status = Some(parsed.status);
                 version = Some(parsed.version);
-                redirect = parsed.location;
+                redirect = parsed.location.map(|location| redact_location(&location));
                 let body_start = head
                     .windows(4)
                     .position(|window| window == b"\r\n\r\n")
@@ -585,6 +594,28 @@ fn round2(value: f64) -> f64 {
     (value * 100.0).round() / 100.0
 }
 
+/// Keep a redirect location useful without carrying credentials, a query
+/// string or a fragment into the report.
+pub fn redact_location(input: &str) -> String {
+    let without_fragment = input.split('#').next().unwrap_or(input);
+    let without_query = without_fragment
+        .split('?')
+        .next()
+        .unwrap_or(without_fragment);
+    let Some((scheme, rest)) = without_query.split_once("://") else {
+        return without_query.to_string();
+    };
+    let (authority, path) = match rest.find('/') {
+        Some(index) => (&rest[..index], &rest[index..]),
+        None => (rest, ""),
+    };
+    let authority = authority
+        .rsplit_once('@')
+        .map(|(_, value)| value)
+        .unwrap_or(authority);
+    format!("{scheme}://{authority}{path}")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -625,6 +656,15 @@ mod tests {
     fn report_url_drops_credentials_and_query() {
         let url = parse_url("https://example.com:8443/a?token=secret#frag").unwrap();
         assert_eq!(url.redacted(), "https://example.com:8443/a");
+    }
+
+    #[test]
+    fn redirect_location_drops_credentials_and_query() {
+        assert_eq!(
+            redact_location("https://user:pass@example.org/next?token=secret#frag"),
+            "https://example.org/next"
+        );
+        assert_eq!(redact_location("/relative?token=secret"), "/relative");
     }
 
     #[test]

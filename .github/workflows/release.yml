@@ -33,6 +33,39 @@ jobs:
           key: ${{ matrix.target }}
       - name: Build
         run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Verify version consistency
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(cargo metadata --format-version 1 --no-deps | python3 -c "import json,sys; print(json.load(sys.stdin)['packages'][0]['version'])")
+          tag="${GITHUB_REF_NAME#v}"
+          test "$version" = "$tag"
+          grep -F "VERSION=\"\${PATHTRIAL_VERSION:-v${version}}\"" scripts/install.sh
+      - name: MCP smoke test
+        shell: bash
+        env:
+          BINARY: target/${{ matrix.target }}/release/pathtrial
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          binary = os.environ["BINARY"]
+          messages = [
+              {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+               "params": {"protocolVersion": "2025-06-18", "capabilities": {},
+                          "clientInfo": {"name": "release", "version": "1"}}},
+              {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+          ]
+          proc = subprocess.run(
+              [binary, "mcp"],
+              input="\n".join(json.dumps(item) for item in messages) + "\n",
+              text=True, capture_output=True, check=True)
+          responses = [json.loads(line) for line in proc.stdout.splitlines()]
+          assert responses[0]["result"]["serverInfo"]["name"] == "pathtrial"
+          assert len(responses[1]["result"]["tools"]) == 9
+          PY
       - name: Package
         shell: bash
         run: |
