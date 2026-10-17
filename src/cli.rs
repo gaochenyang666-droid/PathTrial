@@ -146,8 +146,136 @@ pub enum Command {
     Trace(TraceArgs),
     /// Resolve a name against the system resolvers and optional extra servers.
     Dns(DnsArgs),
-    /// Print the JSON Schema of the report to stdout.
-    Schema,
+    /// Application-level UDP echo against a target you control.
+    Udp(UdpArgs),
+    /// Diagnose a SOCKS5 or HTTP CONNECT proxy path.
+    Proxy(ProxyArgs),
+    /// Compare two saved JSON reports with explicit comparability checks.
+    Compare(CompareArgs),
+    /// Run a temporary local endpoint for repeatable tests.
+    Endpoint(EndpointArgs),
+    /// Print a JSON Schema to stdout.
+    Schema(SchemaArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct SchemaArgs {
+    /// Print the single-command envelope schema instead of the scan schema.
+    #[arg(long)]
+    pub command: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct UdpArgs {
+    /// Echo target as HOST:PORT (IPv6 needs brackets).
+    #[arg(long)]
+    pub target: String,
+
+    /// Probe mode. Only `echo` is implemented.
+    #[arg(long, default_value = "echo")]
+    pub mode: String,
+
+    /// Number of datagrams to send.
+    #[arg(long, default_value_t = 10)]
+    pub rounds: u32,
+
+    /// Per-datagram timeout in milliseconds.
+    #[arg(long, default_value_t = 1500)]
+    pub timeout_ms: u64,
+
+    /// Delay between datagrams in milliseconds.
+    #[arg(long, default_value_t = 200)]
+    pub interval_ms: u64,
+
+    /// Wall-clock budget for the whole run in seconds.
+    #[arg(long, default_value_t = 30)]
+    pub max_seconds: u64,
+
+    /// Payload size in bytes (17 minimum, 512 maximum).
+    #[arg(long, default_value_t = 64)]
+    pub payload: usize,
+
+    /// Pin the socket to a physical interface.
+    #[arg(long)]
+    pub bind_interface: Option<String>,
+
+    /// Output format on stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Summary)]
+    pub format: OutputFormat,
+}
+
+#[derive(Debug, Args)]
+pub struct ProxyArgs {
+    /// Absolute target URL.
+    pub url: String,
+
+    /// Proxy URL: socks5://host:port or http://host:port.
+    #[arg(long)]
+    pub proxy: String,
+
+    /// Timeout for one stage in milliseconds.
+    #[arg(long, default_value_t = 8000)]
+    pub timeout_ms: u64,
+
+    /// Pin the proxy connection to a physical interface.
+    #[arg(long)]
+    pub bind_interface: Option<String>,
+
+    /// Diagnostic only: accept any certificate.
+    #[arg(long)]
+    pub insecure: bool,
+
+    /// Alternate direct and proxied requests against the same URL.
+    #[arg(long)]
+    pub compare_direct: bool,
+
+    /// Rounds per path when --compare-direct is used (1-50).
+    #[arg(long, default_value_t = 5)]
+    pub rounds: u32,
+
+    /// Delay between comparison requests in milliseconds.
+    #[arg(long, default_value_t = 200)]
+    pub interval_ms: u64,
+
+    /// Wall-clock budget for --compare-direct in seconds.
+    #[arg(long, default_value_t = 60)]
+    pub max_seconds: u64,
+
+    /// Output format on stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Summary)]
+    pub format: OutputFormat,
+}
+
+#[derive(Debug, Args)]
+pub struct CompareArgs {
+    /// Earlier report in JSON format.
+    pub before: PathBuf,
+
+    /// Later report in JSON format.
+    pub after: PathBuf,
+
+    /// Output format on stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Summary)]
+    pub format: OutputFormat,
+
+    /// Write <PREFIX>.json and <PREFIX>.md with the comparison.
+    #[arg(long, value_name = "PREFIX")]
+    pub out: Option<PathBuf>,
+}
+
+#[derive(Debug, Args)]
+pub struct EndpointArgs {
+    /// Serve UDP echo on --bind.
+    #[arg(long)]
+    pub udp_echo: bool,
+
+    /// Address to listen on. Defaults to loopback.
+    #[arg(long, default_value = "127.0.0.1:39001")]
+    pub bind: String,
+
+    /// Allow binding a non-loopback address.
+    #[arg(long)]
+    pub allow_public_bind: bool,
 }
 
 #[derive(Debug, Args)]

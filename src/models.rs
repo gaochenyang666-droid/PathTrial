@@ -7,9 +7,9 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-/// Version of the report schema. 1.1.0 added the optional
-/// `configuration.bind_interface` field and the R014 rule; both are additive.
-pub const SCHEMA_VERSION: &str = "1.2.0";
+/// Version of the report schema. 1.4.0 adds the `proxy` probe kind and the
+/// `path_comparison` detail. Both changes are additive.
+pub const SCHEMA_VERSION: &str = "1.4.0";
 
 /// Uniform status vocabulary for stages and findings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -98,6 +98,7 @@ pub enum ProbeKind {
     Icmp,
     Trace,
     UdpObservation,
+    Proxy,
 }
 
 /// Outcome of a single probe, describing that probe only.
@@ -237,6 +238,49 @@ pub enum ProbeDetail {
         reached: bool,
         protocol: String,
         error: Option<String>,
+    },
+    UdpEcho {
+        seq: u32,
+        session: String,
+        sent_bytes: usize,
+        received_bytes: Option<usize>,
+        result: String,
+        rtt_ms: Option<f64>,
+        note: String,
+    },
+    ProxyExchange {
+        proxy: String,
+        proxy_kind: String,
+        target: String,
+        proxy_tcp_ms: f64,
+        negotiation_ms: f64,
+        connect_ms: f64,
+        tls_ms: f64,
+        http_ms: f64,
+        http_status: Option<u16>,
+        tunnel_ok: bool,
+        tls_verified: Option<bool>,
+        error: Option<String>,
+    },
+    /// Aggregate of alternating direct and proxied requests. The two paths may
+    /// use different DNS, egress and routing, so this record never asserts a
+    /// cause for a difference.
+    PathComparison {
+        rounds_requested: u32,
+        rounds_completed: u32,
+        direct_total: u32,
+        direct_success: u32,
+        proxy_total: u32,
+        proxy_success: u32,
+        direct_median_ms: Option<f64>,
+        proxy_median_ms: Option<f64>,
+        direct_min_ms: Option<f64>,
+        proxy_min_ms: Option<f64>,
+        direct_errors: Vec<String>,
+        proxy_errors: Vec<String>,
+        direct_dns: String,
+        proxy_dns: String,
+        note: String,
     },
     /// Evidence record for UDP observations. V1 does not probe UDP, but the
     /// model keeps the classification explicit so ICMP replies can never be

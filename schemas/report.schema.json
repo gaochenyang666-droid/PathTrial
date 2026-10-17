@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pathtrial.dev/schemas/report-1.2.0.json",
+  "$id": "https://pathtrial.dev/schemas/report-1.4.0.json",
   "title": "PathTrial diagnostic report",
-  "description": "Machine readable output of `pathtrial scan`. Every finding references probe IDs that exist in this document. 1.1.0 added configuration.bind_interface; 1.2.0 adds the http probe detail.",
+  "description": "Machine readable output of PathTrial commands. Every finding references probe IDs that exist in this document. 1.4.0 adds the proxy probe kind and the path_comparison detail; both changes are additive.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -1044,6 +1044,224 @@
               ]
             }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "seq",
+            "session",
+            "sent_bytes",
+            "result",
+            "note"
+          ],
+          "properties": {
+            "type": {
+              "const": "udp_echo"
+            },
+            "seq": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "session": {
+              "type": "string"
+            },
+            "sent_bytes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "received_bytes": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "result": {
+              "type": "string",
+              "enum": [
+                "echo",
+                "timeout",
+                "icmp_unreachable",
+                "invalid_payload",
+                "wrong_sequence",
+                "unexpected_source",
+                "duplicate"
+              ]
+            },
+            "rtt_ms": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "note": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "proxy",
+            "proxy_kind",
+            "target",
+            "proxy_tcp_ms",
+            "negotiation_ms",
+            "connect_ms",
+            "tls_ms",
+            "http_ms",
+            "tunnel_ok"
+          ],
+          "properties": {
+            "type": {
+              "const": "proxy_exchange"
+            },
+            "proxy": {
+              "type": "string"
+            },
+            "proxy_kind": {
+              "type": "string"
+            },
+            "target": {
+              "type": "string"
+            },
+            "proxy_tcp_ms": {
+              "type": "number",
+              "minimum": 0
+            },
+            "negotiation_ms": {
+              "type": "number",
+              "minimum": 0
+            },
+            "connect_ms": {
+              "type": "number",
+              "minimum": 0
+            },
+            "tls_ms": {
+              "type": "number",
+              "minimum": 0
+            },
+            "http_ms": {
+              "type": "number",
+              "minimum": 0
+            },
+            "http_status": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "tunnel_ok": {
+              "type": "boolean"
+            },
+            "tls_verified": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "error": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "rounds_requested",
+            "rounds_completed",
+            "direct_total",
+            "direct_success",
+            "proxy_total",
+            "proxy_success",
+            "direct_errors",
+            "proxy_errors",
+            "direct_dns",
+            "proxy_dns",
+            "note"
+          ],
+          "properties": {
+            "type": {
+              "const": "path_comparison"
+            },
+            "rounds_requested": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "rounds_completed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "direct_total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "direct_success": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "proxy_total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "proxy_success": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "direct_median_ms": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "proxy_median_ms": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "direct_min_ms": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "proxy_min_ms": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "direct_errors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "proxy_errors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "direct_dns": {
+              "type": "string"
+            },
+            "proxy_dns": {
+              "type": "string"
+            },
+            "note": {
+              "type": "string"
+            }
+          }
         }
       ]
     },
@@ -1073,7 +1291,8 @@
             "http",
             "udp_observation",
             "icmp",
-            "trace"
+            "trace",
+            "proxy"
           ]
         },
         "outcome": {

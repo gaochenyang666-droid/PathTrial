@@ -16,15 +16,15 @@ $ pathtrial scan example.com
 
 ## 当前状态
 
-本仓库是 **V1.1.0-rc.1**：五阶段固定检测已经可以实际运行，并通过单元测试、集成测试、
-JSON Schema 校验和黄金数据集回归测试。
+本仓库是 **V1.2.0-rc.1**：五阶段固定检测、真实 HTTP、ICMP、traceroute、DNS 对照、
+UDP Echo、SOCKS5、HTTP CONNECT、直连/代理对照和历史报告比较均已实现。测试覆盖本地
+协议桩、真实 TLS 隧道、UDP 回环服务和黄金数据集。
 
-尚未实现（规划在 V1.1 及之后）：UDP Echo、QUIC 握手、代理业务检测、双端抓包关联。
-这些功能在 V1 中会以 `SKIP` 出现，报告里不会把它们算成通过或失败。
+尚未实现：QUIC/HTTP3 握手、双端抓包关联、Windows 平台。报告不会把未实现模块算作通过。
 
 ## 安装与构建
 
-需要 Rust 稳定版（1.80 以上）。
+需要 Rust 稳定版（1.84 以上，与 `Cargo.toml` 的 `rust-version` 一致）。
 
 ```bash
 cargo build --release
@@ -51,13 +51,20 @@ pathtrial http https://example.com/ --expect-status 200
 pathtrial ping 1.1.1.1 --count 5
 pathtrial trace example.com --max-hops 15
 pathtrial dns example.com --server 223.5.5.5
+pathtrial udp --target 127.0.0.1:39001 --mode echo
+pathtrial endpoint --udp-echo --bind 127.0.0.1:39001
+pathtrial proxy https://example.com --proxy socks5://127.0.0.1:1080
+pathtrial proxy https://example.com --proxy http://127.0.0.1:8080
+pathtrial proxy https://example.com --proxy socks5://127.0.0.1:1080 --compare-direct
+pathtrial compare old.json new.json
+pathtrial compare old.json new.json --format markdown --out ./reports/diff
 pathtrial --version
 pathtrial --help
 ```
 
-单点命令（`http` / `ping` / `trace` / `dns`）各自输出一段摘要，`--format json` 输出结构化的
-`probes`，退出码语义与 `scan` 相同。它们**不会**输出 Markdown 报告文件；需要 Markdown 时
-用 `scan`。
+单点命令（`http` / `ping` / `trace` / `dns` / `udp` / `proxy`）各自输出一段摘要，
+`--format json` 输出结构化的 `probes`，退出码语义与 `scan` 相同。需要 Markdown 时使用
+`--format markdown`；`compare --out PREFIX` 会同时写出 `PREFIX.json` 和 `PREFIX.md`。
 
 常用参数：
 
@@ -106,6 +113,10 @@ pathtrial --help
 | 3 | 扫描完成，但证据不足 |
 | 1 | 工具自身失败（参数错误、I/O 错误） |
 
+`compare` 的退出码只有两种正常结果：`0` 表示两份报告在目标、端口、协议、接口、超时和
+样本量上可直接比较；`3` 表示条件不一致，输出 `NOT DIRECTLY COMPARABLE`。它不会把条件
+差异解释成网络改善或恶化。
+
 这个设计让 CI 可以区分「网络有问题」和「工具没跑起来」。
 
 终端摘要、Markdown 报告和 JSON 使用同一套状态优先级，报告顶部会给出「总体判定」。判定同时
@@ -148,6 +159,10 @@ pathtrial --help
 需要固定路径时用 `--out ./reports/run1`，工具会覆盖同名文件，并在 stderr 明确提示这一点。
 `--format json` 时 stdout 只有 JSON，方便 CI 解析；文件路径会写到 stderr。
 
+`pathtrial schema` 输出扫描报告的 Schema；`pathtrial schema --command` 输出单点命令的
+信封 Schema（[`schemas/command.schema.json`](schemas/command.schema.json)）。`compare`
+输出的是独立的比较文档，带有自己的 `schema_version: "1.0.0"`。
+
 ## 安全边界
 
 - 不修改 DNS、路由、防火墙、系统代理或任何系统配置。
@@ -155,6 +170,7 @@ pathtrial --help
 - 不尝试登录、不猜测口令、不测试弱口令。
 - 默认每个地址族 20 次、单次超时 3 秒、间隔 200 毫秒，并受 `--max-seconds` 总预算约束。
 - 报告默认不含任何凭据。代理环境变量只记录「存在」这一事实，不记录值。
+- URL 中的用户名、密码和查询字符串不会写入报告；代理认证请求只记录 `auth_required`。
 - `--redact-ips` 会把 IP 替换成稳定的占位符，便于公开分享。
 
 ## 单点命令说明
@@ -165,9 +181,14 @@ pathtrial --help
 | `ping HOST` | 调用系统 `ping`，记录丢包、RTT、抖动 | 不用原始套接字；ICMP 被限制时判 FAIL 并注明不代表 TCP |
 | `trace HOST` | 调用系统 `traceroute -n`，解析逐跳地址与 RTT | 缺少工具时判 SKIP；中间节点不回应不等于业务丢包 |
 | `dns HOST` | 系统解析器 + `--server` 指定解析器，比较 A/AAAA | 结果不同不等于 DNS 污染；Fake-IP 会单独提示 |
+| `udp --target H:P` | 真实 UDP Echo，校验会话、序号与载荷，统计 RTT/抖动 | 只证明该端口的 Echo；不能推断 QUIC；无回应不定位原因 |
+| `endpoint --udp-echo` | 临时 Echo 服务端，默认只监听回环 | 需要公开监听必须显式 `--allow-public-bind`；只用于测试 |
+| `proxy URL --proxy P` | SOCKS5（无认证）或 HTTP CONNECT，逐段记录 TCP、协商、CONNECT、TLS、HTTP | 不支持代理认证；隧道成功不等于 HTTPS 可用 |
+| `proxy ... --compare-direct` | 同一 URL、同一超时下交替执行直连和代理请求，分别统计 | 两条路径可能使用不同 DNS、出口和路由，差异不能单独归因于运营商 |
+| `compare A.json B.json` | 比较目标、端口、协议、时间、TCP/TLS/HTTP/ICMP/UDP/代理指标和 Finding | 条件差异大时标记不可直接比较；缺失字段不补造样本 |
 
-未实现的模块（UDP Echo、QUIC、SOCKS5/HTTP CONNECT 代理、双端关联、Windows）在本版本中
-**没有命令入口**，工具不会以任何形式报告它们通过。
+未实现的模块（QUIC、双端关联、Windows）在本版本中**没有命令入口**，工具不会以任何
+形式报告它们通过。
 
 ## 已知限制
 
@@ -181,7 +202,8 @@ pathtrial --help
    `--rounds` 并分时段多次运行。
 5. **探测本身可能影响路径。** 高频探测与路径降级可能同时出现，本工具刻意保持低频。
 6. **平台。** V1 只支持 macOS 与 Linux；Windows 未实现。
-7. **TLS 只验证握手与证书**，不发送 HTTP 请求，因此不能替代真实业务验收。
+7. **`scan` 的 TLS 阶段只验证握手与证书**，不发送 HTTP 请求。需要业务验收时使用
+   `http` 或 `proxy`；它们仍只证明请求与响应头部，不证明登录、上传等完整业务流程。
 
 ## FAQ 与常见误判
 
@@ -232,6 +254,24 @@ pathtrial --help
 `--timeout-ms` 只约束一次 TCP connect；`--max-seconds` 约束整次任务。预算不够时工具会减少
 轮次并在报告中写明，「没有测完」不会被伪装成全部通过。实测：`--timeout-ms 1200` 时，
 失败样本的耗时集中在 1201 到 1206 毫秒，成功样本单独统计。
+
+**UDP Echo 成功，能不能说明 Hysteria2 或 QUIC 可用？**
+
+不能。Echo 只证明该端口存在一个会把相同载荷退回的应用层服务，并完成了这次会话校验。
+QUIC 还有独立的 TLS 1.3 握手、证书验证、ALPN 和传输参数；这些都没有被 Echo 测试覆盖。
+反之，Echo 超时也可能只是目标没有运行 Echo 服务，不能直接判成整条 UDP 路径故障。
+
+**HTTP CONNECT 返回 407，是目标网站要求登录吗？**
+
+不是。407 表示代理要求认证，PathTrial 不会猜测或发送凭据，只会记录 `auth_required`。
+403 表示代理拒绝建立隧道，同样不是目标网站的 HTTP 403。只有隧道建立后收到的状态码才
+属于目标响应。
+
+**为什么两份报告被标成不可直接比较？**
+
+`compare` 会检查目标、端口、profile、地址族、接口、超时、样本量和代理/直连属性。任一项
+明显不同都会输出 `NOT DIRECTLY COMPARABLE`，并列出差异。它仍展示两侧观察值，但拒绝把
+差异写成改善或恶化，因为条件已经改变。
 
 ## 测试
 

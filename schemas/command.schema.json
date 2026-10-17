@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathtrial.dev/schemas/command-1.0.0.json",
+  "title": "PathTrial single-command report",
+  "description": "Envelope emitted by http, ping, trace, dns, udp, proxy and compare-adjacent single commands. Probe detail types are documented by schemas/report.schema.json; this schema validates the envelope and the probe identity fields.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "command",
+    "target",
+    "started_at",
+    "finished_at",
+    "status",
+    "summary",
+    "probes",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "tool_version": {
+      "type": "string"
+    },
+    "command": {
+      "type": "string",
+      "enum": [
+        "http",
+        "ping",
+        "trace",
+        "dns",
+        "udp",
+        "proxy"
+      ]
+    },
+    "target": {
+      "type": "string"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "finished_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "WARN",
+        "FAIL",
+        "SKIP",
+        "INCONCLUSIVE"
+      ]
+    },
+    "summary": {
+      "type": "string"
+    },
+    "probes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "outcome",
+          "started_at",
+          "detail"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "system",
+              "route",
+              "dns",
+              "tcp",
+              "tls",
+              "http",
+              "icmp",
+              "trace",
+              "udp_observation",
+              "proxy"
+            ]
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "fail",
+              "not_applicable"
+            ]
+          },
+          "family": {
+            "type": "string",
+            "enum": [
+              "ipv4",
+              "ipv6"
+            ]
+          },
+          "target": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "duration_ms": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "detail": {
+            "type": "object",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

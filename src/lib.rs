@@ -6,6 +6,8 @@
 pub mod analysis;
 pub mod cli;
 pub mod commands;
+pub mod compare;
+pub mod endpoint;
 pub mod models;
 pub mod net;
 pub mod platform;

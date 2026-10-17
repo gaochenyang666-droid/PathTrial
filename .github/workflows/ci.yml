@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-13, macos-14]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -32,8 +32,20 @@ jobs:
           set -euo pipefail
           ./target/release/pathtrial --version
           ./target/release/pathtrial --help > /dev/null
-          # The test suite validates JSON output against the schema on this
-          # platform; this step only proves the release artifact executes.
+          ./target/release/pathtrial endpoint --udp-echo --bind 127.0.0.1:39001 &
+          endpoint_pid=$!
+          trap 'kill "$endpoint_pid" 2>/dev/null || true' EXIT
+          sleep 2
+          ./target/release/pathtrial udp --target 127.0.0.1:39001 --rounds 3 \
+            --timeout-ms 1000 --format json > udp.json
+          kill "$endpoint_pid" 2>/dev/null || true
+          python3 -c "import json; d=json.load(open('udp.json')); assert d['status']=='PASS', d['status']"
+          python3 - <<'PY'
+          import json
+          import subprocess
+          schema = json.loads(subprocess.check_output(["./target/release/pathtrial", "schema"]))
+          assert schema["$id"].startswith("https://pathtrial.dev/schemas/report-")
+          PY
       - name: Report binary size
         shell: bash
         run: |
