@@ -1,5 +1,7 @@
 # PathTrial
 
+**语言 / Languages / Idiomas:** **简体中文** · [English](README.en.md) · [Español](README.es.md)
+
 **Evidence-First Network Diagnostics CLI｜基于真实证据的网络诊断工具**
 
 > 🧪 **公开测试版（Release Candidate）｜v1.3.0-rc.1**  
@@ -53,7 +55,7 @@ curl -fsSL https://github.com/gaochenyang666-droid/PathTrial/releases/download/v
 
 后一种写法会直接执行网络下载的脚本，建议先审查脚本；**压缩包的校验并不等于脚本本身的来源审计**。
 
-**不想运行安装脚本？** 在上面的表格中下载压缩包，解压后找到名为 \`pathtrial\` 的可执行文件；在终端进入它所在的目录，用 \`./pathtrial --version\` 测试。你也可以自行把它放到 PATH 中的目录。
+**不想运行安装脚本？** 在上面的表格中下载压缩包，解压后找到名为 `pathtrial` 的可执行文件；在终端进入它所在的目录，用 `./pathtrial --version` 测试。你也可以自行把它放到 PATH 中的目录。
 
 ## 第二步：确认安装成功
 
@@ -62,7 +64,7 @@ curl -fsSL https://github.com/gaochenyang666-droid/PathTrial/releases/download/v
 ~/.local/bin/pathtrial --help
 ~~~
 
-正常情况下版本应显示 **1.3.0-rc.1**。如果输入 \`pathtrial\` 提示“command not found”，说明安装目录可能不在 PATH 中。你可以直接使用 **~/.local/bin/pathtrial**，或者在当前终端运行：
+正常情况下版本应显示 **1.3.0-rc.1**。如果输入 `pathtrial` 提示“command not found”，说明安装目录可能不在 PATH 中。你可以直接使用 **~/.local/bin/pathtrial**，或者在当前终端运行：
 
 ~~~bash
 export PATH="$HOME/.local/bin:$PATH"
@@ -79,16 +81,16 @@ pathtrial --version
 pathtrial scan example.com --profile web --rounds 5 --redact-ips
 ~~~
 
-如果尚未配置 PATH，将开头的 \`pathtrial\` 改为 \`~/.local/bin/pathtrial\`。
+如果尚未配置 PATH，将开头的 `pathtrial` 改为 `~/.local/bin/pathtrial`。
 
 这条命令会按固定顺序检查：**系统环境 → DNS → TCP/TLS → IPv4/IPv6 对照 → 报告**。
 
-- \`example.com\`：要检测的域名，换成你自己要排查的网站即可。
-- \`--profile web\`：按 Web/TLS 场景检测。
-- \`--rounds 5\`：先用较少轮次试跑，便于快速熟悉操作。
-- \`--redact-ips\`：输出报告时对 IP 进行替换，便于后续分享。
+- `example.com`：要检测的域名，换成你自己要排查的网站即可。
+- `--profile web`：按 Web/TLS 场景检测。
+- `--rounds 5`：先用较少轮次试跑，便于快速熟悉操作。
+- `--redact-ips`：输出报告时对 IP 进行替换，便于后续分享。
 
-**重要：\`scan\` 的 TLS 通过不等于网站能正常返回页面。** 真正检测网页 HTTP 响应，请继续运行：
+**重要：`scan` 的 TLS 通过不等于网站能正常返回页面。** 真正检测网页 HTTP 响应，请继续运行：
 
 ~~~bash
 pathtrial http https://example.com/
@@ -100,7 +102,7 @@ pathtrial http https://example.com/
 pathtrial scan YOUR_VPS_IP --profile ssh --port 22 --rounds 5 --redact-ips
 ~~~
 
-把 \`YOUR_VPS_IP\` 替换为你自己的服务器 IP，注意命令不要带尖括号。
+把 `YOUR_VPS_IP` 替换为你自己的服务器 IP，注意命令不要带尖括号。
 
 ## 第四步：看懂结果与报告
 
@@ -114,10 +116,10 @@ pathtrial scan YOUR_VPS_IP --profile ssh --port 22 --rounds 5 --redact-ips
 | **SKIP** | 本次不适用或没有条件检测；**不等于通过** |
 | **INCONCLUSIVE** | 检测了，但证据还不足以确定结论 |
 
-\`scan\` 默认会在**运行命令的当前目录**生成两个文件：
+`scan` 默认会在**运行命令的当前目录**生成两个文件：
 
-- \`pathtrial-report-<run_id>.md\`：适合人阅读、发给维护人员。
-- \`pathtrial-report-<run_id>.json\`：保留结构化证据，适合机器处理或提交 Bug。
+- `pathtrial-report-<run_id>.md`：适合人阅读、发给维护人员。
+- `pathtrial-report-<run_id>.json`：保留结构化证据，适合机器处理或提交 Bug。
 
 查看当前目录中的 Markdown 报告：
 
@@ -131,24 +133,24 @@ ls pathtrial-report-*.md
 pathtrial scan example.com --format markdown --no-files
 ~~~
 
-也可以用 \`--format json\` 输出 JSON。文件内包含诊断结果、测量证据，以及**还无法证实的原因**。不要仅凭一次结果判断运营商封锁、线路丢包位置或服务商责任。
+也可以用 `--format json` 输出 JSON。文件内包含诊断结果、测量证据，以及**还无法证实的原因**。不要仅凭一次结果判断运营商封锁、线路丢包位置或服务商责任。
 
-程序退出码：\`0\` 表示没有发现 WARN/FAIL；\`1\` 为工具执行错误；\`2\` 表示有 WARN/FAIL；\`3\` 表示证据不足。**退出码不代表整个互联网是否正常。**
+程序退出码：`0` 表示没有发现 WARN/FAIL；`1` 为工具执行错误；`2` 表示有 WARN/FAIL；`3` 表示证据不足。**退出码不代表整个互联网是否正常。**
 
 ## 第五步：根据问题选择功能
 
-先学会 \`scan\` 和 \`http\` 就足够。遇到特定问题时，再使用这些命令：
+先学会 `scan` 和 `http` 就足够。遇到特定问题时，再使用这些命令：
 
 | 你想检查什么 | 复制这个命令（替换示例地址） |
 | --- | --- |
-| DNS 解析结果 | \`pathtrial dns example.com --server 223.5.5.5\` |
-| Ping 与延迟 | \`pathtrial ping 1.1.1.1 --count 5\` |
-| 路由逐跳情况 | \`pathtrial trace example.com --max-hops 15\` |
-| 服务器 TCP/SSH | \`pathtrial scan YOUR_VPS_IP --port 22 --profile ssh\` |
-| 网站是否返回 HTTP 200 | \`pathtrial http https://example.com/ --expect-status 200\` |
-| QUIC 握手 | \`pathtrial quic example.com --port 443 --alpn h3\` |
-| 真实 HTTP/3 请求 | \`pathtrial http3 https://example.com\` |
-| 两份报告对照 | \`pathtrial compare old.json new.json\` |
+| DNS 解析结果 | `pathtrial dns example.com --server 223.5.5.5` |
+| Ping 与延迟 | `pathtrial ping 1.1.1.1 --count 5` |
+| 路由逐跳情况 | `pathtrial trace example.com --max-hops 15` |
+| 服务器 TCP/SSH | `pathtrial scan YOUR_VPS_IP --port 22 --profile ssh` |
+| 网站是否返回 HTTP 200 | `pathtrial http https://example.com/ --expect-status 200` |
+| QUIC 握手 | `pathtrial quic example.com --port 443 --alpn h3` |
+| 真实 HTTP/3 请求 | `pathtrial http3 https://example.com` |
+| 两份报告对照 | `pathtrial compare old.json new.json` |
 
 **注意：** QUIC/HTTP3 需要目标真实支持相应协议，且你的 UDP 路径可用；握手超时不能直接证明目标没有 HTTP/3。
 
@@ -166,7 +168,7 @@ pathtrial proxy https://example.com/ --proxy socks5://127.0.0.1:1080
 pathtrial proxy https://example.com/ --proxy socks5://127.0.0.1:1080 --compare-direct
 ~~~
 
-如果使用的是 HTTP CONNECT 代理，可将代理地址换成 \`http://127.0.0.1:8080\`。当前版本**不支持代理用户名/密码认证**；代理通过也不能自动证明服务器长期稳定。
+如果使用的是 HTTP CONNECT 代理，可将代理地址换成 `http://127.0.0.1:8080`。当前版本**不支持代理用户名/密码认证**；代理通过也不能自动证明服务器长期稳定。
 
 ### 想测试真实 UDP Echo？需要两个终端
 
@@ -217,7 +219,7 @@ pathtrial correlate client.json server.json
 4. **实际上发生了什么**：报错、退出码、截图或简短日志。
 5. **能否重复出现**：偶尔一次、每次都出现，还是有特殊条件？
 
-提交前**请删除真实公网/内网地址、用户名、域名、代理配置、订阅链接、密钥、Cookie 和抓包敏感内容**。即使使用 \`--redact-ips\`，也要人工检查日志和报告是否仍泄露其他信息。不要把私密配置直接上传到公开 Issue。
+提交前**请删除真实公网/内网地址、用户名、域名、代理配置、订阅链接、密钥、Cookie 和抓包敏感内容**。即使使用 `--redact-ips`，也要人工检查日志和报告是否仍泄露其他信息。不要把私密配置直接上传到公开 Issue。
 
 如果你不确定是不是 Bug，也欢迎发 Issue 讨论。开发者会根据可复现的证据排查，但测试版不承诺每个环境都能立即定位根因。
 
@@ -230,7 +232,7 @@ pathtrial correlate client.json server.json
 - **HTTP/3**：本地可控服务已完成真实握手与请求测试，但公共网络 UDP 443 仍可能因用户所处线路而超时。
 - **本次是预发布**：欢迎体验，不建议在自动化生产监控中把它当作唯一判断依据。
 
-**版本与源码说明：** 下载安装包对应 [\`v1.3.0-rc.1\` 标签](https://github.com/gaochenyang666-droid/PathTrial/tree/v1.3.0-rc.1)。默认 \`main\` 的源码可能暂时滞后于该测试版；QUIC/HTTP3 与双端关联的开发记录见 [Milestone C PR #1](https://github.com/gaochenyang666-droid/PathTrial/pull/1)。如果要编译出与下载版相同的源码版本，请切换到该标签，而不是直接假设 \`main\` 相同。
+**版本与源码说明：** 下载安装包对应 [`v1.3.0-rc.1` 标签](https://github.com/gaochenyang666-droid/PathTrial/tree/v1.3.0-rc.1)。默认 `main` 的源码可能暂时滞后于该测试版；QUIC/HTTP3 与双端关联的开发记录见 [Milestone C PR #1](https://github.com/gaochenyang666-droid/PathTrial/pull/1)。如果要编译出与下载版相同的源码版本，请切换到该标签，而不是直接假设 `main` 相同。
 
 ## 给开发者：从源码构建与测试
 
@@ -252,7 +254,7 @@ cargo fmt --all -- --check
 cargo clippy --locked --all-targets -- -D warnings
 ~~~
 
-如需查看更具体的参数，以各命令的 \`--help\` 为准。提交代码修复时，请尽量附带能够复现问题的测试。
+如需查看更具体的参数，以各命令的 `--help` 为准。提交代码修复时，请尽量附带能够复现问题的测试。
 
 ## 项目由来、许可证与致谢
 
