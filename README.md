@@ -5,6 +5,8 @@
 PathTrial 按固定顺序执行网络检查，记录每一步的真实数据，最后生成一份可以用机器读取、
 也可以直接贴进工单的诊断报告。它不修改任何系统配置，也不在没有证据时给出根因。
 
+> **真实案例 / Case Study：** [一台 RackNerd VPS 的 IPv4/IPv6 排障实录](https://github.com/gaochenyang666-droid/racknerd-ipv6-troubleshooting)记录了 TCP、TLS、UDP/QUIC 与双端抓包的分层证据；[PathTrial 对照复现指南](https://github.com/gaochenyang666-droid/racknerd-ipv6-troubleshooting/blob/main/docs/使用-PathTrial-复现排障.md)展示如何把这些排障步骤转化为可审计报告。案例数据产生于工具开发之前，不能视作 PathTrial 当时的实测输出。
+
 ```
 $ pathtrial scan example.com
 01  系统环境      PASS    33 个网卡，IPv4 本地支持 true，IPv6 本地支持 true
