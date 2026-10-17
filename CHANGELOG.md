@@ -49,6 +49,8 @@ PathTrial AI Plugins v0.2: Codex and Claude Code integration and hardening.
 - Real Codex model sessions verified `pathtrial_capabilities`, unauthorized
   target denial (`target_not_allowed`), an authorized local scan, and
   `pathtrial_explain_report` with evidence ID `tcp_ipv4_001`.
+- Commit `0c39c53` passed Ubuntu 24.04, macOS 15 and macOS 15 Intel CI jobs,
+  including the native MCP initialize and tools/list smoke tests.
 - Claude Code manifest loading and live tool calls remain UNVERIFIED. The
   official installer was attempted in a temporary HOME but the native binary
   download stalled.
