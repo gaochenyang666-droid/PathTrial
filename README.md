@@ -342,14 +342,17 @@ QUIC 只负责加密传输和连接建立。HTTP/3 还需要双方协商 `h3` AL
 ## 测试
 
 ```bash
-cargo test              # 单元测试 + 集成测试
+cargo test --locked --all-targets -- --test-threads=1
+cargo test --test quic     # 本地 QUIC/HTTP3 服务端
+cargo test --test collect  # 双端采集与离线关联
 cargo test --test golden   # 黄金数据集回归
 cargo test --test schema   # JSON Schema 校验
 cargo clippy --all-targets -- -D warnings
 cargo fmt --all -- --check
 ```
 
-黄金数据集在 `tests/fixtures/`，来自 2026 年 10 月一次真实的跨境链路排障记录，包含：
+当前共有 134 项测试。黄金数据集在 `tests/fixtures/`，来自 2026 年 10 月一次真实的
+跨境链路排障记录，包含：
 
 - 案例 A：IPv4 8/10 且平均 2476 ms，IPv6 10/10 且平均 323 ms，聚合数据，不得编造分布。
 - 案例 B：TCP 18/20 成功但 TLS 0/20，必须与 TCP 结论分开。
@@ -357,7 +360,7 @@ cargo fmt --all -- --check
 - 案例 D：ICMP 端口不可达、真实 UDP Echo、无效 QUIC 无响应三者不得混为一谈。
 - 案例 E：单次超时只能给出 `INCONCLUSIVE`。
 
-集成测试使用本地 TCP 监听器，不依赖公网。
+集成测试使用本地 TCP、UDP 和 QUIC 服务端，不依赖公网。
 
 ## 设计说明
 
@@ -373,11 +376,12 @@ cargo fmt --all -- --check
 | 目标平台 | 构建 | 运行验证 |
 | --- | --- | --- |
 | macOS arm64 | 通过 | 本机真实网络扫描通过 |
-| macOS x86_64 | 通过 | 未执行（构建机未安装 Rosetta，无法运行 Intel 二进制） |
-| Linux x86_64 | 仅 CI 配置 | 未执行（本机无可信 Linux 交叉工具链） |
+| macOS x86_64 | 通过 | `macos-15-intel` GitHub Actions 通过 |
+| Linux x86_64 | 通过 | `ubuntu-24.04` GitHub Actions 通过 |
+| Windows x86_64 | 未实现 | 未执行 |
 
-Linux 的构建与测试由 `.github/workflows/ci.yml` 在 `ubuntu-latest` 上以原生工具链执行。
-仅存在工作流配置不等于 Linux 已经验证，转换正式版本前需要实际跑通一次。
+Linux、macOS ARM 与 macOS Intel 的构建与测试由 `.github/workflows/ci.yml` 在原生机型上
+执行。三个 Job 均已完成完整测试、Release 构建和 CLI 冒烟测试。
 
 ## 公开分享前的检查
 
