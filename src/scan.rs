@@ -49,6 +49,15 @@ pub fn run(args: &ScanArgs) -> Result<ScanOutcome, String> {
     let interval = Duration::from_millis(args.interval_ms);
     let literal = as_literal_ip(&args.target);
 
+    // A missing interface is a configuration error, not a network finding.
+    if let Some(interface) = args.bind_interface.as_deref() {
+        if crate::net::interface_index(interface).is_none() {
+            return Err(format!(
+                "interface {interface} does not exist; check --bind-interface"
+            ));
+        }
+    }
+
     let mut recorder = Recorder::new();
     let mut limitations: Vec<String> = Vec::new();
     let interface = args.bind_interface.as_deref();

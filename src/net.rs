@@ -260,6 +260,20 @@ pub fn is_private_path(ip: IpAddr) -> bool {
     }
 }
 
+/// Interface index for a name, or `None` when the interface does not exist.
+/// Checking this before probing turns a bad `--bind-interface` value into a
+/// tool error instead of a scan full of connection failures.
+pub fn interface_index(name: &str) -> Option<u32> {
+    let c_name = std::ffi::CString::new(name).ok()?;
+    // SAFETY: if_nametoindex only reads the NUL-terminated string.
+    let index = unsafe { libc::if_nametoindex(c_name.as_ptr()) };
+    if index == 0 {
+        None
+    } else {
+        Some(index)
+    }
+}
+
 /// Classification of an address, used to decide how much a measurement can say
 /// about the public internet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -386,6 +400,12 @@ mod tests {
         assert!(scope_of("8.8.8.8".parse().unwrap()).is_public());
         assert!(!scope_of("192.168.1.1".parse().unwrap()).is_public());
         assert!(!scope_of("198.18.0.1".parse().unwrap()).is_public());
+    }
+
+    #[test]
+    fn interface_lookup_reports_missing_names() {
+        assert!(interface_index("lo0").is_some() || interface_index("lo").is_some());
+        assert!(interface_index("definitely-not-an-interface").is_none());
     }
 
     #[test]
