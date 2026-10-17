@@ -425,24 +425,43 @@ mod tests {
     #[test]
     fn bound_connect_to_loopback_works() {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
         let port = listener.local_addr().unwrap().port();
         let accept = std::thread::spawn(move || {
-            let _ = listener.accept();
+            let deadline = Instant::now() + Duration::from_secs(2);
+            while Instant::now() < deadline {
+                match listener.accept() {
+                    Ok(_) => return,
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        std::thread::sleep(Duration::from_millis(20));
+                    }
+                    Err(_) => return,
+                }
+            }
         });
-        let result = connect(
-            SocketAddr::new("127.0.0.1".parse().unwrap(), port),
-            Duration::from_secs(2),
-            Some("lo0"),
-        );
+        let target = SocketAddr::new("127.0.0.1".parse().unwrap(), port);
+        let mut errors = Vec::new();
+        let mut connected = false;
+        for interface in ["lo0", "lo"] {
+            match connect(target, Duration::from_secs(2), Some(interface)) {
+                Ok(_) => {
+                    connected = true;
+                    break;
+                }
+                Err(error) => errors.push(error),
+            }
+        }
         let _ = accept.join();
-        // lo0 exists on macOS; on Linux the equivalent is lo. Accept either.
-        if result.is_err() {
-            let retry = connect(
-                SocketAddr::new("127.0.0.1".parse().unwrap(), port),
-                Duration::from_secs(2),
-                Some("lo"),
+        if !connected {
+            assert!(
+                errors.iter().any(|error| {
+                    matches!(
+                        error.kind(),
+                        std::io::ErrorKind::PermissionDenied | std::io::ErrorKind::AddrNotAvailable
+                    )
+                }),
+                "binding failed without an explicit permission or interface error: {errors:?}"
             );
-            assert!(retry.is_ok(), "bound loopback connect failed");
         }
     }
 }
