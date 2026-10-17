@@ -3,7 +3,7 @@
 //! Transport success and certificate verification are recorded separately.
 //! A verification failure is never reported as "TLS handshake failed".
 
-use std::net::{IpAddr, SocketAddr};
+use std::net::{IpAddr, SocketAddr, TcpStream};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -183,6 +183,74 @@ fn format_timestamp(seconds: i64) -> String {
 /// Perform one TLS attempt and record it. `insecure` must only be true for the
 /// explicit diagnostic retry.
 #[allow(clippy::too_many_arguments)]
+/// A completed TLS session plus the facts rustls can report about it.
+pub(crate) struct TlsSession {
+    pub stream: rustls::StreamOwned<ClientConnection, TcpStream>,
+    pub protocol: Option<String>,
+    pub cipher: Option<String>,
+    pub cert: Option<CertInfo>,
+}
+
+/// Failure modes kept separate so callers never confuse transport problems
+/// with trust problems.
+pub(crate) enum TlsFailure {
+    // The certificate variant carries parsed metadata, which makes it the large
+    // variant; boxing keeps the Result small on the hot path.
+    Certificate {
+        message: String,
+        cert: Option<Box<CertInfo>>,
+    },
+    Transport(String),
+}
+
+/// Drive a TLS handshake over an established stream.
+pub(crate) fn handshake(
+    mut stream: TcpStream,
+    sni: &str,
+    insecure: bool,
+) -> Result<TlsSession, TlsFailure> {
+    let (config, _note) = build_config(insecure);
+    let name = server_name(sni).map_err(TlsFailure::Transport)?;
+    let mut connection = ClientConnection::new(config, name)
+        .map_err(|error| TlsFailure::Transport(format!("client setup: {error}")))?;
+    while connection.is_handshaking() {
+        if let Err(io_error) = connection.complete_io(&mut stream) {
+            let inner = io_error
+                .get_ref()
+                .and_then(|source| source.downcast_ref::<rustls::Error>());
+            return match inner {
+                Some(rustls::Error::InvalidCertificate(cert_error)) => {
+                    let (_, message) =
+                        classify(&rustls::Error::InvalidCertificate(cert_error.clone()));
+                    Err(TlsFailure::Certificate {
+                        message,
+                        cert: connection
+                            .peer_certificates()
+                            .and_then(cert_info)
+                            .map(Box::new),
+                    })
+                }
+                Some(other) => Err(TlsFailure::Transport(other.to_string())),
+                None => Err(TlsFailure::Transport(io_error.to_string())),
+            };
+        }
+    }
+    let protocol = connection
+        .protocol_version()
+        .map(|value| format!("{value:?}"));
+    let cipher = connection
+        .negotiated_cipher_suite()
+        .map(|suite| format!("{:?}", suite.suite()));
+    let cert = connection.peer_certificates().and_then(cert_info);
+    Ok(TlsSession {
+        stream: rustls::StreamOwned::new(connection, stream),
+        protocol,
+        cipher,
+        cert,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
 pub fn probe(
     recorder: &mut Recorder,
     family: Family,
@@ -201,118 +269,62 @@ pub fn probe(
     let started_at = crate::util::now_rfc3339();
     let started = Instant::now();
 
-    let (config, note) = build_config(insecure);
-    let name = server_name(sni);
     let mut transport_ok = false;
     let mut verification = Verification::NotChecked;
     let mut protocol = None;
     let mut cipher = None;
     let mut cert = None;
     let mut error = None;
-
     let mut notes: Vec<String> = Vec::new();
-    if let Some(note) = note {
-        notes.push(note);
-    }
 
-    let mut connect_error = None;
-    match crate::net::connect(SocketAddr::new(ip, port), timeout, interface) {
+    let connect = crate::net::connect(SocketAddr::new(ip, port), timeout, interface);
+    let tcp_ms = started.elapsed().as_secs_f64() * 1000.0;
+    let handshake_ms = match connect {
         Ok(stream) => {
             let _ = stream.set_read_timeout(Some(timeout));
             let _ = stream.set_write_timeout(Some(timeout));
-            match name {
-                Ok(server_name) => match ClientConnection::new(config, server_name) {
-                    Ok(mut connection) => {
-                        let mut stream = stream;
-                        let mut failure = None;
-                        while connection.is_handshaking() {
-                            match connection.complete_io(&mut stream) {
-                                Ok(_) => {}
-                                Err(err) => {
-                                    failure = Some(err);
-                                    break;
-                                }
-                            }
-                        }
-                        match failure {
-                            None => {
-                                transport_ok = true;
-                                verification = if insecure {
-                                    Verification::NotChecked
-                                } else {
-                                    Verification::Verified
-                                };
-                                protocol = connection
-                                    .protocol_version()
-                                    .map(|value| format!("{value:?}"));
-                                cipher = connection
-                                    .negotiated_cipher_suite()
-                                    .map(|suite| format!("{:?}", suite.suite()));
-                                if let Some(chain) = connection.peer_certificates() {
-                                    cert = cert_info(chain);
-                                }
-                            }
-                            Some(io_error) => {
-                                // rustls reports its own errors wrapped inside
-                                // io::Error, so unwrap before classifying.
-                                let inner = io_error
-                                    .get_ref()
-                                    .and_then(|source| source.downcast_ref::<rustls::Error>());
-                                match inner {
-                                    Some(rustls::Error::InvalidCertificate(cert_error)) => {
-                                        let (classified, message) = classify(
-                                            &rustls::Error::InvalidCertificate(cert_error.clone()),
-                                        );
-                                        verification = Verification::Failed(message.clone());
-                                        error = Some(classified);
-                                        notes.push(format!("certificate verification: {message}"));
-                                        if let Some(chain) = connection.peer_certificates() {
-                                            cert = cert_info(chain);
-                                        }
-                                    }
-                                    Some(other) => {
-                                        let (classified, message) = classify(other);
-                                        error = Some(classified);
-                                        notes.push(format!("tls: {message}"));
-                                    }
-                                    None => {
-                                        let classified = crate::util::classify_io_error(&io_error);
-                                        error = Some(classified.clone());
-                                        notes.push(format!(
-                                            "io: {} ({})",
-                                            io_error,
-                                            classified.label()
-                                        ));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Err(err) => {
-                        error = Some(NetError::TlsTransport);
-                        notes.push(format!("client setup: {err}"));
-                    }
-                },
-                Err(message) => {
+            let handshake_started = Instant::now();
+            let outcome = handshake(stream, sni, insecure);
+            let elapsed = handshake_started.elapsed().as_secs_f64() * 1000.0;
+            match outcome {
+                Ok(session) => {
+                    transport_ok = true;
+                    verification = if insecure {
+                        Verification::NotChecked
+                    } else {
+                        Verification::Verified
+                    };
+                    protocol = session.protocol.clone();
+                    cipher = session.cipher.clone();
+                    cert = session.cert.clone();
+                }
+                Err(TlsFailure::Certificate {
+                    message,
+                    cert: parsed,
+                }) => {
+                    verification = Verification::Failed(message.clone());
+                    error = Some(NetError::Certificate);
+                    cert = parsed.map(|value| *value);
+                    notes.push(format!("certificate verification: {message}"));
+                }
+                Err(TlsFailure::Transport(message)) => {
                     error = Some(NetError::TlsTransport);
-                    notes.push(message);
+                    notes.push(format!("tls: {message}"));
                 }
             }
+            Some(elapsed)
         }
         Err(err) => {
             let classified = crate::util::classify_io_error(&err);
             notes.push(format!("tcp connect: {err}"));
-            connect_error = Some(classified);
+            error = Some(classified);
+            None
         }
-    }
+    };
 
-    if let Some(classified) = connect_error {
-        error = Some(classified);
-    }
-
-    let elapsed = started.elapsed().as_secs_f64() * 1000.0;
+    let total_ms = started.elapsed().as_secs_f64() * 1000.0;
     let detail = ProbeDetail::TlsHandshake {
-        handshake_ms: Some(round2(elapsed)),
+        handshake_ms: handshake_ms.map(round2),
         transport_ok,
         verification: verification.clone(),
         protocol: protocol.clone(),
@@ -322,6 +334,8 @@ pub fn probe(
         error: error.clone(),
         insecure_retry: insecure,
     };
+
+    let _ = tcp_ms;
 
     recorder.record(Probe {
         id: id.clone(),
@@ -335,7 +349,7 @@ pub fn probe(
         target: Some(ip.to_string()),
         port: Some(port),
         started_at,
-        duration_ms: Some(round2(elapsed)),
+        duration_ms: Some(round2(total_ms)),
         detail,
     });
 

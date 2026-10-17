@@ -138,8 +138,96 @@ pub struct ScanArgs {
 pub enum Command {
     /// Run the fixed five-stage diagnostic scan.
     Scan(ScanArgs),
+    /// Send one real HTTP/HTTPS request and report the timings per phase.
+    Http(HttpArgs),
+    /// ICMP echo with loss, RTT and jitter.
+    Ping(PingArgs),
+    /// Hop-by-hop route to the target.
+    Trace(TraceArgs),
+    /// Resolve a name against the system resolvers and optional extra servers.
+    Dns(DnsArgs),
     /// Print the JSON Schema of the report to stdout.
     Schema,
+}
+
+#[derive(Debug, Args)]
+pub struct PingArgs {
+    /// Hostname or literal IP address.
+    pub host: String,
+
+    /// Number of echo requests.
+    #[arg(long, default_value_t = 5)]
+    pub count: u32,
+
+    /// Wall-clock budget for the whole run in milliseconds.
+    #[arg(long, default_value_t = 15000)]
+    pub timeout_ms: u64,
+
+    /// Output format on stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Summary)]
+    pub format: OutputFormat,
+}
+
+#[derive(Debug, Args)]
+pub struct TraceArgs {
+    /// Hostname or literal IP address.
+    pub host: String,
+
+    /// Maximum number of hops.
+    #[arg(long, default_value_t = 15)]
+    pub max_hops: u32,
+
+    /// Wall-clock budget for the whole run in milliseconds.
+    #[arg(long, default_value_t = 30000)]
+    pub timeout_ms: u64,
+
+    /// Output format on stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Summary)]
+    pub format: OutputFormat,
+}
+
+#[derive(Debug, Args)]
+pub struct DnsArgs {
+    /// Hostname to resolve.
+    pub host: String,
+
+    /// Extra resolver to compare against, for example --server 223.5.5.5.
+    #[arg(long = "server")]
+    pub servers: Vec<String>,
+
+    /// Per-query timeout in milliseconds.
+    #[arg(long, default_value_t = 3000)]
+    pub timeout_ms: u64,
+
+    /// Output format on stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Summary)]
+    pub format: OutputFormat,
+}
+
+#[derive(Debug, Args)]
+pub struct HttpArgs {
+    /// Absolute URL, for example https://example.com/path
+    pub url: String,
+
+    /// Expected HTTP status code. A mismatch fails the check.
+    #[arg(long)]
+    pub expect_status: Option<u16>,
+
+    /// Total budget for the request in milliseconds.
+    #[arg(long, default_value_t = 8000)]
+    pub timeout_ms: u64,
+
+    /// Pin the connection to a physical interface.
+    #[arg(long)]
+    pub bind_interface: Option<String>,
+
+    /// Diagnostic only: accept any certificate.
+    #[arg(long)]
+    pub insecure: bool,
+
+    /// Output format on stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Summary)]
+    pub format: OutputFormat,
 }
 
 #[derive(Debug, Parser)]

@@ -68,7 +68,10 @@ pub fn system_resolvers() -> (Vec<String>, Vec<String>) {
         }
     }
 
-    resolvers.dedup();
+    // scutil prints one nameserver line per DNS scope, so the same server can
+    // appear many times. Deduplicate globally, keeping the first occurrence.
+    let mut seen = std::collections::BTreeSet::new();
+    resolvers.retain(|value| seen.insert(value.clone()));
     if resolvers.is_empty() {
         notes.push("no system resolver was discovered".to_string());
     }
@@ -85,12 +88,48 @@ pub fn system_resolvers() -> (Vec<String>, Vec<String>) {
     (resolvers, notes)
 }
 
-/// Resolve A and AAAA for `host`, recording one probe per resolver and family.
+/// Resolve A and AAAA for `host` against the system resolvers.
 pub fn resolve(host: &str, recorder: &mut Recorder, timeout: Duration) -> DnsOutcome {
-    let mut outcome = DnsOutcome::default();
     let (resolvers, notes) = system_resolvers();
+    resolve_with(host, &resolvers, notes, recorder, timeout)
+}
+
+/// Resolve against the system resolvers plus explicitly requested servers.
+/// Explicit servers are appended, deduplicated and capped.
+pub fn resolve_with_servers(
+    host: &str,
+    servers: &[String],
+    recorder: &mut Recorder,
+    timeout: Duration,
+) -> DnsOutcome {
+    let (mut resolvers, mut notes) = system_resolvers();
+    for server in servers {
+        if !resolvers.iter().any(|existing| existing == server) {
+            resolvers.push(server.clone());
+        }
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    resolvers.retain(|value| seen.insert(value.clone()));
+    while resolvers.len() > MAX_RESOLVERS {
+        resolvers.pop();
+    }
+    if servers.is_empty() {
+        notes.push("only the system resolvers were used".to_string());
+    }
+    resolve_with(host, &resolvers, notes, recorder, timeout)
+}
+
+/// Shared implementation used by both entry points.
+pub fn resolve_with(
+    host: &str,
+    resolvers: &[String],
+    notes: Vec<String>,
+    recorder: &mut Recorder,
+    timeout: Duration,
+) -> DnsOutcome {
+    let mut outcome = DnsOutcome::default();
     outcome.notes.extend(notes);
-    outcome.resolvers = resolvers.clone();
+    outcome.resolvers = resolvers.to_vec();
 
     if resolvers.is_empty() {
         outcome
@@ -101,6 +140,7 @@ pub fn resolve(host: &str, recorder: &mut Recorder, timeout: Duration) -> DnsOut
 
     let mut got_v4 = false;
     let mut got_v6 = false;
+    let deadline = Instant::now() + timeout.saturating_mul(2);
 
     for (index, resolver) in resolvers.iter().enumerate() {
         let Ok(server) = parse_resolver(resolver) else {
@@ -111,6 +151,12 @@ pub fn resolve(host: &str, recorder: &mut Recorder, timeout: Duration) -> DnsOut
         };
 
         for (record_type, qtype) in [("A", TYPE_A), ("AAAA", TYPE_AAAA)] {
+            if Instant::now() >= deadline {
+                outcome
+                    .notes
+                    .push("DNS budget exhausted before all queries completed".to_string());
+                break;
+            }
             let family = if qtype == TYPE_A {
                 Family::Ipv4
             } else {

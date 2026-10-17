@@ -75,7 +75,7 @@ fn scan_against_loopback_listener_emits_valid_json() {
         String::from_utf8_lossy(&output.stderr)
     );
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("stdout is JSON");
-    assert_eq!(value["schema_version"], "1.1.0");
+    assert_eq!(value["schema_version"], "1.2.0");
     assert_eq!(value["stages"].as_array().unwrap().len(), 5);
     assert_eq!(value["summaries"][0]["tcp_success"], 2);
     assert_eq!(value["configuration"]["tls_enabled"], false);
@@ -314,6 +314,136 @@ fn unknown_bind_interface_is_a_tool_error() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("does not exist"), "stderr: {stderr}");
     assert!(output.stdout.is_empty(), "no report may be produced");
+}
+
+/// Minimal HTTP/1.1 responder for deterministic tests.
+fn http_stub(status_line: &'static str, body: &'static str) -> u16 {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+    let port = listener.local_addr().expect("addr").port();
+    std::thread::spawn(move || {
+        use std::io::{Read, Write};
+        for stream in listener.incoming().take(4) {
+            let Ok(mut stream) = stream else { continue };
+            let mut buffer = [0u8; 1024];
+            let _ = stream.read(&mut buffer);
+            let response = format!(
+                "{status_line}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            );
+            let _ = stream.write_all(response.as_bytes());
+        }
+    });
+    port
+}
+
+#[test]
+fn http_command_reports_status_and_timings() {
+    let port = http_stub("HTTP/1.1 200 OK", "ok");
+    let output = Command::new(binary())
+        .args([
+            "http",
+            &format!("http://127.0.0.1:{port}/"),
+            "--expect-status",
+            "200",
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("run");
+    assert!(output.status.success(), "expected PASS");
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    assert_eq!(value["command"], "http");
+    let detail = &value["probes"][0]["detail"];
+    assert_eq!(detail["status"], 200);
+    assert_eq!(detail["matches_expectation"], true);
+    assert!(detail["total_ms"].as_f64().unwrap() > 0.0);
+}
+
+#[test]
+fn http_expectation_mismatch_fails() {
+    let port = http_stub("HTTP/1.1 200 OK", "ok");
+    let output = Command::new(binary())
+        .args([
+            "http",
+            &format!("http://127.0.0.1:{port}/"),
+            "--expect-status",
+            "404",
+        ])
+        .output()
+        .expect("run");
+    assert_eq!(output.status.code(), Some(2));
+    let text = String::from_utf8_lossy(&output.stdout);
+    assert!(text.contains("verdict: FAIL"), "output: {text}");
+}
+
+#[test]
+fn http_4xx_without_expectation_is_warn_not_unreachable() {
+    let port = http_stub("HTTP/1.1 403 Forbidden", "no");
+    let output = Command::new(binary())
+        .args(["http", &format!("http://127.0.0.1:{port}/")])
+        .output()
+        .expect("run");
+    assert_eq!(output.status.code(), Some(2));
+    let text = String::from_utf8_lossy(&output.stdout);
+    assert!(text.contains("status: 403"), "output: {text}");
+    assert!(text.contains("verdict: WARN"), "output: {text}");
+}
+
+#[test]
+fn http_connection_refused_is_reported() {
+    let port = free_port();
+    let output = Command::new(binary())
+        .args([
+            "http",
+            &format!("http://127.0.0.1:{port}/"),
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("run");
+    assert_eq!(output.status.code(), Some(2));
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    assert_eq!(value["probes"][0]["detail"]["error"], "connection_refused");
+}
+
+#[test]
+fn ping_and_trace_commands_emit_json() {
+    for args in [
+        vec!["ping", "127.0.0.1", "--count", "2", "--timeout-ms", "8000"],
+        vec![
+            "trace",
+            "127.0.0.1",
+            "--max-hops",
+            "3",
+            "--timeout-ms",
+            "15000",
+        ],
+    ] {
+        let mut args = args;
+        args.extend(["--format", "json"]);
+        let output = Command::new(binary()).args(&args).output().expect("run");
+        let value: serde_json::Value =
+            serde_json::from_slice(&output.stdout).unwrap_or_else(|_| {
+                panic!(
+                    "{} did not emit JSON: {}",
+                    args[0],
+                    String::from_utf8_lossy(&output.stderr)
+                )
+            });
+        assert_eq!(value["command"], args[0]);
+        assert!(!value["probes"].as_array().unwrap().is_empty());
+    }
+}
+
+#[test]
+fn dns_command_reports_resolvers() {
+    let output = Command::new(binary())
+        .args(["dns", "localhost", "--format", "json"])
+        .output()
+        .expect("run");
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    assert_eq!(value["command"], "dns");
+    assert!(!value["probes"].as_array().unwrap().is_empty());
 }
 
 fn unique_dir(tag: &str) -> std::path::PathBuf {

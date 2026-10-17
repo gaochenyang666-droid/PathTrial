@@ -5,10 +5,12 @@
 
 pub mod analysis;
 pub mod cli;
+pub mod commands;
 pub mod models;
 pub mod net;
 pub mod platform;
 pub mod probes;
 pub mod report;
 pub mod scan;
+pub mod single;
 pub mod util;

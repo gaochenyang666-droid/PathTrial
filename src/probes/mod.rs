@@ -2,9 +2,12 @@
 //! stable identifier.
 
 pub mod dns;
+pub mod http;
+pub mod icmp;
 pub mod system;
 pub mod tcp;
 pub mod tls;
+pub mod trace;
 
 use std::collections::BTreeMap;
 
