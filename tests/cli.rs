@@ -722,7 +722,7 @@ fn socks5_tunnel_reaches_http_status() {
     let output = Command::new(binary())
         .args([
             "proxy",
-            "http://127.0.0.1:9/",
+            "http://127.0.0.1:9/?token=secret",
             "--proxy",
             &format!("socks5://127.0.0.1:{proxy}"),
             "--timeout-ms",
@@ -737,6 +737,13 @@ fn socks5_tunnel_reaches_http_status() {
     let detail = &value["probes"][0]["detail"];
     assert_eq!(detail["tunnel_ok"], true);
     assert_eq!(detail["http_status"], 200);
+    assert_eq!(detail["target"], "http://127.0.0.1:9/");
+    assert_eq!(value["target"], "http://127.0.0.1:9/");
+    assert!(!output_text(&value).contains("token=secret"));
+}
+
+fn output_text(value: &serde_json::Value) -> String {
+    serde_json::to_string(value).unwrap_or_default()
 }
 
 #[test]
