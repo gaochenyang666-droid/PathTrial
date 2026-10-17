@@ -122,8 +122,8 @@ Replace **YOUR_VPS_IP** with your real server address. Do not include angle brac
 
 By default, **scan** writes two files in your **current working directory**:
 
-- **pathtrial-report-<run_id>.md** — a readable Markdown report for people and support tickets.
-- **pathtrial-report-<run_id>.json** — structured evidence for analysis or bug reports.
+- `pathtrial-report-<run_id>.md` — a readable Markdown report for people and support tickets.
+- `pathtrial-report-<run_id>.json` — structured evidence for analysis or bug reports.
 
 To find the Markdown file:
 
