@@ -51,6 +51,6 @@
 - Codex 未授权调用返回：`target_not_allowed`。
 - Codex 授权本地扫描和解释返回：`tcp_ipv4_001`，TCP 1/1 PASS。
 - MCP 测试：21 项，覆盖 9 个工具、超时、输出上限、消息上限、客户端断开、授权摘要脱敏、重定向和查询参数脱敏、证据引用和权限拒绝。
-- 核心测试：173 项通过；三平台 CI 待本次提交后的实际运行结果。
+- 核心测试：173 项通过；提交 `0c39c53` 的 Ubuntu 24.04、macOS 15 和 macOS 15 Intel CI 全部通过。
 
 状态定义与核心矩阵一致：VERIFIED、PARTIAL、UNVERIFIED、NOT IMPLEMENTED。
