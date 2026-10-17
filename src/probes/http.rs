@@ -32,6 +32,25 @@ impl Url {
             format!("{}:{}", self.host, self.port)
         }
     }
+
+    /// URL form safe for reports and terminal output: no userinfo and no query
+    /// string, which may carry tokens or other credentials.
+    pub fn redacted(&self) -> String {
+        let default = if self.is_tls() { 443 } else { 80 };
+        let authority = if self.port == default {
+            if self.host.contains(':') {
+                format!("[{}]", self.host)
+            } else {
+                self.host.clone()
+            }
+        } else if self.host.contains(':') {
+            format!("[{}]:{}", self.host, self.port)
+        } else {
+            format!("{}:{}", self.host, self.port)
+        };
+        let path = self.path.split('?').next().unwrap_or("/");
+        format!("{}://{}{}", self.scheme, authority, path)
+    }
 }
 
 /// Parse `http(s)://host[:port][/path][?query]`. IPv6 literals use brackets.
@@ -47,7 +66,9 @@ pub fn parse_url(input: &str) -> Result<Url, String> {
         Some(index) => (&rest[..index], rest[index..].to_string()),
         None => (rest, "/".to_string()),
     };
-    let authority = authority.rsplit('@').next().unwrap_or(authority);
+    if authority.contains('@') {
+        return Err("credentials in URLs are not supported and are refused".to_string());
+    }
     let (host, port) = if let Some(stripped) = authority.strip_prefix('[') {
         let (host, tail) = stripped
             .split_once(']')
@@ -476,13 +497,15 @@ fn finish(
         timings.total_ms = round2(started.elapsed().as_secs_f64() * 1000.0);
     }
     let detail = ProbeDetail::Http {
-        url: request.url.to_string(),
+        url: url.redacted(),
         method: request.method.to_string(),
         status,
         expected_status: request.expected_status,
         matches_expectation: matches,
         http_version: version.clone(),
-        location: redirect.clone(),
+        location: redirect
+            .as_deref()
+            .map(|value| value.split(['?', '#']).next().unwrap_or(value).to_string()),
         body_bytes,
         dns_ms: timings.dns_ms,
         connect_ms: timings.connect_ms,
@@ -595,6 +618,13 @@ mod tests {
         assert!(parse_url("ftp://example.com").is_err());
         assert!(parse_url("https://:443").is_err());
         assert!(parse_url("https://[2001:db8::1").is_err());
+        assert!(parse_url("https://user:pass@example.com/").is_err());
+    }
+
+    #[test]
+    fn report_url_drops_credentials_and_query() {
+        let url = parse_url("https://example.com:8443/a?token=secret#frag").unwrap();
+        assert_eq!(url.redacted(), "https://example.com:8443/a");
     }
 
     #[test]

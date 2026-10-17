@@ -25,6 +25,17 @@ fn version_and_help_are_available() {
     let help_text = String::from_utf8_lossy(&help.stdout);
     assert!(help_text.contains("scan"));
     assert!(help_text.contains("Exit codes"));
+
+    let schema = Command::new(binary())
+        .args(["schema", "--command"])
+        .output()
+        .expect("run schema");
+    assert!(schema.status.success());
+    let schema: serde_json::Value = serde_json::from_slice(&schema.stdout).expect("schema json");
+    assert_eq!(
+        schema["$id"],
+        "https://pathtrial.dev/schemas/command-1.0.0.json"
+    );
 }
 
 #[test]
@@ -75,7 +86,7 @@ fn scan_against_loopback_listener_emits_valid_json() {
         String::from_utf8_lossy(&output.stderr)
     );
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("stdout is JSON");
-    assert_eq!(value["schema_version"], "1.2.0");
+    assert_eq!(value["schema_version"], "1.4.0");
     assert_eq!(value["stages"].as_array().unwrap().len(), 5);
     assert_eq!(value["summaries"][0]["tcp_success"], 2);
     assert_eq!(value["configuration"]["tls_enabled"], false);
@@ -446,6 +457,562 @@ fn dns_command_reports_resolvers() {
     assert!(!value["probes"].as_array().unwrap().is_empty());
 }
 
+fn spawn_udp_endpoint(port: u16) -> std::process::Child {
+    spawn_udp_endpoint_on(&format!("127.0.0.1:{port}"))
+}
+
+fn spawn_udp_endpoint_on(bind: &str) -> std::process::Child {
+    Command::new(binary())
+        .args(["endpoint", "--udp-echo", "--bind", bind])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .expect("spawn endpoint")
+}
+
+#[test]
+fn udp_echo_round_trip_passes() {
+    let port = free_port();
+    let mut endpoint = spawn_udp_endpoint(port);
+    std::thread::sleep(std::time::Duration::from_millis(800));
+    let output = Command::new(binary())
+        .args([
+            "udp",
+            "--target",
+            &format!("127.0.0.1:{port}"),
+            "--rounds",
+            "5",
+            "--timeout-ms",
+            "800",
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("run udp");
+    let _ = endpoint.kill();
+    let _ = endpoint.wait();
+    assert!(output.status.success(), "echo should pass");
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    let probes = value["probes"].as_array().unwrap();
+    assert!(probes.len() >= 5);
+    assert!(probes
+        .iter()
+        .all(|probe| probe["detail"]["result"] == "echo"));
+}
+
+#[test]
+fn udp_without_server_reports_icmp_unreachable() {
+    let port = free_port();
+    let output = Command::new(binary())
+        .args([
+            "udp",
+            "--target",
+            &format!("127.0.0.1:{port}"),
+            "--rounds",
+            "3",
+            "--timeout-ms",
+            "600",
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("run udp");
+    assert_eq!(output.status.code(), Some(2));
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    assert!(value["probes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|probe| probe["detail"]["result"] == "icmp_unreachable"
+            || probe["detail"]["result"] == "timeout"));
+}
+
+#[test]
+fn udp_echo_over_ipv6_when_loopback_is_available() {
+    let port = free_port();
+    let mut endpoint = spawn_udp_endpoint_on(&format!("[::1]:{port}"));
+    std::thread::sleep(std::time::Duration::from_millis(800));
+    if endpoint.try_wait().ok().flatten().is_some() {
+        eprintln!("IPv6 loopback is unavailable on this host; test not exercised");
+        return;
+    }
+    let output = Command::new(binary())
+        .args([
+            "udp",
+            "--target",
+            &format!("[::1]:{port}"),
+            "--rounds",
+            "3",
+            "--timeout-ms",
+            "800",
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("run udp");
+    let _ = endpoint.kill();
+    let _ = endpoint.wait();
+    assert!(
+        output.status.success(),
+        "IPv6 echo should pass: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    assert!(value["probes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|probe| probe["detail"]["result"] == "echo"));
+}
+
+#[test]
+fn endpoint_refuses_public_bind_without_flag() {
+    let output = Command::new(binary())
+        .args(["endpoint", "--udp-echo", "--bind", "0.0.0.0:19999"])
+        .output()
+        .expect("run endpoint");
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("not a loopback"), "stderr: {stderr}");
+}
+
+/// Minimal SOCKS5 server that accepts no-auth CONNECT and then answers the
+/// tunnelled HTTP request. `expected_atyp` makes address-type regressions fail
+/// loudly instead of being masked by a lenient parser.
+fn socks5_stub(require_auth: bool, expected_atyp: Option<u8>) -> u16 {
+    use std::io::{Read, Write};
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+    let port = listener.local_addr().expect("addr").port();
+    std::thread::spawn(move || {
+        for stream in listener.incoming().take(4) {
+            let Ok(mut stream) = stream else { continue };
+            let mut greeting = [0u8; 3];
+            if stream.read_exact(&mut greeting).is_err() {
+                continue;
+            }
+            if require_auth {
+                let _ = stream.write_all(&[0x05, 0xFF]);
+                continue;
+            }
+            let _ = stream.write_all(&[0x05, 0x00]);
+            let mut head = [0u8; 4];
+            if stream.read_exact(&mut head).is_err() {
+                continue;
+            }
+            if let Some(expected) = expected_atyp {
+                if head[3] != expected {
+                    let _ = stream.write_all(&[0x05, 0x08, 0x00, 0x01, 0, 0, 0, 0, 0, 0]);
+                    continue;
+                }
+            }
+            let address_len = match head[3] {
+                0x01 => 4,
+                0x04 => 16,
+                0x03 => {
+                    let mut length = [0u8; 1];
+                    if stream.read_exact(&mut length).is_err() {
+                        continue;
+                    }
+                    length[0] as usize
+                }
+                _ => continue,
+            };
+            if address_len > 0 {
+                let mut host = vec![0u8; address_len + 2];
+                if stream.read_exact(&mut host).is_err() {
+                    continue;
+                }
+            } else {
+                let mut length = [0u8; 1];
+                let _ = stream.read_exact(&mut length);
+                let mut host = vec![0u8; length[0] as usize + 2];
+                if stream.read_exact(&mut host).is_err() {
+                    continue;
+                }
+            }
+            let _ = stream.write_all(&[0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0]);
+            let mut request = [0u8; 1024];
+            let _ = stream.read(&mut request);
+            let _ = stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok");
+        }
+    });
+    port
+}
+
+#[test]
+fn socks5_tunnel_reaches_http_status() {
+    let proxy = socks5_stub(false, Some(0x01));
+    let output = Command::new(binary())
+        .args([
+            "proxy",
+            "http://127.0.0.1:9/",
+            "--proxy",
+            &format!("socks5://127.0.0.1:{proxy}"),
+            "--timeout-ms",
+            "3000",
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("run proxy");
+    assert!(output.status.success(), "tunnel should succeed");
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    let detail = &value["probes"][0]["detail"];
+    assert_eq!(detail["tunnel_ok"], true);
+    assert_eq!(detail["http_status"], 200);
+}
+
+#[test]
+fn socks5_auth_required_is_reported_not_guessed() {
+    let proxy = socks5_stub(true, None);
+    let output = Command::new(binary())
+        .args([
+            "proxy",
+            "http://127.0.0.1:9/",
+            "--proxy",
+            &format!("socks5://127.0.0.1:{proxy}"),
+            "--timeout-ms",
+            "3000",
+        ])
+        .output()
+        .expect("run proxy");
+    assert_eq!(output.status.code(), Some(2));
+    let text = String::from_utf8_lossy(&output.stdout);
+    assert!(text.contains("auth_required"), "output: {text}");
+}
+
+#[test]
+fn closed_proxy_port_is_reported() {
+    let port = free_port();
+    let output = Command::new(binary())
+        .args([
+            "proxy",
+            "http://127.0.0.1:9/",
+            "--proxy",
+            &format!("socks5://127.0.0.1:{port}"),
+            "--timeout-ms",
+            "1500",
+        ])
+        .output()
+        .expect("run proxy");
+    assert_eq!(output.status.code(), Some(2));
+    let text = String::from_utf8_lossy(&output.stdout);
+    assert!(text.contains("proxy_unreachable"), "output: {text}");
+}
+
+#[test]
+fn socks5_literal_ipv6_uses_atyp4() {
+    let proxy = socks5_stub(false, Some(0x04));
+    let output = Command::new(binary())
+        .args([
+            "proxy",
+            "http://[::1]:9/",
+            "--proxy",
+            &format!("socks5://127.0.0.1:{proxy}"),
+            "--timeout-ms",
+            "3000",
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("run proxy");
+    assert!(
+        output.status.success(),
+        "IPv6 literal should use ATYP 4: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+}
+
+#[test]
+fn socks5_stage_timings_are_measured_separately() {
+    use std::io::{Read, Write};
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+    let port = listener.local_addr().expect("addr").port();
+    std::thread::spawn(move || {
+        let Ok((mut stream, _)) = listener.accept() else {
+            return;
+        };
+        let mut greeting = [0u8; 3];
+        let _ = stream.read_exact(&mut greeting);
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        let _ = stream.write_all(&[0x05, 0x00]);
+        let mut head = [0u8; 4];
+        let _ = stream.read_exact(&mut head);
+        let mut rest = [0u8; 6];
+        let _ = stream.read_exact(&mut rest);
+        let _ = stream.write_all(&[0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0]);
+        let mut request = [0u8; 1024];
+        let _ = stream.read(&mut request);
+        let _ = stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok");
+    });
+    let output = Command::new(binary())
+        .args([
+            "proxy",
+            "http://127.0.0.1:9/",
+            "--proxy",
+            &format!("socks5://127.0.0.1:{port}"),
+            "--timeout-ms",
+            "3000",
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("run proxy");
+    assert!(output.status.success());
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    let detail = &value["probes"][0]["detail"];
+    let negotiation = detail["negotiation_ms"].as_f64().unwrap();
+    let connect = detail["connect_ms"].as_f64().unwrap();
+    assert!(
+        negotiation >= 250.0,
+        "greeting delay must appear in negotiation, got {negotiation}"
+    );
+    assert!(
+        connect < 200.0,
+        "CONNECT must not inherit the greeting delay, got {connect}"
+    );
+}
+
+enum ConnectBehavior {
+    Tunnel,
+    AuthRequired,
+    Forbidden,
+    Tls,
+    Close,
+}
+
+/// Minimal HTTP CONNECT proxy. For `Tls` it performs a real rustls server
+/// handshake inside the tunnel and answers the HTTPS request.
+fn http_connect_stub(behavior: ConnectBehavior) -> u16 {
+    use std::io::{Read, Write};
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+    let port = listener.local_addr().expect("addr").port();
+    std::thread::spawn(move || {
+        for stream in listener.incoming().take(4) {
+            let Ok(mut stream) = stream else { continue };
+            let mut head = Vec::new();
+            let mut buffer = [0u8; 512];
+            while !head.windows(4).any(|window| window == b"\r\n\r\n") {
+                match stream.read(&mut buffer) {
+                    Ok(0) | Err(_) => break,
+                    Ok(read) => head.extend_from_slice(&buffer[..read]),
+                }
+                if head.len() > 8192 {
+                    break;
+                }
+            }
+            match behavior {
+                ConnectBehavior::AuthRequired => {
+                    let _ = stream.write_all(
+                        b"HTTP/1.1 407 Proxy Authentication Required\r\nContent-Length: 0\r\n\r\n",
+                    );
+                }
+                ConnectBehavior::Forbidden => {
+                    let _ =
+                        stream.write_all(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n");
+                }
+                ConnectBehavior::Close => {
+                    let _ = stream.write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n");
+                }
+                ConnectBehavior::Tunnel => {
+                    let _ = stream.write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n");
+                    let mut request = [0u8; 1024];
+                    let _ = stream.read(&mut request);
+                    let _ = stream.write_all(
+                        b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok",
+                    );
+                }
+                ConnectBehavior::Tls => {
+                    let _ = stream.write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n");
+                    let _ = rustls::crypto::ring::default_provider().install_default();
+                    let generated =
+                        rcgen::generate_simple_self_signed(vec!["localhost".to_string()])
+                            .expect("certificate");
+                    let cert =
+                        rustls::pki_types::CertificateDer::from(generated.cert.der().to_vec());
+                    let key = rustls::pki_types::PrivateKeyDer::Pkcs8(
+                        generated.key_pair.serialize_der().into(),
+                    );
+                    let config = rustls::ServerConfig::builder()
+                        .with_no_client_auth()
+                        .with_single_cert(vec![cert], key)
+                        .expect("server config");
+                    let connection = rustls::ServerConnection::new(std::sync::Arc::new(config))
+                        .expect("server connection");
+                    let mut tls = rustls::StreamOwned::new(connection, stream);
+                    let mut request = [0u8; 1024];
+                    let _ = tls.read(&mut request);
+                    let _ = tls.write_all(
+                        b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\nConnection: close\r\n\r\nhello",
+                    );
+                    let _ = tls.flush();
+                }
+            }
+        }
+    });
+    port
+}
+
+fn run_http_proxy(proxy: u16, target: &str, extra: &[&str]) -> std::process::Output {
+    let mut args = vec![
+        "proxy".to_string(),
+        target.to_string(),
+        "--proxy".to_string(),
+        format!("http://127.0.0.1:{proxy}"),
+        "--timeout-ms".to_string(),
+        "3000".to_string(),
+        "--format".to_string(),
+        "json".to_string(),
+    ];
+    args.extend(extra.iter().map(|value| value.to_string()));
+    Command::new(binary())
+        .args(&args)
+        .output()
+        .expect("run proxy")
+}
+
+#[test]
+fn http_connect_tunnel_reaches_http_status() {
+    let proxy = http_connect_stub(ConnectBehavior::Tunnel);
+    let output = run_http_proxy(proxy, "http://127.0.0.1:9/", &[]);
+    assert!(
+        output.status.success(),
+        "CONNECT should pass: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    let detail = &value["probes"][0]["detail"];
+    assert_eq!(detail["type"], "proxy_exchange");
+    assert_eq!(detail["proxy_kind"], "http_connect");
+    assert_eq!(detail["tunnel_ok"], true);
+    assert_eq!(detail["http_status"], 200);
+    assert_eq!(detail["negotiation_ms"], 0.0);
+}
+
+#[test]
+fn http_connect_407_is_auth_required() {
+    let proxy = http_connect_stub(ConnectBehavior::AuthRequired);
+    let output = run_http_proxy(proxy, "http://127.0.0.1:9/", &[]);
+    assert_eq!(output.status.code(), Some(2));
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    assert_eq!(value["probes"][0]["detail"]["error"], "auth_required");
+}
+
+#[test]
+fn http_connect_403_is_not_auth_and_not_target_health() {
+    let proxy = http_connect_stub(ConnectBehavior::Forbidden);
+    let output = run_http_proxy(proxy, "http://127.0.0.1:9/", &[]);
+    assert_eq!(output.status.code(), Some(2));
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    assert_eq!(value["probes"][0]["detail"]["error"], "http_status:403");
+    assert_eq!(value["probes"][0]["detail"]["tunnel_ok"], false);
+}
+
+#[test]
+fn http_connect_tls_failure_stays_separate_from_tunnel() {
+    let proxy = http_connect_stub(ConnectBehavior::Close);
+    let output = run_http_proxy(proxy, "https://127.0.0.1:9/", &[]);
+    assert_eq!(output.status.code(), Some(2));
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    let detail = &value["probes"][0]["detail"];
+    assert_eq!(detail["tunnel_ok"], true);
+    assert!(detail["error"].as_str().unwrap().starts_with("tls:"));
+    assert!(detail["http_status"].is_null());
+}
+
+#[test]
+fn http_connect_https_request_through_real_tls_tunnel() {
+    let proxy = http_connect_stub(ConnectBehavior::Tls);
+    let output = run_http_proxy(proxy, "https://127.0.0.1:9/", &["--insecure"]);
+    assert!(
+        output.status.success(),
+        "HTTPS through CONNECT should pass: {} {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    let detail = &value["probes"][0]["detail"];
+    assert_eq!(detail["tunnel_ok"], true);
+    assert_eq!(detail["tls_verified"], false);
+    assert_eq!(detail["http_status"], 200);
+    assert!(detail["tls_ms"].as_f64().unwrap() >= 0.0);
+}
+
+#[test]
+fn closed_http_proxy_is_reported() {
+    let port = free_port();
+    let output = run_http_proxy(port, "http://127.0.0.1:9/", &[]);
+    assert_eq!(output.status.code(), Some(2));
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    assert!(value["probes"][0]["detail"]["error"]
+        .as_str()
+        .unwrap()
+        .starts_with("proxy_unreachable"));
+}
+
+#[test]
+fn compare_direct_alternates_both_paths_and_states_limits() {
+    let target = http_stub("HTTP/1.1 200 OK", "ok");
+    let proxy = http_connect_stub(ConnectBehavior::Tunnel);
+    let output = Command::new(binary())
+        .args([
+            "proxy",
+            &format!("http://127.0.0.1:{target}/"),
+            "--proxy",
+            &format!("http://127.0.0.1:{proxy}"),
+            "--compare-direct",
+            "--rounds",
+            "2",
+            "--interval-ms",
+            "10",
+            "--timeout-ms",
+            "2000",
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("run proxy");
+    assert!(
+        output.status.success(),
+        "comparison should pass: {} {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    let comparison = value["probes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|probe| probe["detail"]["type"] == "path_comparison")
+        .expect("path comparison detail");
+    assert_eq!(comparison["detail"]["direct_total"], 2);
+    assert_eq!(comparison["detail"]["proxy_total"], 2);
+    assert_eq!(comparison["detail"]["direct_success"], 2);
+    assert_eq!(comparison["detail"]["proxy_success"], 2);
+    assert_eq!(
+        comparison["detail"]["direct_dns"],
+        "literal address (no DNS)"
+    );
+    assert_eq!(
+        comparison["detail"]["proxy_dns"],
+        "literal address (no DNS)"
+    );
+    assert!(value["limitations"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item.as_str().unwrap_or("").contains("Fake-IP")));
+
+    let schema: serde_json::Value =
+        serde_json::from_str(include_str!("../schemas/command.schema.json")).unwrap();
+    let validator = jsonschema::validator_for(&schema).expect("schema");
+    let errors: Vec<String> = validator
+        .iter_errors(&value)
+        .map(|error| format!("{} at {}", error, error.instance_path))
+        .collect();
+    assert!(errors.is_empty(), "schema violations: {errors:#?}");
+}
+
 fn unique_dir(tag: &str) -> std::path::PathBuf {
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -528,4 +1095,165 @@ fn explicit_out_prefix_overwrites_on_purpose() {
     assert!(dir.join("fixed.md").exists());
     let count = std::fs::read_dir(&dir).unwrap().count();
     assert_eq!(count, 2, "explicit prefix writes exactly two files");
+}
+
+fn comparison_fixture(target: &str, successes: usize, duration: f64) -> serde_json::Value {
+    let mut probes = Vec::new();
+    for index in 0..2 {
+        let ok = index < successes;
+        probes.push(serde_json::json!({
+            "id": format!("tcp_ipv4_{:03}", index + 1),
+            "kind": "tcp",
+            "outcome": if ok { "ok" } else { "fail" },
+            "family": "ipv4",
+            "started_at": "2026-10-17T00:00:00Z",
+            "duration_ms": duration,
+            "detail": {
+                "type": "tcp_connect",
+                "connect_ms": if ok { serde_json::json!(duration) } else { serde_json::Value::Null },
+                "error": if ok { serde_json::Value::Null } else { serde_json::json!("timeout") }
+            }
+        }));
+    }
+    serde_json::json!({
+        "schema_version": "1.3.0",
+        "tool_version": "1.2.0-rc.1",
+        "run_id": "fixture",
+        "started_at": "2026-10-17T00:00:00Z",
+        "finished_at": "2026-10-17T00:00:01Z",
+        "target": {"input": target, "port": 443, "profile": "web"},
+        "configuration": {
+            "rounds": 2,
+            "timeout_ms": 3000,
+            "interval_ms": 200,
+            "max_total_seconds": 180,
+            "connect_budget": 4,
+            "tls_enabled": true,
+            "allow_insecure_tls": false,
+            "output_format": "json",
+            "redact_ips": false
+        },
+        "environment": {"os": "macos", "arch": "arm64"},
+        "stages": [],
+        "probes": probes,
+        "summaries": [],
+        "findings": [
+            {"id": "F1", "rule_id": "R006", "status": "WARN", "claim": "one connect failed"}
+        ],
+        "recommendations": [],
+        "limitations": [],
+        "redaction": {"applied": false, "ips_masked": 0, "notes": []}
+    })
+}
+
+#[test]
+fn compare_reports_metric_changes_and_rejects_different_targets() {
+    let dir = unique_dir("compare");
+    std::fs::create_dir_all(&dir).unwrap();
+    let before = dir.join("before.json");
+    let after = dir.join("after.json");
+    std::fs::write(
+        &before,
+        serde_json::to_vec(&comparison_fixture("example.com", 1, 100.0)).unwrap(),
+    )
+    .unwrap();
+    std::fs::write(
+        &after,
+        serde_json::to_vec(&comparison_fixture("example.com", 2, 80.0)).unwrap(),
+    )
+    .unwrap();
+
+    let output = Command::new(binary())
+        .args([
+            "compare",
+            before.to_str().unwrap(),
+            after.to_str().unwrap(),
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("run compare");
+    assert!(output.status.success(), "same conditions should compare");
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    assert_eq!(value["comparability"]["verdict"], "DIRECTLY COMPARABLE");
+    let metrics = value["metrics"].as_array().unwrap();
+    let tcp = metrics
+        .iter()
+        .find(|metric| metric["name"] == "TCP success")
+        .unwrap();
+    assert_eq!(tcp["before"], 50.0);
+    assert_eq!(tcp["after"], 100.0);
+    assert_eq!(tcp["change"], "Improved");
+
+    std::fs::write(
+        &after,
+        serde_json::to_vec(&comparison_fixture("other.example", 2, 80.0)).unwrap(),
+    )
+    .unwrap();
+    let output = Command::new(binary())
+        .args([
+            "compare",
+            before.to_str().unwrap(),
+            after.to_str().unwrap(),
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("run compare");
+    assert_eq!(output.status.code(), Some(3));
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    assert_eq!(value["comparability"]["verdict"], "NOT DIRECTLY COMPARABLE");
+    assert!(value["comparability"]["issues"][0]
+        .as_str()
+        .unwrap()
+        .contains("target differs"));
+}
+
+#[test]
+fn compare_writes_json_and_markdown_without_overwriting() {
+    let dir = unique_dir("compare-out");
+    std::fs::create_dir_all(&dir).unwrap();
+    let before = dir.join("before.json");
+    let after = dir.join("after.json");
+    std::fs::write(
+        &before,
+        serde_json::to_vec(&comparison_fixture("example.com", 1, 100.0)).unwrap(),
+    )
+    .unwrap();
+    std::fs::write(
+        &after,
+        serde_json::to_vec(&comparison_fixture("example.com", 2, 80.0)).unwrap(),
+    )
+    .unwrap();
+    let prefix = dir.join("diff");
+    let output = Command::new(binary())
+        .args([
+            "compare",
+            before.to_str().unwrap(),
+            after.to_str().unwrap(),
+            "--out",
+            prefix.to_str().unwrap(),
+            "--format",
+            "markdown",
+        ])
+        .output()
+        .expect("run compare");
+    assert!(output.status.success());
+    assert!(dir.join("diff.json").exists());
+    assert!(dir.join("diff.md").exists());
+    let markdown = std::fs::read_to_string(dir.join("diff.md")).unwrap();
+    assert!(markdown.contains("DIRECTLY COMPARABLE"));
+
+    let again = Command::new(binary())
+        .args([
+            "compare",
+            before.to_str().unwrap(),
+            after.to_str().unwrap(),
+            "--out",
+            prefix.to_str().unwrap(),
+        ])
+        .output()
+        .expect("run compare");
+    assert_eq!(again.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&again.stderr).contains("refusing to overwrite"));
 }

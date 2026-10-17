@@ -60,7 +60,31 @@ impl CommandReport {
                     serde_json::to_string_pretty(self).unwrap_or_else(|_| "{}".to_string())
                 );
             }
-            OutputFormat::Markdown | OutputFormat::Summary => {
+            OutputFormat::Markdown => {
+                println!("# PathTrial {} `{}`", self.tool_version, self.command);
+                println!();
+                println!("- Target: `{}`", self.target);
+                println!("- Started: {}", self.started_at);
+                println!("- Finished: {}", self.finished_at);
+                println!("- Verdict: **{}**", self.status.label());
+                println!();
+                println!("```text");
+                for line in self.summary.lines() {
+                    println!("{line}");
+                }
+                println!("```");
+                if !self.limitations.is_empty() {
+                    println!();
+                    println!("## Limits");
+                    println!();
+                    for item in &self.limitations {
+                        println!("- {item}");
+                    }
+                }
+                println!();
+                println!("Probes: {}", self.probes.len());
+            }
+            OutputFormat::Summary => {
                 println!("PathTrial {}  {}", self.tool_version, self.command);
                 println!("target: {}", self.target);
                 for line in self.summary.lines() {

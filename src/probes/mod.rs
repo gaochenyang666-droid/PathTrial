@@ -4,10 +4,12 @@
 pub mod dns;
 pub mod http;
 pub mod icmp;
+pub mod proxy;
 pub mod system;
 pub mod tcp;
 pub mod tls;
 pub mod trace;
+pub mod udp;
 
 use std::collections::BTreeMap;
 

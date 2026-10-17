@@ -3,6 +3,62 @@
 All notable changes to PathTrial. The format follows Keep a Changelog, and the
 project uses semantic versioning for both the binary and the report schema.
 
+## [1.2.0-rc.1] - 2026-10-17
+
+Milestone B: UDP echo and proxy tunnels.
+
+### Added
+
+- **M09 UDP Echo**: `udp --target HOST:PORT --mode echo` sends datagrams with a
+  magic marker, session id and sequence number, and only counts a byte-identical
+  reply as a success. ICMP unreachable, timeout, wrong sequence, invalid payload
+  and duplicates are separate categories. `endpoint --udp-echo` provides a
+  loopback-only echo service for repeatable tests.
+- **M11 SOCKS5**: `proxy URL --proxy socks5://host:port` performs the RFC 1928
+  no-auth greeting, CONNECT and then the real request through the tunnel.
+  Authentication requests are reported, never guessed. Literal IPv4 and IPv6
+  targets use ATYP 1 and 4; names use ATYP 3 for proxy-side resolution.
+- **M11 HTTP CONNECT**: `http://` proxies perform a bounded CONNECT exchange,
+  classify 403, 407 and 5xx separately, then run a real TLS and HTTP exchange
+  inside the tunnel. Proxy errors are never reported as target authentication
+  failures.
+- **B4 direct/proxy comparison**: `--compare-direct` alternates direct and
+  proxied requests with the same URL and timeout, records both success rates
+  and medians, and states that DNS, egress and routing can differ.
+- **B5 report comparison**: `compare A.json B.json` checks target, port,
+  profile, family, interface, timeout and sample size before presenting metric
+  changes. Incompatible conditions produce `NOT DIRECTLY COMPARABLE`.
+- Proxy credentials in the proxy URL are rejected instead of silently ignored.
+
+### Changed
+
+- Report schema **1.4.0** adds the `proxy` probe kind and `path_comparison`
+  detail. Version 1.3.0 added `udp_echo` and `proxy_exchange`. All changes are
+  additive.
+- Proxy stage timings are measured separately. The previous build split one
+  exchange in half, which could not be traced to real phase boundaries.
+- URL userinfo and query strings are removed from reports and terminal output.
+- `endpoint` refuses non-loopback binds unless `--allow-public-bind` is given.
+
+### Verified
+
+- 118 tests (65 unit, 38 CLI, 13 golden, 2 schema).
+- Real SOCKS5 handshake against a local protocol double: tunnel + HTTP 200,
+  IPv6 ATYP 4, auth-required and closed-port paths.
+- Real HTTP CONNECT protocol exchange: 200, 403, 407, closed proxy, TLS failure
+  after a successful tunnel, and a real rustls handshake carrying HTTPS 200.
+- Real UDP echo: 5/5 with the local endpoint; a closed port reports
+  `icmp_unreachable` with the correct limitations. IPv6 loopback is exercised
+  when the host provides it.
+- `compare` accepts older fixtures, rejects different targets, and writes JSON
+  plus Markdown without overwriting existing files.
+
+### Not verified in this increment
+
+- Linux CI is configured for Ubuntu plus Intel and Apple Silicon macOS runners,
+  but it has not been executed from this machine.
+- QUIC, dual-end correlation and Windows remain out of scope.
+
 ## [1.1.0-rc.1] - 2026-10-17
 
 Feature increment: real application-layer checks land as new subcommands.

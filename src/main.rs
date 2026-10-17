@@ -24,8 +24,12 @@ fn main() -> ExitCode {
 
     let cli = Cli::parse();
     match cli.command {
-        Command::Schema => {
-            print!("{}", include_str!("../schemas/report.schema.json"));
+        Command::Schema(args) => {
+            if args.command {
+                print!("{}", include_str!("../schemas/command.schema.json"));
+            } else {
+                print!("{}", include_str!("../schemas/report.schema.json"));
+            }
             ExitCode::from(EXIT_OK)
         }
         Command::Http(args) => match pathtrial::commands::http(&args) {
@@ -50,6 +54,34 @@ fn main() -> ExitCode {
             }
         },
         Command::Dns(args) => match pathtrial::commands::dns(&args) {
+            Ok(code) => ExitCode::from(code),
+            Err(message) => {
+                eprintln!("error: {message}");
+                ExitCode::from(EXIT_TOOL_ERROR)
+            }
+        },
+        Command::Udp(args) => match pathtrial::commands::udp(&args) {
+            Ok(code) => ExitCode::from(code),
+            Err(message) => {
+                eprintln!("error: {message}");
+                ExitCode::from(EXIT_TOOL_ERROR)
+            }
+        },
+        Command::Proxy(args) => match pathtrial::commands::proxy(&args) {
+            Ok(code) => ExitCode::from(code),
+            Err(message) => {
+                eprintln!("error: {message}");
+                ExitCode::from(EXIT_TOOL_ERROR)
+            }
+        },
+        Command::Compare(args) => match pathtrial::compare::run(&args) {
+            Ok(code) => ExitCode::from(code),
+            Err(message) => {
+                eprintln!("error: {message}");
+                ExitCode::from(EXIT_TOOL_ERROR)
+            }
+        },
+        Command::Endpoint(args) => match pathtrial::commands::endpoint(&args) {
             Ok(code) => ExitCode::from(code),
             Err(message) => {
                 eprintln!("error: {message}");

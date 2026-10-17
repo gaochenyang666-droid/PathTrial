@@ -8,6 +8,7 @@
 
 use std::io;
 use std::mem;
+use std::net::UdpSocket;
 use std::net::{IpAddr, SocketAddr, TcpStream};
 use std::os::unix::io::FromRawFd;
 use std::time::{Duration, Instant};
@@ -272,6 +273,19 @@ pub fn interface_index(name: &str) -> Option<u32> {
     } else {
         Some(index)
     }
+}
+
+/// Create a UDP socket bound to `bind`, optionally pinned to an interface.
+/// Binding is applied with the same platform option used for TCP, so a caller
+/// that asked for `en0` never silently falls back to the default route.
+pub fn udp_socket(bind: SocketAddr, interface: Option<&str>) -> io::Result<UdpSocket> {
+    let socket = UdpSocket::bind(bind)?;
+    if let Some(name) = interface {
+        use std::os::unix::io::AsRawFd;
+        let fd = socket.as_raw_fd();
+        bind_interface(fd, &bind, name)?;
+    }
+    Ok(socket)
 }
 
 /// Classification of an address, used to decide how much a measurement can say

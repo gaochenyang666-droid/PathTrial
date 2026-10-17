@@ -124,7 +124,7 @@
 4. 脱敏模式
 5. 证据边界与未证实项
 
-## 验收记录（2026-10-17，v1.1.0-rc.1）
+## 验收记录（2026-10-17，v1.2.0-rc.1）
 
 | 模块 | 状态 | 通过项 | 得分（满分 5） |
 | --- | --- | ---: | ---: |
@@ -136,25 +136,38 @@
 | M06 TCP | VERIFIED | 5/5 | 5.00 |
 | M07 TLS | VERIFIED | 5/5 | 5.00 |
 | M08 HTTP | VERIFIED | 6/6 | 5.00 |
-| M09 UDP | NOT IMPLEMENTED | 0/4 | 0.00 |
+| M09 UDP | VERIFIED | 4/4 | 5.00 |
 | M10 QUIC | NOT IMPLEMENTED | 0/4 | 0.00 |
-| M11 代理 | NOT IMPLEMENTED | 0/5 | 0.00 |
+| M11 代理 | VERIFIED | 5/5 | 5.00 |
 | M12 双端 | NOT IMPLEMENTED | 0/4 | 0.00 |
-| M13 对照 | PARTIAL | 1/3 | 1.67 |
+| M13 对照 | VERIFIED | 3/3 | 5.00 |
 | M14 报告 | VERIFIED | 5/5 | 5.00 |
 
-模块分：9 个 VERIFIED + 1 个 PARTIAL = 45.00 + 1.67 = **46.67 / 70**。
+模块分：12 个 VERIFIED = **60.00 / 70**。
 
 平台分（15）：macOS arm64 实测通过 3.75；macOS x86_64 仅编译 0；Linux 仅 CI 配置 0；
 Windows 未实现 0 → **3.75 / 15**。
 
 安全、隐私、预算与回归（10）：预算与超时、脱敏、证据引用、Fake-IP 守卫、
-87 项测试均已验证；Linux 与 Windows 上的新模块未验证，扣 2 → **8.0 / 10**。
+118 项测试均已验证；URL 查询串与凭据不进入报告；Linux 与 Windows 上的新模块未验证，
+扣 2 → **8.0 / 10**。
 
 文档与发布（5）：README、CHANGELOG、CONTRIBUTING、SECURITY、完整度矩阵、Release 工作流齐备；
 尚未发布安装包或 Homebrew formula → **4.0 / 5**。
 
-**合计：46.67 + 3.75 + 8.0 + 4.0 = 62.4%，未达到 90%。**
+**合计：60.00 + 3.75 + 8.0 + 4.0 = 75.75%。**
 
-未达标的直接原因：M09/M10/M11/M12 与 Windows 尚未实现，M13 只做了同窗口对照而缺少
-两份报告的结构化 diff。下一步顺序见 README 的路线图，优先 UDP Echo 与代理对照。
+本阶段验收依据：
+
+- M09：本地 IPv4 Echo 5/5；IPv6 回环在可用主机上通过；无效载荷、错误序号、重复响应
+  与 ICMP 不可达分别归类；临时服务端默认只监听回环。
+- M11：SOCKS5 无认证握手覆盖 ATYP 1、3、4；HTTP CONNECT 覆盖 200、403、407、关闭端口、
+  隧道成功后 TLS 失败，以及隧道内真实 rustls 握手加 HTTPS 200；直连/代理交替对照记录
+  两条路径的 DNS 语义和性能，且不把差异归因于运营商。
+- M13：`compare` 接受 1.0 到当前版本的 JSON，检查目标、端口、profile、地址族、接口、
+  超时和样本量；条件不同时退出码 3 并标记 `NOT DIRECTLY COMPARABLE`。
+
+未达标的直接原因：M10 QUIC、M12 双端诊断、Windows 尚未实现；Linux 只有 CI 配置，
+本机没有 Linux 运行环境；macOS x86_64 已成功交叉编译，但本机未安装 Rosetta，无法执行。
+Linux 目标的 `cargo check` 也因缺少 x86_64 Linux C 交叉编译器而失败。后续优先在
+GitHub Actions 或真实 Linux 主机执行 `cargo test --all-targets` 与本地 UDP/代理冒烟测试。
