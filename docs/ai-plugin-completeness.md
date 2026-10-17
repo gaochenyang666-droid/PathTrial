@@ -32,7 +32,7 @@
 | --- | --- | ---: | --- |
 | MCP 协议与工具 | VERIFIED | 20.0 | 9 个工具均有真实 MCP stdio 测试；21 项协议测试覆盖本地 QUIC、HTTP/3、UDP、SOCKS/HTTP CONNECT、断开和错误响应 |
 | 安全与权限 | VERIFIED | 25.0 | DNS 全部候选检查、确定性 IP 绑定、代理双端授权、子进程硬超时、客户端断开取消、输出和消息上限、授权摘要脱敏、IP 与重定向脱敏、报告证据校验 |
-| Codex 端到端 | PARTIAL | 14.0 | 真实模型会话完成 capabilities、未授权拒绝、授权本地扫描和报告解释；INCONCLUSIVE 解释场景未单列 |
+| Codex 端到端 | PARTIAL | 14.0 | v0.1.0 真实模型会话完成 capabilities、未授权拒绝、授权本地扫描和报告解释；v0.2.0 完成安装与协议验收，模型会话未重录，INCONCLUSIVE 场景未单列 |
 | Claude Code 端到端 | UNVERIFIED | 0.0 | 官方安装器在临时 HOME 下载原生二进制时停滞；未完成 CLI 验证 |
 | 预编译发行 | PARTIAL | 5.0 | Release 工作流已加入原生 MCP 冒烟、版本一致性和哈希；尚未公开发布含 MCP 的 1.4.0 包 |
 | 文档与 CI | VERIFIED | 10.0 | 四语言文档、集成指南、三平台 CI、173 项测试门禁 |
