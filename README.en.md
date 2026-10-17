@@ -2,7 +2,7 @@
 
 **Evidence-First Network Diagnostics CLI**
 
-**Languages:** [简体中文](README.md) · **English** · [Español](README.es.md)
+**Languages:** [简体中文](README.md) · **English** · [Español](README.es.md) · [Русский](README.ru.md)
 
 > **Public beta / Release Candidate — v1.3.0-rc.1**
 >
@@ -239,6 +239,8 @@ The issue template may have Chinese field names. You can submit your report in *
 **Language note:** these READMEs are translations of the **documentation**. They do **not** mean that all CLI output or generated reports are available in English or Spanish yet.
 
 ## For developers — Build from source
+
+**For AI readers and coding agents:** [llms.txt](llms.txt) indexes project documentation and schemas; [AGENTS.md](AGENTS.md) describes development and evidence rules.
 
 Rust stable is needed **only for source builds**, not for the downloads above. Check out the matching release tag:
 
