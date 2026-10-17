@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pathtrial.dev/schemas/report-1.4.0.json",
+  "$id": "https://pathtrial.dev/schemas/report-1.5.0.json",
   "title": "PathTrial diagnostic report",
-  "description": "Machine readable output of PathTrial commands. Every finding references probe IDs that exist in this document. 1.4.0 adds the proxy probe kind and the path_comparison detail; both changes are additive.",
+  "description": "Machine readable output of PathTrial commands. Every finding references probe IDs that exist in this document. 1.5.0 adds QUIC/HTTP3 probe evidence and the quic probe kind.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -1262,6 +1262,95 @@
               "type": "string"
             }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "host",
+            "port",
+            "family",
+            "server_name",
+            "alpn_requested",
+            "handshake_ok",
+            "http3_bytes",
+            "stage"
+          ],
+          "properties": {
+            "type": {
+              "const": "quic"
+            },
+            "host": {
+              "type": "string"
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "family": {
+              "type": "string"
+            },
+            "server_name": {
+              "type": "string"
+            },
+            "alpn_requested": {
+              "type": "string"
+            },
+            "alpn": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "handshake_ms": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "handshake_ok": {
+              "type": "boolean"
+            },
+            "tls_verified": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "http3_status": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "http3_bytes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "http3_ttfb_ms": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "http3_total_ms": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "stage": {
+              "type": "string"
+            },
+            "error": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
         }
       ]
     },
@@ -1292,7 +1381,8 @@
             "udp_observation",
             "icmp",
             "trace",
-            "proxy"
+            "proxy",
+            "quic"
           ]
         },
         "outcome": {

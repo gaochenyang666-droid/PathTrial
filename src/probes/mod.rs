@@ -5,6 +5,7 @@ pub mod dns;
 pub mod http;
 pub mod icmp;
 pub mod proxy;
+pub mod quic;
 pub mod system;
 pub mod tcp;
 pub mod tls;

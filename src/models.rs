@@ -7,9 +7,8 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-/// Version of the report schema. 1.4.0 adds the `proxy` probe kind and the
-/// `path_comparison` detail. Both changes are additive.
-pub const SCHEMA_VERSION: &str = "1.4.0";
+/// Version of the report schema. 1.5.0 adds the `quic` probe kind and detail.
+pub const SCHEMA_VERSION: &str = "1.5.0";
 
 /// Uniform status vocabulary for stages and findings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -99,6 +98,7 @@ pub enum ProbeKind {
     Trace,
     UdpObservation,
     Proxy,
+    Quic,
 }
 
 /// Outcome of a single probe, describing that probe only.
@@ -281,6 +281,26 @@ pub enum ProbeDetail {
         direct_dns: String,
         proxy_dns: String,
         note: String,
+    },
+    /// Real QUIC handshake and optional HTTP/3 exchange. The stage field names
+    /// the last completed or attempted phase so transport, TLS, ALPN and
+    /// application failures stay separate.
+    Quic {
+        host: String,
+        port: u16,
+        family: String,
+        server_name: String,
+        alpn_requested: String,
+        alpn: Option<String>,
+        handshake_ms: Option<f64>,
+        handshake_ok: bool,
+        tls_verified: Option<bool>,
+        http3_status: Option<u16>,
+        http3_bytes: usize,
+        http3_ttfb_ms: Option<f64>,
+        http3_total_ms: Option<f64>,
+        stage: String,
+        error: Option<String>,
     },
     /// Evidence record for UDP observations. V1 does not probe UDP, but the
     /// model keeps the classification explicit so ICMP replies can never be

@@ -27,6 +27,10 @@ fn main() -> ExitCode {
         Command::Schema(args) => {
             if args.command {
                 print!("{}", include_str!("../schemas/command.schema.json"));
+            } else if args.collect {
+                print!("{}", include_str!("../schemas/collect.schema.json"));
+            } else if args.correlate {
+                print!("{}", include_str!("../schemas/correlate.schema.json"));
             } else {
                 print!("{}", include_str!("../schemas/report.schema.json"));
             }
@@ -68,6 +72,34 @@ fn main() -> ExitCode {
             }
         },
         Command::Proxy(args) => match pathtrial::commands::proxy(&args) {
+            Ok(code) => ExitCode::from(code),
+            Err(message) => {
+                eprintln!("error: {message}");
+                ExitCode::from(EXIT_TOOL_ERROR)
+            }
+        },
+        Command::Quic(args) => match pathtrial::commands::quic(&args) {
+            Ok(code) => ExitCode::from(code),
+            Err(message) => {
+                eprintln!("error: {message}");
+                ExitCode::from(EXIT_TOOL_ERROR)
+            }
+        },
+        Command::Http3(args) => match pathtrial::commands::http3(&args) {
+            Ok(code) => ExitCode::from(code),
+            Err(message) => {
+                eprintln!("error: {message}");
+                ExitCode::from(EXIT_TOOL_ERROR)
+            }
+        },
+        Command::Collect(args) => match pathtrial::collect::collect(&args) {
+            Ok(code) => ExitCode::from(code),
+            Err(message) => {
+                eprintln!("error: {message}");
+                ExitCode::from(EXIT_TOOL_ERROR)
+            }
+        },
+        Command::Correlate(args) => match pathtrial::collect::correlate(&args) {
             Ok(code) => ExitCode::from(code),
             Err(message) => {
                 eprintln!("error: {message}");

@@ -3,6 +3,45 @@
 All notable changes to PathTrial. The format follows Keep a Changelog, and the
 project uses semantic versioning for both the binary and the report schema.
 
+## [1.3.0-rc.1] - 2026-10-17
+
+Milestone C: QUIC/HTTP3 and offline dual-end correlation.
+
+### Added
+
+- **M10 QUIC/HTTP3**: `quic HOST` performs a real Quinn handshake with an
+  explicit ALPN, certificate verification, SNI, IPv4/IPv6 selection and a
+  separate handshake timer. `http3 URL` sends a real HTTP/3 GET and records the
+  status, body byte budget and response timings.
+- QUIC stages distinguish DNS, UDP socket setup, handshake, certificate, ALPN
+  and HTTP/3 failures. ALPN mismatch is reported as protocol unavailable rather
+  than a network failure. Fake-IP targets remain INCONCLUSIVE.
+- **M12 dual-end collection**: `collect --role client|server` writes independent
+  JSON reports without SSH. Client payloads carry a task id and sequence; the
+  server records accepts, peers, timestamps and matching task ids.
+- **M12 offline correlation**: `correlate` checks task id, protocol, port,
+  target address, schema versions and time-window overlap. It reports
+  observed connection behavior only and lists clock sync and loss location as
+  not established.
+- Local QUIC test server and eight protocol tests cover HTTP/3 200/500,
+  certificate failure, ALPN mismatch, IPv4, IPv6, timeout and QUIC success with
+  HTTP/3 failure.
+
+### Changed
+
+- Report schema **1.5.0** adds the `quic` probe kind and detail.
+- Single-command schema **1.1.0** adds `quic` and `http3`.
+- New collect and correlation documents use schema `1.0.0`.
+- Added MIT/Apache-2.0 dependencies: quinn, quinn-proto, h3, h3-quinn, tokio,
+  http, bytes, futures-util and rustls-pemfile.
+
+### Verified
+
+- 134 tests across unit, CLI, collect, golden, QUIC and schema suites.
+- Real local HTTP/3 request over a rustls/quinn server, including response body.
+- macOS arm64 and macOS Intel GitHub Actions jobs completed successfully on the
+  Milestone B baseline. Linux execution status is recorded separately.
+
 ## [1.2.0-rc.1] - 2026-10-17
 
 Milestone B: UDP echo and proxy tunnels.

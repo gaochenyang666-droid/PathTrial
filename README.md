@@ -16,11 +16,11 @@ $ pathtrial scan example.com
 
 ## 当前状态
 
-本仓库是 **V1.2.0-rc.1**：五阶段固定检测、真实 HTTP、ICMP、traceroute、DNS 对照、
-UDP Echo、SOCKS5、HTTP CONNECT、直连/代理对照和历史报告比较均已实现。测试覆盖本地
-协议桩、真实 TLS 隧道、UDP 回环服务和黄金数据集。
+本仓库是 **V1.3.0-rc.1**：五阶段固定检测、真实 HTTP、ICMP、traceroute、DNS 对照、
+UDP Echo、SOCKS5、HTTP CONNECT、直连/代理对照、历史报告比较、QUIC/HTTP3 和双端离线
+关联均已实现。测试覆盖本地 QUIC 服务端、真实 HTTP/3 请求、协议桩、TLS 隧道和黄金数据集。
 
-尚未实现：QUIC/HTTP3 握手、双端抓包关联、Windows 平台。报告不会把未实现模块算作通过。
+尚未实现：Windows 平台、自动抓包分析。报告不会把未实现模块算作通过。
 
 ## 安装与构建
 
@@ -58,6 +58,11 @@ pathtrial proxy https://example.com --proxy http://127.0.0.1:8080
 pathtrial proxy https://example.com --proxy socks5://127.0.0.1:1080 --compare-direct
 pathtrial compare old.json new.json
 pathtrial compare old.json new.json --format markdown --out ./reports/diff
+pathtrial quic example.com --port 443
+pathtrial http3 https://example.com
+pathtrial collect --role server --task-id demo --listen 0.0.0.0:39001 --max-seconds 30
+pathtrial collect --role client --task-id demo --target server.example.com:39001 --rounds 10
+pathtrial correlate collect-client.json collect-server.json
 pathtrial --version
 pathtrial --help
 ```
@@ -160,7 +165,8 @@ pathtrial --help
 `--format json` 时 stdout 只有 JSON，方便 CI 解析；文件路径会写到 stderr。
 
 `pathtrial schema` 输出扫描报告的 Schema；`pathtrial schema --command` 输出单点命令的
-信封 Schema（[`schemas/command.schema.json`](schemas/command.schema.json)）。`compare`
+信封 Schema（[`schemas/command.schema.json`](schemas/command.schema.json)）。
+`schema --collect` 和 `schema --correlate` 分别输出双端采集与关联 Schema。`compare`
 输出的是独立的比较文档，带有自己的 `schema_version: "1.0.0"`。
 
 ## 安全边界
@@ -186,9 +192,53 @@ pathtrial --help
 | `proxy URL --proxy P` | SOCKS5（无认证）或 HTTP CONNECT，逐段记录 TCP、协商、CONNECT、TLS、HTTP | 不支持代理认证；隧道成功不等于 HTTPS 可用 |
 | `proxy ... --compare-direct` | 同一 URL、同一超时下交替执行直连和代理请求，分别统计 | 两条路径可能使用不同 DNS、出口和路由，差异不能单独归因于运营商 |
 | `compare A.json B.json` | 比较目标、端口、协议、时间、TCP/TLS/HTTP/ICMP/UDP/代理指标和 Finding | 条件差异大时标记不可直接比较；缺失字段不补造样本 |
+| `quic HOST` | 真实 QUIC 握手，记录地址族、SNI、证书、ALPN 和耗时 | 握手成功不等于 HTTP/3 业务成功；UDP 无响应不定位丢包位置 |
+| `http3 URL` | QUIC 握手后发送真实 HTTP/3 GET，读取状态和响应体摘要 | 目标未提供 h3 时判 SKIP，不据此判断整条网络异常 |
+| `collect --role client\|server` | 独立采集连接尝试或监听端接受事件，写出 JSON | 报告不含抓包，不能证明某个数据包在哪一跳丢失 |
+| `correlate C.json S.json` | 校验任务、端口、协议和时间窗，关联双方事件 | 时钟同步和丢包位置仍属于未证实项 |
 
-未实现的模块（QUIC、双端关联、Windows）在本版本中**没有命令入口**，工具不会以任何
+未实现的模块（Windows、自动抓包分析）在本版本中**没有命令入口**，工具不会以任何
 形式报告它们通过。
+
+## QUIC 与 HTTP/3
+
+`quic` 只验证 QUIC 传输和 TLS 握手。`http3` 在同一个连接上继续发送 HTTP/3 GET。
+报告分别记录地址解析、UDP Socket、握手、证书、ALPN 和 HTTP/3 阶段：
+
+```bash
+pathtrial quic example.com --port 443 --alpn h3
+pathtrial http3 https://example.com
+pathtrial http3 https://127.0.0.1:4433 --sni localhost --ca-file ./test-ca.pem
+```
+
+目标未协商 `h3` 时记为 `SKIP`，退出码 3。握手成功但 HTTP/3 请求失败时记为 `FAIL`，
+并保留 `handshake_ok=true`、`alpn=h3` 和具体的 `http3:*` 错误。解析到 198.18.0.0/15
+时记为 `INCONCLUSIVE`，因为测到的是本地代理路径。
+
+`--insecure` 只用于本地诊断。正式网络检测应使用系统信任库，或用 `--ca-file` 显式信任
+测试根证书。
+
+## 双端离线诊断
+
+客户端和服务器可以独立运行，不需要 SSH：
+
+```bash
+# 服务器，VNC 或本地终端均可
+pathtrial collect --role server --task-id demo --listen 0.0.0.0:39001 \
+  --max-seconds 30 --output server.json
+
+# 客户端
+pathtrial collect --role client --task-id demo --target 203.0.113.10:39001 \
+  --rounds 10 --output client.json
+
+pathtrial correlate client.json server.json
+```
+
+客户端把 `PTCT <task-id> <seq>` 写入每次 TCP 连接。服务器记录 accept、来源地址、时间
+和读取到的任务标识。`correlate` 检查任务标识、协议、端口、目标地址和时间窗重叠情况。
+
+这些报告只描述连接行为。没有抓包证据时，工具不会声称某个数据包在哪一跳丢失，也会明确
+列出「时钟是否同步」尚未确认。
 
 ## 已知限制
 
@@ -204,6 +254,10 @@ pathtrial --help
 6. **平台。** V1 只支持 macOS 与 Linux；Windows 未实现。
 7. **`scan` 的 TLS 阶段只验证握手与证书**，不发送 HTTP 请求。需要业务验收时使用
    `http` 或 `proxy`；它们仍只证明请求与响应头部，不证明登录、上传等完整业务流程。
+8. **QUIC 依赖 UDP 443 路径。** UDP 被拦截、目标未开放 HTTP/3 或本地代理不支持 UDP
+   时，`http3` 会分别显示握手超时、ALPN 不匹配或 INCONCLUSIVE，不能据此判断 TCP 路径。
+9. **`collect` 当前只实现 TCP。** 它记录连接尝试和监听端 accept，不做抓包，也不声称
+   能定位丢失数据包的具体网元。
 
 ## FAQ 与常见误判
 
@@ -272,6 +326,18 @@ QUIC 还有独立的 TLS 1.3 握手、证书验证、ALPN 和传输参数；这�
 `compare` 会检查目标、端口、profile、地址族、接口、超时、样本量和代理/直连属性。任一项
 明显不同都会输出 `NOT DIRECTLY COMPARABLE`，并列出差异。它仍展示两侧观察值，但拒绝把
 差异写成改善或恶化，因为条件已经改变。
+
+**QUIC 握手成功，为什么 HTTP/3 仍然失败？**
+
+QUIC 只负责加密传输和连接建立。HTTP/3 还需要双方协商 `h3` ALPN、交换 SETTINGS、打开
+请求流并返回响应。`http3` 会把 `handshake_ok=true` 和 `http3:*` 错误同时保留，避免把
+应用层失败写成 UDP 路径故障。
+
+**双端报告显示客户端成功、服务器没有记录，能说明什么？**
+
+只能说明本次采集中客户端完成了连接和写入，服务器没有记录到匹配任务标识的 accept。
+可能原因包括监听地址或端口不一致、任务标识不匹配、时间窗没有重叠、路径拦截或服务器
+侧采集问题。没有抓包证据时，工具不会指认具体网元。
 
 ## 测试
 
