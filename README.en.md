@@ -10,6 +10,8 @@
 >
 > [**Download beta**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.3.0-rc.1) · [**Report a bug**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**Open issues**](https://github.com/gaochenyang666-droid/PathTrial/issues) · [**Real-world case study**](https://github.com/gaochenyang666-droid/racknerd-ipv6-troubleshooting)
 
+> **Which version should I use?** [v1.3.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.3.0-rc.1) is the publicly downloadable CLI beta. The MCP-enabled **v1.4.0-rc.1 / AI Plugins v0.2.0** is in [PR #2](https://github.com/gaochenyang666-droid/PathTrial/pull/2), with **no public v1.4 prebuilt release yet**. The v1.3 binary cannot run `pathtrial mcp`.
+
 ## What is PathTrial, and who is it for?
 
 Why does a website fail even though its server responds to Ping? Why can a VPS accept a TCP connection while a proxy fails? Why might IPv6 work better than IPv4?
@@ -23,6 +25,46 @@ Why does a website fail even though its server responds to Ping? Why can a VPS a
 - **CLI only:** there is no graphical interface yet. Test only systems you own or are authorized to test.
 
 For example, if TCP succeeds but TLS fails, PathTrial reports those stages separately rather than calling the whole connection healthy.
+
+## AI Plugins for Codex and Claude Code (developer preview)
+
+PathTrial AI Plugins v0.2.0 gives **Codex and Claude Code** access to one local MCP server and shared Skills. The Rust engine performs actual network measurements; the AI client interprets recorded evidence. **The diagnostic server needs no separate AI API key; each AI client still requires its own access.**
+
+**Verification status:** v1.4.0-rc.1 passed 173 tests and native CI on Ubuntu 24.04, macOS ARM and macOS Intel. All nine MCP tools have local protocol tests. **Codex v0.1 had real model-driven calls; the v0.2 model session was not rerun. Claude Code plugin validation and live calls are still unverified.** The [AI Plugins score is 74%](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/docs/ai-plugin-completeness.md) under an independent engineering acceptance rubric, not a probe success rate.
+
+**Build the development preview (Rust 1.84+ required; ordinary CLI users should install v1.3 above instead):**
+
+~~~sh
+git clone https://github.com/gaochenyang666-droid/PathTrial.git
+cd PathTrial
+git checkout codex/ai-plugins-v0.1
+cargo build --release --locked
+export PATH="$PWD/target/release:$PATH"
+pathtrial --version
+pathtrial mcp --help
+~~~
+
+**Codex plugin:** make sure the new binary is available in the PATH inherited by Codex, then:
+
+~~~sh
+codex plugin marketplace add gaochenyang666-droid/PathTrial --ref codex/ai-plugins-v0.1
+codex plugin add pathtrial@pathtrial
+codex plugin list
+codex mcp list
+~~~
+
+**Claude Code plugin:** this is an **unverified runtime preview**. With Claude Code installed, try the following from the repository root:
+
+~~~sh
+claude plugin validate ./plugins/claude-code/pathtrial
+claude --plugin-dir ./plugins/claude-code/pathtrial
+~~~
+
+**Explicit target authorization:** by default, `pathtrial mcp` blocks all network probes, while offline report explanation and comparison remain available. For a target you are authorized to test, set the server's `args` in Codex `mcp.json` or Claude Code `.mcp.json` to `["mcp", "--allow-target", "example.com:443"]`, then restart the client. Do not use a wildcard or test unauthorized targets; read the full guide first.
+
+**Example prompts:** “Why is my website timing out?” “Compare IPv4 and IPv6 for my VPS.” “Explain this PathTrial JSON report with real evidence IDs.”
+
+**Links:** [full integration and troubleshooting guide](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/docs/ai-integrations.md) · [Codex plugin](https://github.com/gaochenyang666-droid/PathTrial/tree/codex/ai-plugins-v0.1/plugins/codex/pathtrial) · [Claude Code plugin](https://github.com/gaochenyang666-droid/PathTrial/tree/codex/ai-plugins-v0.1/plugins/claude-code/pathtrial) · [PR #2](https://github.com/gaochenyang666-droid/PathTrial/pull/2)
 
 ## Step 1 — Download
 
