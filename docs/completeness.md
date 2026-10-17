@@ -146,18 +146,17 @@
 模块分：14 个 VERIFIED = **70.00 / 70**。
 
 平台分（15）：macOS arm64 GitHub Actions 实测通过 3.75；macOS Intel GitHub Actions
-实测通过 3.75；Linux CI 已配置并等待本轮实际结果 0；Windows 未实现 0 →
-**7.50 / 15**。
+实测通过 3.75；Ubuntu 24.04 GitHub Actions 实测通过 3.75；Windows 未实现 0 →
+**11.25 / 15**。
 
 安全、隐私、预算与回归（10）：预算与超时、脱敏、证据引用、Fake-IP 守卫、
-134 项本地测试均已验证；QUIC 证书验证、ALPN 分离、双端任务标识和时间窗检查、
-URL 查询串与凭据不进入报告；Linux 与 Windows 上的新模块尚未完全验证，扣 1.5 →
-**8.5 / 10**。
+134 项测试已在本地与 Linux CI 验证；QUIC 证书验证、ALPN 分离、双端任务标识和时间窗
+检查、URL 查询串与凭据不进入报告；Windows 尚未验证，扣 1.0 → **9.0 / 10**。
 
 文档与发布（5）：README、CHANGELOG、CONTRIBUTING、SECURITY、完整度矩阵、Release 工作流齐备；
 尚未发布安装包或 Homebrew formula → **4.0 / 5**。
 
-**合计：70.00 + 7.50 + 8.5 + 4.0 = 90.00%。**
+**合计：70.00 + 11.25 + 9.0 + 4.0 = 94.25%。**
 
 本阶段验收依据：
 
@@ -171,5 +170,9 @@ URL 查询串与凭据不进入报告；Linux 与 Windows 上的新模块尚未�
 - M13：`compare` 接受 1.0 到当前版本的 JSON，检查目标、端口、profile、地址族、接口、
   超时和样本量；条件不同时退出码 3 并标记 `NOT DIRECTLY COMPARABLE`。
 
-剩余缺口：Windows 尚未实现；Linux CI 在本轮验收时仍需以实际 Job 结果确认；
-本机没有 Linux 容器或虚拟机，无法替代 GitHub Actions 的 Linux 执行证据。
+Linux CI 在本轮修复了两个只在 Linux 暴露的问题：`/proc/net/route` 网关字节序解析错误，
+以及无 `CAP_NET_RAW` 时测试 accept 线程无限等待。修复后 Ubuntu 24.04、macOS ARM 和
+macOS Intel 三个 Job 全部通过。
+
+剩余缺口：Windows 尚未实现；当前 Mac 的 UDP 443 路径对公共 HTTP/3 目标超时，
+公共 HTTP/3 验证仍需在可用 UDP 出口上重复。
