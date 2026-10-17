@@ -11,6 +11,8 @@
 >
 > [**下载测试版**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.3.0-rc.1) · [**报告 Bug / 提建议**](https://github.com/gaochenyang666-droid/PathTrial/issues/new/choose) · [**查看已知问题**](https://github.com/gaochenyang666-droid/PathTrial/issues) · [**真实排障案例**](https://github.com/gaochenyang666-droid/racknerd-ipv6-troubleshooting)
 
+> **版本提示：** [公开可下载版 v1.3.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.3.0-rc.1) 可直接用于 CLI 网络诊断；带本地 MCP 的 **v1.4.0-rc.1 / AI Plugins v0.2.0** 仍在 [PR #2 开发测试](https://github.com/gaochenyang666-droid/PathTrial/pull/2)，**尚无 1.4 的公开预编译 Release**。不要用 1.3 安装包运行 `pathtrial mcp`。
+
 ## 这是什么？适合谁用？
 
 遇到“网站打不开”“VPS 的端口能连但代理不能用”“IPv4 很慢，IPv6 却正常”，通常不能只靠一次 Ping 找到原因。**PathTrial 是一个免费、开源的终端小工具**：按明确的步骤测量 DNS、TCP、TLS、HTTP 等环节，把每一步结果和证据记录下来，生成可分享的网络诊断报告。
@@ -21,6 +23,46 @@
 - **注意**：这是命令行工具（CLI），目前没有图形界面；诊断不等于自动修复。
 
 **一个简单例子：** 如果 TCP 连接成功，但 TLS 握手失败，PathTrial 会分别记录这两件事，而不是简单地说“网络通了”或“服务器坏了”。测试时请使用你拥有或获授权的目标。
+
+## AI Plugins：Codex 与 Claude Code（开发者预览）
+
+PathTrial AI Plugins v0.2.0 让 **Codex 和 Claude Code** 通过同一个本地 MCP Server 调用真实网络诊断，并结合共享 Skills 解读证据。**插件不需要单独购买 AI API；使用 Codex / Claude Code 本身仍需具备相应客户端访问权限。**
+
+**当前阶段：** 1.4.0-rc.1 代码已通过 173 项测试和 Ubuntu 24.04、macOS ARM、macOS Intel 三平台 CI；MCP 的 9 个工具均有本地协议级测试。**Codex v0.1 已通过实际 AI 调用，v0.2 尚未重跑模型会话；Claude Code 的真实客户端加载和调用仍未验证。** [AI 插件独立完成度：74%](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/docs/ai-plugin-completeness.md)（工程验收评分，不是功能成功率）。
+
+**先试用开发分支（需要 Rust 1.84+；普通 CLI 用户请继续使用上面的 1.3 安装包）：**
+
+~~~bash
+git clone https://github.com/gaochenyang666-droid/PathTrial.git
+cd PathTrial
+git checkout codex/ai-plugins-v0.1
+cargo build --release --locked
+export PATH="$PWD/target/release:$PATH"
+pathtrial --version
+pathtrial mcp --help
+~~~
+
+**Codex 插件：** 确保上述可执行文件位于 Codex 启动时的 PATH 中，然后执行：
+
+~~~bash
+codex plugin marketplace add gaochenyang666-droid/PathTrial --ref codex/ai-plugins-v0.1
+codex plugin add pathtrial@pathtrial
+codex plugin list
+codex mcp list
+~~~
+
+**Claude Code 插件：** 目前是**待真实客户端验收**的预览；安装 Claude Code 后，可以在仓库根目录尝试：
+
+~~~bash
+claude plugin validate ./plugins/claude-code/pathtrial
+claude --plugin-dir ./plugins/claude-code/pathtrial
+~~~
+
+**授权很重要：** 默认配置 `pathtrial mcp` 不允许任何网络探测，但允许离线分析报告。要测试你有权限的目标，请在 Codex 插件的 `mcp.json` 或 Claude Code 插件的 `.mcp.json` 中，将服务器 `args` 设为 `["mcp", "--allow-target", "example.com:443"]`，重启客户端；不要使用通配符或测试未经授权的设备。修改配置前请阅读完整指南。
+
+**常见用途：** “帮我诊断这个网站为什么超时”“比较我的 VPS 的 IPv4/IPv6”“分析这份 PathTrial JSON 报告，并引用实际证据 ID”。
+
+**更多说明：** [插件安装、权限和排错完整指南](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/docs/ai-integrations.md) · [Codex 插件源码](https://github.com/gaochenyang666-droid/PathTrial/tree/codex/ai-plugins-v0.1/plugins/codex/pathtrial) · [Claude Code 插件源码](https://github.com/gaochenyang666-droid/PathTrial/tree/codex/ai-plugins-v0.1/plugins/claude-code/pathtrial) · [PR #2](https://github.com/gaochenyang666-droid/PathTrial/pull/2)
 
 ## 第一步：下载 PathTrial
 
