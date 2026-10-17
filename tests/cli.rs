@@ -299,6 +299,23 @@ fn long_timeout_is_accepted() {
     assert_eq!(value["configuration"]["timeout_ms"], 6000);
 }
 
+#[test]
+fn unknown_bind_interface_is_a_tool_error() {
+    let port = loopback(2);
+    let mut args = scan_args_with(port, 2, "tcp", 1000, &[]);
+    args.push("--bind-interface".to_string());
+    args.push("definitely-not-an-interface".to_string());
+    let output = Command::new(binary()).args(&args).output().expect("run");
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "a bad interface name is a tool error, not a network finding"
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("does not exist"), "stderr: {stderr}");
+    assert!(output.stdout.is_empty(), "no report may be produced");
+}
+
 fn unique_dir(tag: &str) -> std::path::PathBuf {
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

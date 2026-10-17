@@ -22,6 +22,8 @@ project uses semantic versioning for both the binary and the report schema.
   cannot hide behind an unrelated PASS. Terminal, Markdown and JSON share the
   same precedence.
 - Added an overall verdict line to the terminal summary and the Markdown report.
+- `--bind-interface` with an unknown interface is now a tool error (exit 1)
+  instead of a scan where every probe fails for a configuration reason.
 
 ### Added
 
@@ -31,7 +33,7 @@ project uses semantic versioning for both the binary and the report schema.
 
 ### Verified
 
-- 69 tests (41 unit, 13 CLI, 13 golden, 2 schema).
+- 71 tests (42 unit, 14 CLI, 13 golden, 2 schema).
 - macOS arm64: built and exercised against real network targets.
 - macOS x86_64: release build succeeds; runtime not exercised here because
   Rosetta is not installed on the build machine.
