@@ -26,6 +26,14 @@ jobs:
         run: cargo test --all-targets
       - name: Release build
         run: cargo build --release
+      - name: CLI smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./target/release/pathtrial --version
+          ./target/release/pathtrial --help > /dev/null
+          # The test suite validates JSON output against the schema on this
+          # platform; this step only proves the release artifact executes.
       - name: Report binary size
         shell: bash
         run: |
