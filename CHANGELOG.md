@@ -42,9 +42,10 @@ Milestone B: UDP echo and proxy tunnels.
 
 ### Verified
 
-- 118 tests (65 unit, 38 CLI, 13 golden, 2 schema).
+- 121 tests (65 unit, 41 CLI, 13 golden, 2 schema).
 - Real SOCKS5 handshake against a local protocol double: tunnel + HTTP 200,
-  IPv6 ATYP 4, auth-required and closed-port paths.
+  IPv6 ATYP 4, bad version, CONNECT refusal, malformed bound address,
+  auth-required and closed-port paths.
 - Real HTTP CONNECT protocol exchange: 200, 403, 407, closed proxy, TLS failure
   after a successful tunnel, and a real rustls handshake carrying HTTPS 200.
 - Real UDP echo: 5/5 with the local endpoint; a closed port reports

@@ -566,6 +566,38 @@ fn udp_echo_over_ipv6_when_loopback_is_available() {
 }
 
 #[test]
+fn udp_total_budget_stops_the_run() {
+    let port = free_port();
+    let started = std::time::Instant::now();
+    let output = Command::new(binary())
+        .args([
+            "udp",
+            "--target",
+            &format!("127.0.0.1:{port}"),
+            "--rounds",
+            "100",
+            "--timeout-ms",
+            "800",
+            "--interval-ms",
+            "400",
+            "--max-seconds",
+            "1",
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("run udp");
+    let elapsed = started.elapsed();
+    assert!(
+        elapsed < std::time::Duration::from_secs(5),
+        "budget should stop the run, took {elapsed:?}"
+    );
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    let probes = value["probes"].as_array().unwrap().len();
+    assert!(probes < 100, "budget must reduce rounds, got {probes}");
+}
+
+#[test]
 fn endpoint_refuses_public_bind_without_flag() {
     let output = Command::new(binary())
         .args(["endpoint", "--udp-echo", "--bind", "0.0.0.0:19999"])
@@ -639,6 +671,51 @@ fn socks5_stub(require_auth: bool, expected_atyp: Option<u8>) -> u16 {
     port
 }
 
+#[derive(Clone, Copy)]
+enum SocksBehavior {
+    BadVersion,
+    ConnectRefused,
+    BadBoundAddress,
+}
+
+fn socks5_error_stub(behavior: SocksBehavior) -> u16 {
+    use std::io::{Read, Write};
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+    let port = listener.local_addr().expect("addr").port();
+    std::thread::spawn(move || {
+        for stream in listener.incoming().take(2) {
+            let Ok(mut stream) = stream else { continue };
+            let mut greeting = [0u8; 3];
+            if stream.read_exact(&mut greeting).is_err() {
+                continue;
+            }
+            if matches!(behavior, SocksBehavior::BadVersion) {
+                let _ = stream.write_all(&[0x04, 0x00]);
+                continue;
+            }
+            let _ = stream.write_all(&[0x05, 0x00]);
+            let mut head = [0u8; 4];
+            if stream.read_exact(&mut head).is_err() {
+                continue;
+            }
+            let mut rest = [0u8; 6];
+            if stream.read_exact(&mut rest).is_err() {
+                continue;
+            }
+            match behavior {
+                SocksBehavior::ConnectRefused => {
+                    let _ = stream.write_all(&[0x05, 0x05, 0x00, 0x01, 0, 0, 0, 0, 0, 0]);
+                }
+                SocksBehavior::BadBoundAddress => {
+                    let _ = stream.write_all(&[0x05, 0x00, 0x00, 0x02, 0, 0, 0, 0, 0, 0]);
+                }
+                SocksBehavior::BadVersion => {}
+            }
+        }
+    });
+    port
+}
+
 #[test]
 fn socks5_tunnel_reaches_http_status() {
     let proxy = socks5_stub(false, Some(0x01));
@@ -660,6 +737,37 @@ fn socks5_tunnel_reaches_http_status() {
     let detail = &value["probes"][0]["detail"];
     assert_eq!(detail["tunnel_ok"], true);
     assert_eq!(detail["http_status"], 200);
+}
+
+#[test]
+fn socks5_version_and_reply_errors_are_classified() {
+    for (behavior, expected) in [
+        (SocksBehavior::BadVersion, "unexpected SOCKS version 4"),
+        (SocksBehavior::ConnectRefused, "socks_reply:5"),
+        (
+            SocksBehavior::BadBoundAddress,
+            "unsupported bound address type 0x02",
+        ),
+    ] {
+        let proxy = socks5_error_stub(behavior);
+        let output = Command::new(binary())
+            .args([
+                "proxy",
+                "http://127.0.0.1:9/",
+                "--proxy",
+                &format!("socks5://127.0.0.1:{proxy}"),
+                "--timeout-ms",
+                "1500",
+                "--format",
+                "json",
+            ])
+            .output()
+            .expect("run proxy");
+        assert_eq!(output.status.code(), Some(2));
+        let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+        let error = value["probes"][0]["detail"]["error"].as_str().unwrap();
+        assert!(error.contains(expected), "expected {expected}, got {error}");
+    }
 }
 
 #[test]
@@ -777,6 +885,8 @@ enum ConnectBehavior {
     Tunnel,
     AuthRequired,
     Forbidden,
+    ServerError,
+    HugeHead,
     Tls,
     Close,
 }
@@ -810,6 +920,13 @@ fn http_connect_stub(behavior: ConnectBehavior) -> u16 {
                 ConnectBehavior::Forbidden => {
                     let _ =
                         stream.write_all(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n");
+                }
+                ConnectBehavior::ServerError => {
+                    let _ =
+                        stream.write_all(b"HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n");
+                }
+                ConnectBehavior::HugeHead => {
+                    let _ = stream.write_all(&vec![b'X'; 9000]);
                 }
                 ConnectBehavior::Close => {
                     let _ = stream.write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n");
@@ -906,6 +1023,22 @@ fn http_connect_403_is_not_auth_and_not_target_health() {
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
     assert_eq!(value["probes"][0]["detail"]["error"], "http_status:403");
     assert_eq!(value["probes"][0]["detail"]["tunnel_ok"], false);
+}
+
+#[test]
+fn http_connect_5xx_and_oversized_head_are_reported() {
+    let proxy = http_connect_stub(ConnectBehavior::ServerError);
+    let output = run_http_proxy(proxy, "http://127.0.0.1:9/", &[]);
+    assert_eq!(output.status.code(), Some(2));
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    assert_eq!(value["probes"][0]["detail"]["error"], "http_status:502");
+
+    let proxy = http_connect_stub(ConnectBehavior::HugeHead);
+    let output = run_http_proxy(proxy, "http://127.0.0.1:9/", &[]);
+    assert_eq!(output.status.code(), Some(2));
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    let error = value["probes"][0]["detail"]["error"].as_str().unwrap();
+    assert!(error.contains("CONNECT head too large"), "error: {error}");
 }
 
 #[test]
