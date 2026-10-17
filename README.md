@@ -2,6 +2,8 @@
 
 **语言 / Languages / Idiomas:** **简体中文** · [English](README.en.md) · [Español](README.es.md)
 
+> **语言说明：** 目前多语言支持的是 README 文档；命令行界面及报告内容尚未全面翻译。
+
 **Evidence-First Network Diagnostics CLI｜基于真实证据的网络诊断工具**
 
 > 🧪 **公开测试版（Release Candidate）｜v1.3.0-rc.1**  
