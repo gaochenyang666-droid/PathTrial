@@ -1,0 +1,44 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "pathtrial",
+  "version": "0.1.0",
+  "description": "Evidence-first local network diagnostics for Codex, backed by the PathTrial CLI and MCP server.",
+  "author": {
+    "name": "gaochenyang666-droid",
+    "url": "https://github.com/gaochenyang666-droid"
+  },
+  "homepage": "https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/ai-integrations.md",
+  "repository": "https://github.com/gaochenyang666-droid/PathTrial",
+  "license": "MIT",
+  "keywords": [
+    "network",
+    "diagnostics",
+    "mcp",
+    "dns",
+    "tcp",
+    "tls",
+    "quic"
+  ],
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/setup/SKILL.md",
+      "interface": {
+        "displayName": "PathTrial Network Diagnostics",
+        "shortDescription": "Diagnose DNS, TCP, TLS, HTTP, UDP, QUIC and proxies with auditable evidence.",
+        "longDescription": "PathTrial runs local, user-authorized network probes and returns structured evidence with probe IDs, findings, limitations and explicit uncertainty. It never uploads reports or changes system settings.",
+        "developerName": "gaochenyang666-droid",
+        "category": "Developer Tools",
+        "capabilities": [
+          "Read"
+        ],
+        "websiteURL": "https://github.com/gaochenyang666-droid/PathTrial",
+        "defaultPrompt": [
+          "Diagnose why this authorized website is not reachable.",
+          "Compare IPv4 and IPv6 for this authorized target using PathTrial.",
+          "Explain this PathTrial JSON report and cite its evidence IDs."
+        ],
+        "brandColor": "#10A37F"
+      }
+    }
+  }
+}

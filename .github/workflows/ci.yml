@@ -37,6 +37,12 @@ jobs:
       - name: Test QUIC
         timeout-minutes: 5
         run: cargo test --locked --test quic -- --test-threads=1 --nocapture
+      - name: Test MCP
+        timeout-minutes: 5
+        run: cargo test --locked --test mcp -- --test-threads=1 --nocapture
+      - name: Test plugins
+        timeout-minutes: 5
+        run: cargo test --locked --test plugins -- --test-threads=1
       - name: Test golden and schema
         timeout-minutes: 5
         run: |
@@ -58,6 +64,23 @@ jobs:
             --timeout-ms 1000 --format json > udp.json
           kill "$endpoint_pid" 2>/dev/null || true
           python3 -c "import json; d=json.load(open('udp.json')); assert d['status']=='PASS', d['status']"
+          python3 - <<'PY'
+          import json
+          import subprocess
+          messages = [
+              {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+               "params": {"protocolVersion": "2025-06-18", "capabilities": {},
+                          "clientInfo": {"name": "ci", "version": "1"}}},
+              {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+          ]
+          proc = subprocess.run(
+              ["./target/release/pathtrial", "mcp"],
+              input="\n".join(json.dumps(item) for item in messages) + "\n",
+              text=True, capture_output=True, check=True)
+          responses = [json.loads(line) for line in proc.stdout.splitlines()]
+          assert responses[0]["result"]["serverInfo"]["name"] == "pathtrial"
+          assert len(responses[1]["result"]["tools"]) == 9
+          PY
           python3 - <<'PY'
           import json
           import subprocess

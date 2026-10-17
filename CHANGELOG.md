@@ -3,6 +3,45 @@
 All notable changes to PathTrial. The format follows Keep a Changelog, and the
 project uses semantic versioning for both the binary and the report schema.
 
+## [1.4.0-rc.1] - 2026-10-17
+
+PathTrial AI Plugins v0.1: Codex and Claude Code integration.
+
+### Added
+
+- Local stdio MCP server at `pathtrial mcp`, implementing initialize,
+  tools/list and tools/call without a cloud service or API key.
+- Nine MCP tools: capabilities, scan, HTTP, QUIC, HTTP/3, proxy test, UDP Echo,
+  report comparison and report explanation.
+- Server-side target allowlist through repeatable `--allow-target` arguments or
+  `PATHTRIAL_MCP_ALLOW_TARGETS`, with DNS-resolution and private-address checks.
+- Portable Codex plugin with `plugin.json`, `mcp.json`, shared skills and an
+  onboarding skill.
+- Claude Code plugin with `.claude-plugin/plugin.json`, `.mcp.json` and the same
+  shared skills.
+- Codex and Claude Code marketplace manifests.
+- MCP protocol tests, plugin structural tests, AI integration guide and
+  four-language entry pages.
+
+### Verified
+
+- 147 tests: 65 unit, 41 CLI, 5 collect, 13 golden, 8 MCP, 5 plugin,
+  8 QUIC and 2 schema.
+- Codex marketplace add and `pathtrial@pathtrial` install verified with a
+  temporary `CODEX_HOME`; `codex mcp list` shows the bundled server enabled.
+- MCP initialize, tools/list, authorized scan, HTTP, report explanation,
+  report comparison, allowlist denial and JSON-only stdout verified locally.
+- Claude Code manifest loading and live tool calls remain UNVERIFIED because
+  the `claude` CLI is not installed on this machine.
+
+### Security
+
+- Probe tools are denied by default.
+- Wildcard target authorization is rejected.
+- Rounds, timeout, total budget, payload size and port ranges are bounded.
+- The MCP server exposes no generic shell or file-reading tool and writes only
+  JSON-RPC messages to stdout.
+
 ## [1.3.0-rc.1] - 2026-10-17
 
 Milestone C: QUIC/HTTP3 and offline dual-end correlation.

@@ -158,6 +158,8 @@ pub enum Command {
     Collect(CollectArgs),
     /// Correlate independently collected client and server JSON reports.
     Correlate(CorrelateArgs),
+    /// Run the local stdio MCP server for AI clients.
+    Mcp(McpArgs),
     /// Compare two saved JSON reports with explicit comparability checks.
     Compare(CompareArgs),
     /// Run a temporary local endpoint for repeatable tests.
@@ -438,6 +440,13 @@ pub struct CorrelateArgs {
     /// Write <PREFIX>.json and <PREFIX>.md.
     #[arg(long, value_name = "PREFIX")]
     pub out: Option<PathBuf>,
+}
+
+#[derive(Debug, Args)]
+pub struct McpArgs {
+    /// Authorized probe target, repeatable. Use HOST or HOST:PORT.
+    #[arg(long = "allow-target", value_name = "HOST[:PORT]")]
+    pub allow_target: Vec<String>,
 }
 
 #[derive(Debug, Args)]
