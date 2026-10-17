@@ -22,6 +22,26 @@ UDP Echo、SOCKS5、HTTP CONNECT、直连/代理对照、历史报告比较、QU
 
 尚未实现：Windows 平台、自动抓包分析。报告不会把未实现模块算作通过。
 
+## 下载应用
+
+预编译版本发布在 [GitHub Releases](https://github.com/gaochenyang666-droid/PathTrial/releases)。
+当前候选版本为 `v1.3.0-rc.1`。
+
+macOS 与 Linux 可以用一条命令安装到 `~/.local/bin`，脚本会校验 SHA-256：
+
+```bash
+curl -fsSL https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/install.sh | sh
+```
+
+也可以直接下载对应平台的压缩包：
+
+- [macOS Apple Silicon](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz)
+- [macOS Intel](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz)
+- [Linux x86_64](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz)
+
+每个压缩包都有同名的 `.sha256` 文件。Windows 尚未支持。静态下载页见
+[`docs/download.html`](docs/download.html)。
+
 ## 安装与构建
 
 需要 Rust 稳定版（1.84 以上，与 `Cargo.toml` 的 `rust-version` 一致）。
