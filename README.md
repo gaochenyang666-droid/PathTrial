@@ -1,328 +1,261 @@
 # PathTrial
 
-**Evidence-First Network Diagnostics CLI** / **基于可验证证据的轻量级网络故障诊断工具**
+**Evidence-First Network Diagnostics CLI｜基于真实证据的网络诊断工具**
 
-PathTrial 按固定顺序执行网络检查，记录每一步的真实数据，最后生成一份可以用机器读取、
-也可以直接贴进工单的诊断报告。它不修改任何系统配置，也不在没有证据时给出根因。
+> 🧪 **公开测试版（Release Candidate）｜v1.3.0-rc.1**  
+> PathTrial 仍在测试中，可能有 Bug、兼容性问题或不准确的诊断提示。**欢迎下载试用、提出建议、帮忙找 Bug！** 即使不懂 Rust，只要告诉我们“运行了什么、预期怎样、实际怎样”，就很有帮助。
+>
+> [**下载测试版**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.3.0-rc.1) · [**报告 Bug / 提建议**](https://github.com/gaochenyang666-droid/PathTrial/issues/new/choose) · [**查看已知问题**](https://github.com/gaochenyang666-droid/PathTrial/issues) · [**真实排障案例**](https://github.com/gaochenyang666-droid/racknerd-ipv6-troubleshooting)
 
-```
-$ pathtrial scan example.com
-01  系统环境      PASS    33 个网卡，IPv4 本地支持 true，IPv6 本地支持 true
-02  DNS           PASS    A 解析 1 个地址，AAAA 解析 1 个地址
-03  TCP 与 TLS    WARN    IPv4 8/20，IPv6 20/20；TLS 传输握手 4/4
-04  双栈对照      WARN    IPv4 8/20，IPv6 20/20
-05  报告          PASS    3 条结论，1 条建议
-```
+## 这是什么？适合谁用？
 
-## 当前状态
+遇到“网站打不开”“VPS 的端口能连但代理不能用”“IPv4 很慢，IPv6 却正常”，通常不能只靠一次 Ping 找到原因。**PathTrial 是一个免费、开源的终端小工具**：按明确的步骤测量 DNS、TCP、TLS、HTTP 等环节，把每一步结果和证据记录下来，生成可分享的网络诊断报告。
 
-本仓库是 **V1.2.0-rc.1**：五阶段固定检测、真实 HTTP、ICMP、traceroute、DNS 对照、
-UDP Echo、SOCKS5、HTTP CONNECT、直连/代理对照和历史报告比较均已实现。测试覆盖本地
-协议桩、真实 TLS 隧道、UDP 回环服务和黄金数据集。
+- **适合**：普通用户初步排查网络、VPS/服务器维护、自托管服务、代理连接和双栈 IPv4/IPv6 排障。
+- **不用**：安装 Python、Node.js，注册账号，上传数据，启动常驻服务。
+- **不会**：擅自修改 DNS、路由、防火墙或代理设置，也不会把猜测写成确定的故障原因。
+- **注意**：这是命令行工具（CLI），目前没有图形界面；诊断不等于自动修复。
 
-尚未实现：QUIC/HTTP3 握手、双端抓包关联、Windows 平台。报告不会把未实现模块算作通过。
+**一个简单例子：** 如果 TCP 连接成功，但 TLS 握手失败，PathTrial 会分别记录这两件事，而不是简单地说“网络通了”或“服务器坏了”。测试时请使用你拥有或获授权的目标。
 
-## 安装与构建
+## 第一步：下载 PathTrial
 
-需要 Rust 稳定版（1.84 以上，与 `Cargo.toml` 的 `rust-version` 一致）。
+### 1. 选择系统（目前不支持 Windows）
 
-```bash
-cargo build --release
-./target/release/pathtrial --version
-```
+| 你的电脑 | 下载 |
+| --- | --- |
+| Mac（Apple Silicon，M1/M2/M3/M4 等） | [macOS ARM64 安装包](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz) |
+| Mac（Intel 芯片） | [macOS Intel 安装包](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz) |
+| Linux（x86_64，如大部分 Intel/AMD VPS） | [Linux x86_64 安装包](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz) |
 
-也可以直接运行：
+每个压缩包都有对应的 SHA-256 校验文件，可在 [Release 页面](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.3.0-rc.1) 下载。
 
-```bash
-cargo run -- scan example.com
-```
+### 2. 安装（推荐：先查看脚本，再运行）
 
-## 用法
+在 Mac 打开“终端”（Terminal）；在 Linux 打开终端。依次粘贴运行：
 
-```bash
-pathtrial scan example.com
-pathtrial scan example.com --rounds 20
-pathtrial scan example.com --port 443
-pathtrial scan example.com --profile web
-pathtrial scan server.example.com --port 22 --profile tcp
-pathtrial scan example.com --format json
-pathtrial scan example.com --format markdown
-pathtrial http https://example.com/ --expect-status 200
-pathtrial ping 1.1.1.1 --count 5
-pathtrial trace example.com --max-hops 15
-pathtrial dns example.com --server 223.5.5.5
-pathtrial udp --target 127.0.0.1:39001 --mode echo
-pathtrial endpoint --udp-echo --bind 127.0.0.1:39001
-pathtrial proxy https://example.com --proxy socks5://127.0.0.1:1080
-pathtrial proxy https://example.com --proxy http://127.0.0.1:8080
-pathtrial proxy https://example.com --proxy socks5://127.0.0.1:1080 --compare-direct
-pathtrial compare old.json new.json
-pathtrial compare old.json new.json --format markdown --out ./reports/diff
+~~~bash
+# 下载官方 Release 中的安装脚本
+curl -fsSLo pathtrial-install.sh https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/install.sh
+
+# 建议先看一下脚本内容
+less pathtrial-install.sh
+
+# 确认后安装；脚本会下载对应平台的压缩包并校验 SHA-256
+sh pathtrial-install.sh
+~~~
+
+安装位置是 **~/.local/bin/pathtrial**，不需要 sudo。熟悉命令行的用户也可以选择一行安装：
+
+~~~bash
+curl -fsSL https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/install.sh | sh
+~~~
+
+后一种写法会直接执行网络下载的脚本，建议先审查脚本；**压缩包的校验并不等于脚本本身的来源审计**。
+
+**不想运行安装脚本？** 在上面的表格中下载压缩包，解压后找到名为 \`pathtrial\` 的可执行文件；在终端进入它所在的目录，用 \`./pathtrial --version\` 测试。你也可以自行把它放到 PATH 中的目录。
+
+## 第二步：确认安装成功
+
+~~~bash
+~/.local/bin/pathtrial --version
+~/.local/bin/pathtrial --help
+~~~
+
+正常情况下版本应显示 **1.3.0-rc.1**。如果输入 \`pathtrial\` 提示“command not found”，说明安装目录可能不在 PATH 中。你可以直接使用 **~/.local/bin/pathtrial**，或者在当前终端运行：
+
+~~~bash
+export PATH="$HOME/.local/bin:$PATH"
 pathtrial --version
-pathtrial --help
-```
+~~~
 
-单点命令（`http` / `ping` / `trace` / `dns` / `udp` / `proxy`）各自输出一段摘要，
-`--format json` 输出结构化的 `probes`，退出码语义与 `scan` 相同。需要 Markdown 时使用
-`--format markdown`；`compare --out PREFIX` 会同时写出 `PREFIX.json` 和 `PREFIX.md`。
+上面的 PATH 修改仅针对当前终端会话。如果使用的是安装包解压版，请把命令中的可执行文件路径换成你自己的路径。
 
-常用参数：
+## 第三步：第一次诊断（从这里开始）
 
-| 参数 | 作用 |
+先运行一个普通网站的 TCP/TLS 检查：
+
+~~~bash
+pathtrial scan example.com --profile web --rounds 5 --redact-ips
+~~~
+
+如果尚未配置 PATH，将开头的 \`pathtrial\` 改为 \`~/.local/bin/pathtrial\`。
+
+这条命令会按固定顺序检查：**系统环境 → DNS → TCP/TLS → IPv4/IPv6 对照 → 报告**。
+
+- \`example.com\`：要检测的域名，换成你自己要排查的网站即可。
+- \`--profile web\`：按 Web/TLS 场景检测。
+- \`--rounds 5\`：先用较少轮次试跑，便于快速熟悉操作。
+- \`--redact-ips\`：输出报告时对 IP 进行替换，便于后续分享。
+
+**重要：\`scan\` 的 TLS 通过不等于网站能正常返回页面。** 真正检测网页 HTTP 响应，请继续运行：
+
+~~~bash
+pathtrial http https://example.com/
+~~~
+
+只想排查自己的 VPS SSH（比如 TCP 22 端口）：
+
+~~~bash
+pathtrial scan YOUR_VPS_IP --profile ssh --port 22 --rounds 5 --redact-ips
+~~~
+
+把 \`YOUR_VPS_IP\` 替换为你自己的服务器 IP，注意命令不要带尖括号。
+
+## 第四步：看懂结果与报告
+
+每个检测项都可能出现以下状态：
+
+| 状态 | 用简单的话解释 |
 | --- | --- |
-| `--rounds N` | 每个地址族的 TCP 轮次，1 到 200，默认 20 |
-| `--port N` | 覆盖 profile 的默认端口 |
-| `--profile web\|tcp\|ssh` | 只决定端口与是否启用 TLS，不改变阶段顺序 |
-| `--tls` / `--no-tls` | 强制开启或关闭 TLS |
-| `--sni NAME` | 目标是字面 IP 时指定 TLS 服务器名 |
-| `--bind-interface en0` | 把探测绑定到物理网卡，绕过本地 TUN 代理（Linux 需要 root） |
-| `--timeout-ms` / `--interval-ms` / `--max-seconds` | 单次超时、探测间隔、整次任务上限 |
-| `--format summary\|json\|markdown` | stdout 输出格式 |
-| `--out-dir DIR` / `--no-files` | 报告文件目录，或完全不写文件 |
-| `--out PREFIX` | 指定固定输出前缀，写入 `PREFIX.json` 与 `PREFIX.md`，同名文件会被覆盖 |
-| `--allow-insecure-tls` | 仅诊断用：证书校验失败后重试一次「不校验」握手，单独标注 |
-| `--redact-ips` | 在报告里把 IP 替换成占位符 |
+| **PASS** | 这项检查达到预期 |
+| **WARN** | 有响应，但存在值得注意的异常 |
+| **FAIL** | 这项检查未达到预期 |
+| **SKIP** | 本次不适用或没有条件检测；**不等于通过** |
+| **INCONCLUSIVE** | 检测了，但证据还不足以确定结论 |
 
-## 五个固定阶段
+\`scan\` 默认会在**运行命令的当前目录**生成两个文件：
 
-| # | 阶段 | 记录内容 |
-| --- | --- | --- |
-| 1 | 系统环境 | 操作系统、架构、内核、网卡与地址、默认路由、目标路由、隧道类接口、代理环境变量名 |
-| 2 | DNS | 每个系统解析器的 A/AAAA 回答、耗时、rcode、CNAME 链、Fake-IP 迹象 |
-| 3 | TCP 与 TLS | 每次建连结果与耗时、错误分类、TLS 握手耗时、协议版本、证书有效期与 SAN、证书校验结果 |
-| 4 | 双栈对照 | 同一时间窗口内 IPv4 与 IPv6 的成功率、中位耗时、差异 |
-| 5 | 报告 | 阶段状态、原始数据、结论、证据、未证实项、限制、人工验证建议 |
+- \`pathtrial-report-<run_id>.md\`：适合人阅读、发给维护人员。
+- \`pathtrial-report-<run_id>.json\`：保留结构化证据，适合机器处理或提交 Bug。
 
-目标没有 AAAA 记录时，IPv6 记为 `SKIP`，不会当成 DNS 故障。
-目标不是 TLS 服务时，TLS 记为 `SKIP`，不会当成握手失败。
+查看当前目录中的 Markdown 报告：
 
-## 状态与退出码
+~~~bash
+ls pathtrial-report-*.md
+~~~
 
-| 状态 | 含义 |
+要在屏幕上直接输出 Markdown：
+
+~~~bash
+pathtrial scan example.com --format markdown --no-files
+~~~
+
+也可以用 \`--format json\` 输出 JSON。文件内包含诊断结果、测量证据，以及**还无法证实的原因**。不要仅凭一次结果判断运营商封锁、线路丢包位置或服务商责任。
+
+程序退出码：\`0\` 表示没有发现 WARN/FAIL；\`1\` 为工具执行错误；\`2\` 表示有 WARN/FAIL；\`3\` 表示证据不足。**退出码不代表整个互联网是否正常。**
+
+## 第五步：根据问题选择功能
+
+先学会 \`scan\` 和 \`http\` 就足够。遇到特定问题时，再使用这些命令：
+
+| 你想检查什么 | 复制这个命令（替换示例地址） |
 | --- | --- |
-| `PASS` | 达到该检测项的明确通过条件 |
-| `WARN` | 检测完成，但存在异常表现 |
-| `FAIL` | 明确违反该检测项的预期条件 |
-| `SKIP` | 不适用或缺少必要测试条件，不计入成功率 |
-| `INCONCLUSIVE` | 已检测，但证据不足以定性，报告中必须写明原因 |
+| DNS 解析结果 | \`pathtrial dns example.com --server 223.5.5.5\` |
+| Ping 与延迟 | \`pathtrial ping 1.1.1.1 --count 5\` |
+| 路由逐跳情况 | \`pathtrial trace example.com --max-hops 15\` |
+| 服务器 TCP/SSH | \`pathtrial scan YOUR_VPS_IP --port 22 --profile ssh\` |
+| 网站是否返回 HTTP 200 | \`pathtrial http https://example.com/ --expect-status 200\` |
+| QUIC 握手 | \`pathtrial quic example.com --port 443 --alpn h3\` |
+| 真实 HTTP/3 请求 | \`pathtrial http3 https://example.com\` |
+| 两份报告对照 | \`pathtrial compare old.json new.json\` |
 
-| 退出码 | 含义 |
-| --- | --- |
-| 0 | 扫描完成，没有 WARN/FAIL |
-| 2 | 扫描完成，存在 WARN/FAIL |
-| 3 | 扫描完成，但证据不足 |
-| 1 | 工具自身失败（参数错误、I/O 错误） |
+**注意：** QUIC/HTTP3 需要目标真实支持相应协议，且你的 UDP 路径可用；握手超时不能直接证明目标没有 HTTP/3。
 
-`compare` 的退出码只有两种正常结果：`0` 表示两份报告在目标、端口、协议、接口、超时和
-样本量上可直接比较；`3` 表示条件不一致，输出 `NOT DIRECTLY COMPARABLE`。它不会把条件
-差异解释成网络改善或恶化。
+### 如果你在使用 SOCKS5 或 HTTP 代理
 
-这个设计让 CI 可以区分「网络有问题」和「工具没跑起来」。
+先确保你自己的代理已经运行并监听对应端口（这里使用本机 1080 作为示例）：
 
-终端摘要、Markdown 报告和 JSON 使用同一套状态优先级，报告顶部会给出「总体判定」。判定同时
-考虑所有 Finding 与所有阶段状态：某一项 PASS 不会掩盖同一次扫描中的 FAIL；UDP/QUIC 这类
-未实现项显示 SKIP，也不会被算成失败。
+~~~bash
+pathtrial proxy https://example.com/ --proxy socks5://127.0.0.1:1080
+~~~
 
-## 证据规则
+比较直连与代理路径：
 
-每条结论都是一个 `Finding`，固定包含：
+~~~bash
+pathtrial proxy https://example.com/ --proxy socks5://127.0.0.1:1080 --compare-direct
+~~~
 
-```json
-{
-  "id": "F001",
-  "rule_id": "R007",
-  "claim": "IPv6 路径明显优于 IPv4（成功率 20/20 对 8/20）",
-  "severity": "warn",
-  "status": "WARN",
-  "evidence": ["tcp_ipv4_001", "tcp_ipv6_001"],
-  "not_established": ["具体丢包位置", "是否存在人为流量过滤"],
-  "confidence": "moderate",
-  "limits": ["两个地址族在同一轮窗口内交替测量"]
-}
-```
+如果使用的是 HTTP CONNECT 代理，可将代理地址换成 \`http://127.0.0.1:8080\`。当前版本**不支持代理用户名/密码认证**；代理通过也不能自动证明服务器长期稳定。
 
-约束：
+### 想测试真实 UDP Echo？需要两个终端
 
-- `evidence` 里只能出现本报告中真实存在的 probe ID，集成测试会强制检查。
-- `confidence` 由样本量规则生成，不是统计概率。汇总数据固定为 `low`。
-- 少于 20 个样本不发布 P95；汇总数据不生成中位数。
-- 阈值写在 `src/analysis/mod.rs` 顶部：建连 500 ms 起告警、1500 ms 起视为影响交互使用；
-  协议族成功率差 20 个百分点或中位耗时相差 2 倍才判定为路径差异。
+终端 A：启动临时本机测试服务（默认仅监听回环）：
 
-## 报告
+~~~bash
+pathtrial endpoint --udp-echo --bind 127.0.0.1:39001
+~~~
 
-每次扫描默认在当前目录写出带 run id 的文件名，避免两次扫描互相覆盖：
+终端 B：发出 Echo 测试：
 
-- `pathtrial-report-<run_id>.json`：符合 [`schemas/report.schema.json`](schemas/report.schema.json) 的完整数据。
-- `pathtrial-report-<run_id>.md`：十节中文报告，可直接贴进 GitHub Issue 或 VPS 工单。
+~~~bash
+pathtrial udp --target 127.0.0.1:39001 --mode echo
+~~~
 
-需要固定路径时用 `--out ./reports/run1`，工具会覆盖同名文件，并在 stderr 明确提示这一点。
-`--format json` 时 stdout 只有 JSON，方便 CI 解析；文件路径会写到 stderr。
+结束后在终端 A 按 **Ctrl+C** 停止服务。
 
-`pathtrial schema` 输出扫描报告的 Schema；`pathtrial schema --command` 输出单点命令的
-信封 Schema（[`schemas/command.schema.json`](schemas/command.schema.json)）。`compare`
-输出的是独立的比较文档，带有自己的 `schema_version: "1.0.0"`。
+这只验证**本机回环**。如需测试 VPS，需要在你有权限的远端部署兼容 Echo 服务，并确认地址、防火墙和端口授权。**UDP Echo 不是 QUIC/Hysteria2 测试**。
 
-## 安全边界
+### 双端采集（进阶，先用本机练习）
 
-- 不修改 DNS、路由、防火墙、系统代理或任何系统配置。
-- 只探测用户显式给出的目标与其正常解析结果，不扫描网段、不做端口枚举。
-- 不尝试登录、不猜测口令、不测试弱口令。
-- 默认每个地址族 20 次、单次超时 3 秒、间隔 200 毫秒，并受 `--max-seconds` 总预算约束。
-- 报告默认不含任何凭据。代理环境变量只记录「存在」这一事实，不记录值。
-- URL 中的用户名、密码和查询字符串不会写入报告；代理认证请求只记录 `auth_required`。
-- `--redact-ips` 会把 IP 替换成稳定的占位符，便于公开分享。
+分别打开两个终端，再运行关联命令：
 
-## 单点命令说明
+~~~bash
+# 终端 A：监听本机测试端口
+pathtrial collect --role server --task-id demo --listen 127.0.0.1:39001 --max-seconds 30 --output server.json
 
-| 命令 | 实际做什么 | 不做什么 |
-| --- | --- | --- |
-| `http URL` | 真实 GET 请求，记录 DNS/TCP/TLS/首字节/总耗时、状态码、协议版本、Location | 不跟随重定向；不下载大文件（默认最多 64 KB） |
-| `ping HOST` | 调用系统 `ping`，记录丢包、RTT、抖动 | 不用原始套接字；ICMP 被限制时判 FAIL 并注明不代表 TCP |
-| `trace HOST` | 调用系统 `traceroute -n`，解析逐跳地址与 RTT | 缺少工具时判 SKIP；中间节点不回应不等于业务丢包 |
-| `dns HOST` | 系统解析器 + `--server` 指定解析器，比较 A/AAAA | 结果不同不等于 DNS 污染；Fake-IP 会单独提示 |
-| `udp --target H:P` | 真实 UDP Echo，校验会话、序号与载荷，统计 RTT/抖动 | 只证明该端口的 Echo；不能推断 QUIC；无回应不定位原因 |
-| `endpoint --udp-echo` | 临时 Echo 服务端，默认只监听回环 | 需要公开监听必须显式 `--allow-public-bind`；只用于测试 |
-| `proxy URL --proxy P` | SOCKS5（无认证）或 HTTP CONNECT，逐段记录 TCP、协商、CONNECT、TLS、HTTP | 不支持代理认证；隧道成功不等于 HTTPS 可用 |
-| `proxy ... --compare-direct` | 同一 URL、同一超时下交替执行直连和代理请求，分别统计 | 两条路径可能使用不同 DNS、出口和路由，差异不能单独归因于运营商 |
-| `compare A.json B.json` | 比较目标、端口、协议、时间、TCP/TLS/HTTP/ICMP/UDP/代理指标和 Finding | 条件差异大时标记不可直接比较；缺失字段不补造样本 |
+# 终端 B：发送测试连接（在终端 A 的时间窗口内运行）
+pathtrial collect --role client --task-id demo --target 127.0.0.1:39001 --rounds 5 --output client.json
 
-未实现的模块（QUIC、双端关联、Windows）在本版本中**没有命令入口**，工具不会以任何
-形式报告它们通过。
+# 双方采集完成后，关联结果
+pathtrial correlate client.json server.json
+~~~
 
-## 已知限制
+这是 TCP 连接事件关联，不是自动抓包；没有抓包和时钟校准时，不能定位具体丢包设备。
 
-1. **Fake-IP 会污染结论。** 如果本机代理把域名改写成 198.18.x 之类的地址，TCP 阶段会被标记为
-   `INCONCLUSIVE`，因为测到的不是公网路径。解决方式：关闭本地代理，或对字面 IP 使用
-   `--bind-interface`。
-2. **TUN 路由会劫持测量。** 只绑定源地址不足以绕开 TUN；需要 `--bind-interface`。
-3. **DNS 仍走系统解析器。** 绑定网卡只作用于 TCP/TLS 探测；解析结果可能仍被本地软件改写，
-   报告会标记 Fake-IP 迹象。
-4. **样本量。** 默认 20 次只适合发现明显异常，不代表长时间稳定性。需要更长观察时请调大
-   `--rounds` 并分时段多次运行。
-5. **探测本身可能影响路径。** 高频探测与路径降级可能同时出现，本工具刻意保持低频。
-6. **平台。** V1 只支持 macOS 与 Linux；Windows 未实现。
-7. **`scan` 的 TLS 阶段只验证握手与证书**，不发送 HTTP 请求。需要业务验收时使用
-   `http` 或 `proxy`；它们仍只证明请求与响应头部，不证明登录、上传等完整业务流程。
+## 找到 Bug 了？欢迎直接告诉我们！
 
-## FAQ 与常见误判
+**这正是公开测试版最需要的帮助。** 遇到崩溃、卡住、错误诊断、命令不符合说明、某个系统无法运行、安装失败、翻译不清楚，都欢迎反馈。建议或功能需求也可以提 Issue。
 
-**扫描一个私有 IP，会不会被当成故障？**
+**[点这里提交 Bug（GitHub Issues）](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md)**
 
-不会。`pathtrial scan 192.168.1.1 --profile tcp` 会正常建立 TCP 连接并统计成功率，
-报告里用一条 R014 说明「目标是私有地址，结论描述本地或内网路径」。私有地址本身不是异常。
+按以下顺序说明就可以，不需要写复杂的技术报告：
 
-**域名解析到 198.18.x，是不是 DNS 被污染？**
+1. **环境**：系统（如 macOS 15 / Ubuntu 24.04）、CPU（ARM64 或 x86_64）、PathTrial 版本。
+2. **你输入了什么命令**：敏感 IP、域名、Token、密码请替换为占位符。
+3. **你原本希望发生什么**。
+4. **实际上发生了什么**：报错、退出码、截图或简短日志。
+5. **能否重复出现**：偶尔一次、每次都出现，还是有特殊条件？
 
-198.18.0.0/15 是本地代理常用的 Fake-IP 网段。工具会把它标为「疑似被本地代理改写」，
-并把 TCP 阶段标成 INCONCLUSIVE，因为测到的是本地代理的应答，不是公网路径。
-这只是嫌疑，不是确证：报告中同时列出「改写来源是哪一个进程」尚未证实。
+提交前**请删除真实公网/内网地址、用户名、域名、代理配置、订阅链接、密钥、Cookie 和抓包敏感内容**。即使使用 \`--redact-ips\`，也要人工检查日志和报告是否仍泄露其他信息。不要把私密配置直接上传到公开 Issue。
 
-**域名解析到 10.x 或 192.168.x，是 Fake-IP 吗？**
+如果你不确定是不是 Bug，也欢迎发 Issue 讨论。开发者会根据可复现的证据排查，但测试版不承诺每个环境都能立即定位根因。
 
-不一定。企业内网域名、Split DNS、hosts 文件都会产生私有地址解析。工具不再把私有地址
-当作 Fake-IP 证据，只会提示「目标是私有地址」，并允许继续做 TCP/TLS 检测。
+## 目前的测试范围与已知限制
 
-**为什么同一条命令两次结果不一样？**
+- **支持**：macOS Apple Silicon、macOS Intel、Linux x86_64；这些平台已在原生 CI 中运行构建和测试。
+- **暂不支持**：Windows、图形界面、自动修改网络配置、自动抓包和具体网元级丢包定位。
+- **Fake-IP / TUN**：本地代理可能影响 DNS 和“直连”测量；检测到可疑地址时会提示证据不足。
+- **ICMP 与 UDP**：Ping 不通不代表 TCP 不通；收到 ICMP 端口不可达也不代表 UDP Echo 成功。
+- **HTTP/3**：本地可控服务已完成真实握手与请求测试，但公共网络 UDP 443 仍可能因用户所处线路而超时。
+- **本次是预发布**：欢迎体验，不建议在自动化生产监控中把它当作唯一判断依据。
 
-跨境链路本身会随时间波动。每次报告都记录独立的 run id 与时间窗口，比较时必须使用同一
-窗口内的数据。跨窗口的数字不能拼成一个成功率。
+**版本与源码说明：** 下载安装包对应 [\`v1.3.0-rc.1\` 标签](https://github.com/gaochenyang666-droid/PathTrial/tree/v1.3.0-rc.1)。默认 \`main\` 的源码可能暂时滞后于该测试版；QUIC/HTTP3 与双端关联的开发记录见 [Milestone C PR #1](https://github.com/gaochenyang666-droid/PathTrial/pull/1)。如果要编译出与下载版相同的源码版本，请切换到该标签，而不是直接假设 \`main\` 相同。
 
-**端口返回 connection refused，说明什么？**
+## 给开发者：从源码构建与测试
 
-说明连接请求被明确拒绝：对方（或路径上的某台设备）回了 RST。但指定端口并没有连上，所以
-这项 TCP 检查判为 FAIL，退出码 2。报告不会据此宣称「主机完整可达」或「服务健康」，
-并保留「拒绝响应可能由中间设备生成」这一未证实项。它与全部超时是两种不同证据：超时没有
-任何回应，拒绝有明确回应。
+需要 Rust 稳定工具链。请使用对应的发行标签：
 
-**扫描时 TCP 全部成功，但 TLS 失败，算通过吗？**
+~~~bash
+git clone https://github.com/gaochenyang666-droid/PathTrial.git
+cd PathTrial
+git checkout v1.3.0-rc.1
+cargo build --release --locked
+./target/release/pathtrial --version
+~~~
 
-不算。TCP 与 TLS 分开统计：`--profile web` 下 TCP 成功而 TLS 握手失败会给出 R008（FAIL）。
-`--profile ssh` 或 `tcp` 不做 TLS 检测，相关项显示 SKIP，不会被当成失败。
+运行测试：
 
-**为什么 IPv6 那一栏是 SKIP？**
-
-目标没有 AAAA 记录，或者本机没有可用 IPv6。SKIP 表示「没有测」，不计入成功率也不计入失败。
-
-**能不能用它判断是哪一跳在丢包？**
-
-不能。它能证明「这一层有问题」以及「问题与哪个地址族或时间窗口相关」，无法定位具体网元。
-需要定位时请配合双端抓包，并注意抓包本身也需要在两端同一时间进行。
-
-**单次超时和总预算是怎么互相影响的？**
-
-`--timeout-ms` 只约束一次 TCP connect；`--max-seconds` 约束整次任务。预算不够时工具会减少
-轮次并在报告中写明，「没有测完」不会被伪装成全部通过。实测：`--timeout-ms 1200` 时，
-失败样本的耗时集中在 1201 到 1206 毫秒，成功样本单独统计。
-
-**UDP Echo 成功，能不能说明 Hysteria2 或 QUIC 可用？**
-
-不能。Echo 只证明该端口存在一个会把相同载荷退回的应用层服务，并完成了这次会话校验。
-QUIC 还有独立的 TLS 1.3 握手、证书验证、ALPN 和传输参数；这些都没有被 Echo 测试覆盖。
-反之，Echo 超时也可能只是目标没有运行 Echo 服务，不能直接判成整条 UDP 路径故障。
-
-**HTTP CONNECT 返回 407，是目标网站要求登录吗？**
-
-不是。407 表示代理要求认证，PathTrial 不会猜测或发送凭据，只会记录 `auth_required`。
-403 表示代理拒绝建立隧道，同样不是目标网站的 HTTP 403。只有隧道建立后收到的状态码才
-属于目标响应。
-
-**为什么两份报告被标成不可直接比较？**
-
-`compare` 会检查目标、端口、profile、地址族、接口、超时、样本量和代理/直连属性。任一项
-明显不同都会输出 `NOT DIRECTLY COMPARABLE`，并列出差异。它仍展示两侧观察值，但拒绝把
-差异写成改善或恶化，因为条件已经改变。
-
-## 测试
-
-```bash
-cargo test              # 单元测试 + 集成测试
-cargo test --test golden   # 黄金数据集回归
-cargo test --test schema   # JSON Schema 校验
-cargo clippy --all-targets -- -D warnings
+~~~bash
+cargo test --locked --all-targets
 cargo fmt --all -- --check
-```
+cargo clippy --locked --all-targets -- -D warnings
+~~~
 
-黄金数据集在 `tests/fixtures/`，来自 2026 年 10 月一次真实的跨境链路排障记录，包含：
+如需查看更具体的参数，以各命令的 \`--help\` 为准。提交代码修复时，请尽量附带能够复现问题的测试。
 
-- 案例 A：IPv4 8/10 且平均 2476 ms，IPv6 10/10 且平均 323 ms，聚合数据，不得编造分布。
-- 案例 B：TCP 18/20 成功但 TLS 0/20，必须与 TCP 结论分开。
-- 案例 C：TCP 0/20，不得断言 IP 被封锁。
-- 案例 D：ICMP 端口不可达、真实 UDP Echo、无效 QUIC 无响应三者不得混为一谈。
-- 案例 E：单次超时只能给出 `INCONCLUSIVE`。
+## 项目由来、许可证与致谢
 
-集成测试使用本地 TCP 监听器，不依赖公网。
+PathTrial 来源于一次 [RackNerd VPS 的 IPv4/IPv6 真实排障经历](https://github.com/gaochenyang666-droid/racknerd-ipv6-troubleshooting)。原案例包含 TCP、TLS、UDP、QUIC、双端抓包及业务验收的历史记录；**历史数据并非 PathTrial 在当时生成的测量结果**。想按该案例一步步测试，可阅读 [PathTrial 复现指南](https://github.com/gaochenyang666-droid/racknerd-ipv6-troubleshooting/blob/main/docs/使用-PathTrial-复现排障.md)。
 
-## 设计说明
-
-- **为什么要自己发 DNS 查询**：`getaddrinfo` 看不到解析器、rcode 和耗时，也无法识别 Fake-IP。
-- **为什么 TLS 与证书分开记录**：传输握手完成但证书不被信任，和握手根本完不成，是两种完全不同的故障。
-- **为什么要绑定网卡**：本机装 VPN 时，路由表会把探测送进 TUN，测出来的 1 毫秒是本地代理的回复，
-  不是真实路径。
-- **为什么输出 `SKIP` 而不是 `FAIL`**：没有服务端配合时，UDP 探测没有任何意义；把它算成失败会
-  制造假结论。
-
-## 发布状态
-
-| 目标平台 | 构建 | 运行验证 |
-| --- | --- | --- |
-| macOS arm64 | 通过 | 本机真实网络扫描通过 |
-| macOS x86_64 | 通过 | 未执行（构建机未安装 Rosetta，无法运行 Intel 二进制） |
-| Linux x86_64 | 仅 CI 配置 | 未执行（本机无可信 Linux 交叉工具链） |
-
-Linux 的构建与测试由 `.github/workflows/ci.yml` 在 `ubuntu-latest` 上以原生工具链执行。
-仅存在工作流配置不等于 Linux 已经验证，转换正式版本前需要实际跑通一次。
-
-## 公开分享前的检查
-
-报告默认包含目标地址、DNS 解析器地址、网卡名、探测时间与逐次样本。这些是复核结论所必需的，
-但同时也暴露了你的网络环境：
-
-- 用 `--redact-ips` 把所有 IP 替换成稳定占位符；
-- 发布前检查网卡名与解析器地址是否属于内网信息；
-- 不要附带客户端配置、口令、私钥或订阅链接；
-- 抓包文件不要与报告一起公开，除非已经逐包审查。
-
-## 许可证
-
-MIT，见 [LICENSE](LICENSE)。
+源代码采用 [MIT License](LICENSE)。欢迎提交 Issue、复现步骤、文档改进和 Pull Request。**感谢每一位愿意帮忙测试、指出问题的使用者。**
