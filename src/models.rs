@@ -413,7 +413,14 @@ pub struct Report {
 impl Report {
     /// Highest severity among findings, used for the process exit code.
     pub fn worst_status(&self) -> Status {
-        worst_of(self.findings.iter().map(|finding| finding.status))
+        // Stage statuses are included so a stage that failed without emitting a
+        // finding cannot hide behind an unrelated PASS.
+        worst_of(
+            self.findings
+                .iter()
+                .map(|finding| finding.status)
+                .chain(self.stages.iter().map(|stage| stage.status)),
+        )
     }
 }
 

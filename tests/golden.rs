@@ -214,21 +214,76 @@ fn case_h_latency_gap_is_not_reported_as_loss() {
 }
 
 #[test]
-fn case_i_refused_is_not_a_path_failure() {
+fn case_i_all_refused_is_a_failed_check() {
     let (_, analysis) = analyze_case("case_i_all_refused");
     let refused = analysis
         .findings
         .iter()
         .find(|finding| finding.rule_id == "R015")
         .expect("refused finding");
-    assert_eq!(refused.status, Status::Pass);
-    assert!(refused.claim.contains("可达"));
+    // A refusal proves something answered, but the requested port is not
+    // connectable, so the TCP check fails.
+    assert_eq!(refused.status, Status::Fail);
+    assert!(refused.claim.contains("拒绝"));
+    assert!(refused.claim.contains("不可连接"));
+    assert!(
+        !refused.claim.contains("主机可达"),
+        "must not claim remote reachability from a RST"
+    );
+    assert!(refused
+        .not_established
+        .iter()
+        .any(|item| item.contains("中间设备")));
     assert!(
         analysis
             .findings
             .iter()
             .all(|finding| finding.rule_id != "R004"),
-        "a refusal must not be reported as a connectivity failure"
+        "a pure refusal keeps its own rule instead of a generic timeout claim"
+    );
+}
+
+#[test]
+fn case_j_refused_plus_timeouts_is_not_a_refusal_only_claim() {
+    let (_, analysis) = analyze_case("case_j_refused_and_timeouts");
+    let failure = analysis
+        .findings
+        .iter()
+        .find(|finding| finding.rule_id == "R004")
+        .expect("generic failure finding");
+    assert_eq!(failure.status, Status::Fail);
+    assert!(failure.claim.contains("timeout"));
+    assert!(failure.claim.contains("connection_refused"));
+    assert!(
+        analysis
+            .findings
+            .iter()
+            .all(|finding| finding.rule_id != "R015"),
+        "a mix of causes must not be described as a pure refusal"
+    );
+}
+
+#[test]
+fn case_k_partial_refused_is_partial_loss() {
+    let (_, analysis) = analyze_case("case_k_partial_refused");
+    let loss = analysis
+        .findings
+        .iter()
+        .find(|finding| finding.rule_id == "R005")
+        .expect("partial loss finding");
+    assert_eq!(loss.status, Status::Warn);
+    assert!(loss.claim.contains("10/20"));
+}
+
+#[test]
+fn case_l_all_success_is_quiet() {
+    let (_, analysis) = analyze_case("case_l_all_success");
+    assert!(
+        analysis
+            .findings
+            .iter()
+            .all(|finding| !finding.status.is_notable()),
+        "a healthy target must not produce WARN/FAIL/INCONCLUSIVE findings"
     );
 }
 
@@ -244,6 +299,9 @@ fn every_finding_cites_existing_probes() {
         "case_g_single_success",
         "case_h_latency_gap",
         "case_i_all_refused",
+        "case_j_refused_and_timeouts",
+        "case_k_partial_refused",
+        "case_l_all_success",
     ] {
         let fixture = load(case);
         let report = report_from_fixture(&fixture);

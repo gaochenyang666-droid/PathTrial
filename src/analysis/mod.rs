@@ -267,7 +267,17 @@ pub fn analyze(ctx: &AnalysisContext<'_>) -> Analysis {
     }
 
     // ---- TCP rules -------------------------------------------------------
-    for summary in summaries {
+    // When a hostname resolved into the Fake-IP range, every downstream TCP/TLS
+    // number describes the local proxy, not the target service. Interpreting
+    // those numbers would produce confident but wrong claims, so the rules are
+    // deliberately skipped and the raw data stays in the report.
+    if ctx.fake_ip_suspected {
+        limitations.push(
+            "目标地址为本地改写时的 TCP/TLS 结论已被有意省略；原始探测数据仍保留，请关闭本地代理后重测"
+                .to_string(),
+        );
+    }
+    for summary in summaries.iter().filter(|_| !ctx.fake_ip_suspected) {
         let ids = all_probe_ids(summary);
         let confidence = confidence_for(summary);
         let limits: Vec<String> = sample_limit(summary).into_iter().collect();
@@ -295,7 +305,10 @@ pub fn analyze(ctx: &AnalysisContext<'_>) -> Analysis {
                 );
             } else {
                 // A refusal proves the host answered: the path is fine and the
-                // port is closed. That is a result, not a connectivity fault.
+                // port is closed. The refusal itself is recorded, but the
+                // requested port is not connectable, so this is a failed check.
+                // PathTrial must not conclude that the remote host or its
+                // service is healthy from a RST alone.
                 let refused_only = summary.error_classes.len() == 1
                     && summary.error_classes.contains_key("connection_refused");
                 if refused_only {
@@ -303,14 +316,19 @@ pub fn analyze(ctx: &AnalysisContext<'_>) -> Analysis {
                         &mut findings,
                         "R015",
                         format!(
-                            "{} 目标主机可达，但端口未监听（{} 次连接均被拒绝）",
+                            "{} 连接请求被明确拒绝（ECONNREFUSED，{}/{} 次），目标端口不可连接",
                             summary.family.label(),
+                            summary.tcp_total,
                             summary.tcp_total
                         ),
-                        Severity::Info,
-                        Status::Pass,
+                        Severity::Fail,
+                        Status::Fail,
                         ids.clone(),
-                        vec!["该端口是否本应开放".to_string()],
+                        vec![
+                            "拒绝响应由目标主机还是中间设备生成".to_string(),
+                            "该端口是否本应开放".to_string(),
+                            "远端服务本身的健康状态".to_string(),
+                        ],
                         confidence,
                         limits.clone(),
                     );
@@ -416,7 +434,7 @@ pub fn analyze(ctx: &AnalysisContext<'_>) -> Analysis {
     }
 
     // ---- Family comparison ----------------------------------------------
-    if summaries.len() == 2 && !suppress_comparison {
+    if summaries.len() == 2 && !suppress_comparison && !ctx.fake_ip_suspected {
         let (a, b) = (&summaries[0], &summaries[1]);
         if a.tcp_total > 0 && b.tcp_total > 0 {
             let gap = (a.tcp_success_rate - b.tcp_success_rate).abs();
@@ -538,7 +556,7 @@ pub fn analyze(ctx: &AnalysisContext<'_>) -> Analysis {
     if tls_enabled && tls_total == 0 {
         limitations.push("本次没有完成 TLS 检测（可能因为 TCP 未建立连接）".to_string());
     }
-    if tls_total > 0 {
+    if tls_total > 0 && !ctx.fake_ip_suspected {
         if tls_transport_ok == 0 {
             add_finding(
                 &mut findings,
@@ -834,6 +852,24 @@ mod tests {
         assert_eq!(finding.status, Status::Warn);
         assert!(!finding.evidence.is_empty());
         assert!(finding.limits.iter().any(|item| item.contains("198.18")));
+        // Downstream numbers describe the local proxy, so no TCP/TLS verdicts
+        // may be derived from them.
+        assert!(
+            analysis
+                .findings
+                .iter()
+                .all(|finding| finding.rule_id == "R002"),
+            "fake-ip runs must not emit TCP/TLS conclusions: {:?}",
+            analysis
+                .findings
+                .iter()
+                .map(|finding| finding.rule_id.clone())
+                .collect::<Vec<_>>()
+        );
+        assert!(analysis
+            .limitations
+            .iter()
+            .any(|item| item.contains("有意省略")));
     }
 
     #[test]

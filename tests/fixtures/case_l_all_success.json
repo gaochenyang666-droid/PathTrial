@@ -1,0 +1,7 @@
+{
+  "case": "L",
+  "description": "A healthy target: every attempt succeeded quickly.",
+  "provenance": "aggregate",
+  "tcp": [{ "family": "ipv4", "total": 20, "success": 20, "mean_ms": 35.0 }],
+  "expected_rules": []
+}

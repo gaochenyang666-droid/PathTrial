@@ -3,6 +3,41 @@
 All notable changes to PathTrial. The format follows Keep a Changelog, and the
 project uses semantic versioning for both the binary and the report schema.
 
+## [1.0.0-rc.2] - 2026-10-17
+
+### Fixed
+
+- **R015 semantics.** A connection refused used to be reported as PASS because
+  "something answered". That was wrong: the requested port is not connectable.
+  R015 now fails the TCP check, the stage is FAIL, and the process exits 2. The
+  claim records the refusal and does not assert that the remote host or its
+  service is healthy; "the RST may come from an intermediate device" stays in
+  `not_established`.
+- A mixed refusal/timeout result is described by R004 with both error classes,
+  not as a pure refusal.
+- Fake-IP targets no longer produce TCP/TLS/latency verdicts: those numbers
+  describe the local proxy, so the analysis now keeps only the R002 warning and
+  states that the downstream conclusions were deliberately omitted.
+- The overall verdict now also considers stage statuses, so a failing stage
+  cannot hide behind an unrelated PASS. Terminal, Markdown and JSON share the
+  same precedence.
+- Added an overall verdict line to the terminal summary and the Markdown report.
+
+### Added
+
+- Golden fixtures J (refused plus timeouts), K (partial refusals) and L (healthy
+  target), plus CLI tests for closed ports, profile differences, per-attempt
+  timeout bounds and budget-driven round reduction.
+
+### Verified
+
+- 69 tests (41 unit, 13 CLI, 13 golden, 2 schema).
+- macOS arm64: built and exercised against real network targets.
+- macOS x86_64: release build succeeds; runtime not exercised here because
+  Rosetta is not installed on the build machine.
+- Linux: CI workflow only. A local cross build would require a third-party
+  Homebrew cross toolchain; that tap was not trusted or installed.
+
 ## [1.0.0-rc.1] - 2026-10-17
 
 Release candidate: feature complete for the five-stage V1 scope.

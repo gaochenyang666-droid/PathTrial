@@ -122,6 +122,183 @@ fn scan_args(port: u16) -> Vec<String> {
     .collect()
 }
 
+fn scan_args_with(
+    port: u16,
+    rounds: u32,
+    profile: &str,
+    timeout_ms: u32,
+    extra: &[&str],
+) -> Vec<String> {
+    let mut args: Vec<String> = [
+        "scan".to_string(),
+        "127.0.0.1".to_string(),
+        "--port".to_string(),
+        port.to_string(),
+        "--profile".to_string(),
+        profile.to_string(),
+        "--rounds".to_string(),
+        rounds.to_string(),
+        "--timeout-ms".to_string(),
+        timeout_ms.to_string(),
+        "--interval-ms".to_string(),
+        "20".to_string(),
+    ]
+    .to_vec();
+    args.extend(extra.iter().map(|value| value.to_string()));
+    args
+}
+
+fn run_json(args: &[String]) -> (std::process::ExitStatus, serde_json::Value) {
+    let mut args = args.to_vec();
+    args.push("--format".to_string());
+    args.push("json".to_string());
+    args.push("--no-files".to_string());
+    let output = Command::new(binary()).args(&args).output().expect("run");
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap_or_else(|error| {
+        panic!(
+            "stdout was not JSON ({error}): {}",
+            String::from_utf8_lossy(&output.stdout)
+        )
+    });
+    (output.status, value)
+}
+
+fn free_port() -> u16 {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+    listener.local_addr().expect("addr").port()
+}
+
+#[test]
+fn closed_port_is_a_failed_check_with_exit_2() {
+    let port = free_port();
+    let (status, value) = run_json(&scan_args_with(port, 5, "tcp", 1000, &[]));
+    assert_eq!(status.code(), Some(2), "refused connections are a finding");
+    let stage = value["stages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|stage| stage["id"] == "tcp_tls")
+        .expect("tcp stage");
+    assert_eq!(stage["status"], "FAIL");
+    assert_eq!(value["summaries"][0]["tcp_success"], 0);
+    let finding = value["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|finding| finding["rule_id"] == "R015")
+        .expect("R015 finding");
+    assert_eq!(finding["status"], "FAIL");
+    let claim = finding["claim"].as_str().unwrap();
+    assert!(claim.contains("拒绝"));
+    assert!(!claim.contains("主机可达"));
+}
+
+#[test]
+fn web_profile_against_plain_tcp_reports_tls_failure() {
+    let port = loopback(4);
+    let (status, value) = run_json(&scan_args_with(port, 2, "web", 1000, &[]));
+    assert_eq!(status.code(), Some(2));
+    assert!(
+        value["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|finding| finding["rule_id"] == "R008"),
+        "plain TCP must fail the TLS stage"
+    );
+}
+
+#[test]
+fn ssh_profile_skips_tls() {
+    let port = loopback(4);
+    let (status, value) = run_json(&scan_args_with(port, 2, "ssh", 1000, &[]));
+    assert!(status.success(), "TCP-only profile should pass");
+    assert_eq!(value["configuration"]["tls_enabled"], false);
+    assert!(
+        value["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|finding| finding["rule_id"] != "R008"),
+        "TLS must not be evaluated for an SSH profile"
+    );
+}
+
+#[test]
+fn per_attempt_timeout_is_bounded() {
+    // 192.0.2.0/24 is reserved for documentation and never routable. The probe
+    // may fail immediately (unreachable) or time out; either way the recorded
+    // duration must respect --timeout-ms.
+    let output = Command::new(binary())
+        .args([
+            "scan",
+            "192.0.2.1",
+            "--port",
+            "443",
+            "--profile",
+            "tcp",
+            "--rounds",
+            "3",
+            "--timeout-ms",
+            "1000",
+            "--interval-ms",
+            "20",
+            "--max-seconds",
+            "30",
+            "--format",
+            "json",
+            "--no-files",
+        ])
+        .output()
+        .expect("run");
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
+    let durations: Vec<f64> = value["probes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|probe| probe["kind"] == "tcp")
+        .map(|probe| probe["duration_ms"].as_f64().unwrap_or(0.0))
+        .collect();
+    assert!(!durations.is_empty());
+    for duration in durations {
+        assert!(
+            duration <= 1600.0,
+            "attempt took {duration} ms with a 1000 ms timeout"
+        );
+    }
+}
+
+#[test]
+fn budget_shrinks_rounds_and_says_so() {
+    let port = loopback(40);
+    let (status, value) = run_json(&scan_args_with(
+        port,
+        50,
+        "tcp",
+        800,
+        &["--max-seconds", "5"],
+    ));
+    assert!(status.success() || status.code() == Some(3));
+    let rounds = value["configuration"]["rounds"].as_u64().unwrap();
+    assert!(rounds < 50, "budget must reduce rounds, got {rounds}");
+    assert!(
+        value["limitations"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|item| item.as_str().unwrap_or("").contains("预算")),
+        "the reduced round count must be explained"
+    );
+}
+
+#[test]
+fn long_timeout_is_accepted() {
+    let port = loopback(4);
+    let (status, value) = run_json(&scan_args_with(port, 2, "tcp", 6000, &[]));
+    assert!(status.success());
+    assert_eq!(value["configuration"]["timeout_ms"], 6000);
+}
+
 fn unique_dir(tag: &str) -> std::path::PathBuf {
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

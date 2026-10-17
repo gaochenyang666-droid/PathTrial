@@ -1,0 +1,15 @@
+{
+  "case": "K",
+  "description": "Half of the attempts succeeded while the rest were refused.",
+  "provenance": "aggregate",
+  "tcp": [
+    {
+      "family": "ipv4",
+      "total": 20,
+      "success": 10,
+      "mean_ms": 220.0,
+      "errors": { "connection_refused": 10 }
+    }
+  ],
+  "expected_rules": ["R005"]
+}
