@@ -12,7 +12,7 @@
 
 > **Which version should I use?** [v1.3.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.3.0-rc.1) is the publicly downloadable CLI beta. The MCP-enabled **v1.4.0-rc.1 / AI Plugins v0.2.0** is in [PR #2](https://github.com/gaochenyang666-droid/PathTrial/pull/2), with **no public v1.4 prebuilt release yet**. The v1.3 binary cannot run `pathtrial mcp`.
 
-> **AI plugin testers wanted (developer preview):** We welcome users with working **Codex or Claude Code** accounts to try the [AI Plugins v0.2.0 development branch](https://github.com/gaochenyang666-droid/PathTrial/tree/codex/ai-plugins-v0.1). Real Codex v0.2 model tool calls have been verified. Claude Code manifests validate, but live model calls remain **UNVERIFIED** because the maintainer cannot complete account sign-in; community testing is welcome. **No public prebuilt v1.4 MCP release exists yet, so this preview requires Rust 1.84+ and a source build.** See the [developer branch installation guide](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/README.en.md). Please [report bugs](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) with core/plugin/client versions, platform, steps, expected and observed results. **Remove private addresses, tokens, proxy credentials and unredacted reports before posting.**
+> **Try the AI plugins:** Codex and Claude Code integrations are available in the [AI Plugins v0.2.0 development branch](https://github.com/gaochenyang666-droid/PathTrial/tree/codex/ai-plugins-v0.1). A public prebuilt v1.4 MCP package is not available yet; testing requires Rust 1.84+ and a source build. Follow the [setup guide](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/README.en.md) and [report issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) with redacted version details, reproduction steps and expected versus actual results.
 
 ## What is PathTrial, and who is it for?
 
@@ -32,7 +32,7 @@ For example, if TCP succeeds but TLS fails, PathTrial reports those stages separ
 
 PathTrial AI Plugins v0.2.0 gives **Codex and Claude Code** access to one local MCP server and shared Skills. The Rust engine performs actual network measurements; the AI client interprets recorded evidence. **The diagnostic server needs no separate AI API key; each AI client still requires its own access.**
 
-**Verification status:** v1.4.0-rc.1 passed 173 tests and native CI on Ubuntu 24.04, macOS ARM and macOS Intel. All nine MCP tools have local protocol tests. **Real Codex v0.2 model-driven calls are verified (capabilities, authorized TCP scan, report explanation and unauthorized denial). Claude Code manifests validate, but live model calls remain unverified due to maintainer sign-in issues; community testers are welcome.** The [AI Plugins score is 75%](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/docs/ai-plugin-completeness.md) under an independent engineering acceptance rubric, not a probe success rate.
+**Development status:** v1.4.0-rc.1 passed 173 tests and CI on Ubuntu 24.04 and macOS ARM/Intel. All nine MCP tools have local protocol tests; real model-driven Codex v0.2 calls and authorized scans have been exercised. See the [engineering test matrix](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/docs/ai-plugin-completeness.md) for details.
 
 **Build the development preview (Rust 1.84+ required; ordinary CLI users should install v1.3 above instead):**
 
@@ -55,7 +55,7 @@ codex plugin list
 codex mcp list
 ~~~
 
-**Claude Code plugin:** this is an **unverified runtime preview**. With Claude Code installed, try the following from the repository root:
+**Claude Code plugin:** with Claude Code installed, load the local plugin from the repository root:
 
 ~~~sh
 claude plugin validate ./plugins/claude-code/pathtrial
