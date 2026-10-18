@@ -8,6 +8,8 @@
 
 > **Estado:** el CLI público es `v1.3.0-rc.1`. AI Plugins `v0.2.0` es una vista previa para desarrolladores del núcleo `1.4.0-rc.1` y todavía no tiene un paquete precompilado público. El README está disponible en cuatro idiomas; la salida del CLI y los informes no están totalmente traducidos.
 
+> **Buscamos probadores de la comunidad:** Esta es la **versión preliminar AI Plugins v0.2.0**. Se han verificado llamadas reales de Codex v0.2. Los manifiestos de Claude Code son válidos, pero **aún no hay pruebas reales con Claude Code**, ya que el responsable del proyecto no ha podido iniciar sesión. Invitamos a los usuarios con acceso a Claude Code a probar las instrucciones siguientes e [informar de errores reproducibles](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md). **Aún no hay binarios públicos v1.4 con MCP; se necesitan Rust 1.84+ y compilación desde el código fuente.** Indica las versiones, el sistema, los pasos y los resultados, sin publicar direcciones privadas, credenciales ni informes sin anonimizar.
+
 ## ¿Por qué usar PathTrial?
 
 Que un Ping funcione no demuestra que DNS, TCP, TLS, HTTP y la aplicación estén sanos. PathTrial mide cada capa por separado, conserva las pruebas y explica qué causas siguen sin demostrarse.
