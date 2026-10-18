@@ -1,6 +1,6 @@
-# PathTrial
+# PathTrial — Diagnóstico de red CLI y plugins MCP
 
-**Deja que la IA diagnostique tu red con mediciones reales.**
+**Herramienta gratuita y de código abierto para el diagnóstico de redes, escrita en Rust.** Comprueba DNS, TCP, TLS, HTTP/3, QUIC, UDP, proxies y conectividad IPv4/IPv6 de sitios web y servidores VPS; genera informes JSON con pruebas verificables. Los plugins MCP locales para Codex y Claude Code están en versión preliminar.
 
 **Idiomas:** [简体中文](README.md) · [English](README.en.md) · **Español** · [Русский](README.ru.md)
 
@@ -10,7 +10,7 @@
 
 > **Prueba los plugins de IA:** Los plugins de Codex y Claude Code están disponibles en la rama de desarrollo AI Plugins v0.2.0. Comparte errores de instalación, compatibilidad o diagnóstico en [GitHub Issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) con versiones, pasos y resultados, eliminando datos sensibles. **Todavía no hay binarios públicos v1.4 con MCP; esta versión requiere Rust 1.84+ y compilar desde el código fuente.**
 
-## ¿Por qué usar PathTrial?
+## ¿Qué problemas de red puede diagnosticar PathTrial?
 
 Que un Ping funcione no demuestra que DNS, TCP, TLS, HTTP y la aplicación estén sanos. PathTrial mide cada capa por separado, conserva las pruebas y explica qué causas siguen sin demostrarse.
 
@@ -144,6 +144,24 @@ pathtrial scan example.com --profile web --rounds 5 --redact-ips
 - Claude Code: se proporcionan carga local del plugin, configuración MCP y Skills compartidas.
 
 Consulta la [matriz de completitud de AI Plugins](docs/ai-plugin-completeness.md). No están disponibles Windows, una interfaz gráfica, la reparación automática de la red, la captura automática de paquetes ni la atribución exacta del equipo que pierde tráfico. Fake-IP/TUN, UDP 443 público y HTTP/3 todavía pueden depender de la red local.
+
+## Preguntas frecuentes sobre diagnóstico de red
+
+### Si no abre una web, ¿cómo diferenciar un fallo de DNS, TCP, TLS o HTTP?
+
+Para un destino autorizado, ejecuta `pathtrial scan example.com --profile web --rounds 5 --redact-ips` y después `pathtrial http https://example.com/`. Cada capa se mide por separado; recibir respuesta a un Ping no demuestra que el sitio funcione.
+
+### ¿Sirve para VPS, IPv4/IPv6, proxies SOCKS5 y HTTP/3?
+
+Sí. El CLI permite analizar IPv4/IPv6, TCP/TLS, proxies SOCKS5 y HTTP CONNECT, handshakes QUIC y peticiones HTTP/3 reales cuando el destino admite el protocolo. Consulta la [guía del CLI](docs/cli.md). Un timeout UDP por sí solo no identifica la causa.
+
+### ¿Cómo utilizar PathTrial con Codex o Claude Code mediante MCP?
+
+Sigue las [instrucciones de instalación](#instalar-los-plugins-de-ia). Los plugins usan el motor local en Rust. El CLI público `v1.3.0-rc.1` no incluye MCP; la vista previa requiere compilar el núcleo `1.4.0-rc.1` y autorizar el destino expresamente.
+
+### ¿Necesito Rust? ¿Funciona en Windows?
+
+Los paquetes CLI públicos ya compilados no requieren Rust y admiten macOS Apple Silicon, macOS Intel y Linux x86_64. Windows aún no está disponible. Para compilar o probar MCP en desarrollo sí se necesita Rust.
 
 ## Informar de errores y contribuir
 
