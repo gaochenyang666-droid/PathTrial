@@ -61,7 +61,7 @@ PathTrial AI Plugins v0.2: Codex and Claude Code integration and hardening.
   including the native MCP initialize and tools/list smoke tests.
 - Claude Code CLI 2.1.292 is installed and both the plugin manifest and
   repository marketplace pass `claude plugin validate`. Live Claude Code calls
-  remain UNVERIFIED because no Claude account is signed in on this machine.
+  have not yet been verified through a live model session.
 
 ### Security
 
