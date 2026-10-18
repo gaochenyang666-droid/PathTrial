@@ -50,13 +50,15 @@ codex plugin list
 codex mcp list
 ~~~
 
+The real v0.2.0 Codex model session completed an authorized local scan and report explanation: TCP succeeded `1/1`, evidence ID `tcp_ipv4_001` was returned, and an unauthorized target was rejected with `target_not_allowed`.
+
 Then ask Codex:
 
 > Call `pathtrial_capabilities` first and confirm the PathTrial version and all nine MCP tools.
 
 ### Claude Code
 
-Claude Code runtime validation is still `UNVERIFIED`. The default `main` branch has no marketplace file, and remote branch installation has not been tested in a real Claude Code client. Use the officially supported local plugin loading flow:
+Claude Code runtime validation is still `UNVERIFIED`. Official CLI `2.1.292` is installed and `claude plugin validate` passes, but this machine is not signed in to a Claude account, so a live model session has not started. The default `main` branch also has no marketplace file. Use the officially supported local plugin loading flow:
 
 ~~~bash
 claude plugin validate ./plugins/claude-code/pathtrial
@@ -136,9 +138,9 @@ pathtrial scan example.com --profile web --rounds 5 --redact-ips
 - AI Plugins: `0.2.0` developer preview.
 - Public prebuilt CLI: `v1.3.0-rc.1`, without MCP.
 - Automated verification: 173 tests passed, with CI on Ubuntu 24.04, macOS ARM and macOS Intel.
-- Codex: real model-driven calls passed on the `v0.1.0` baseline. `v0.2.0` passed installation and protocol checks; its model session was not rerun.
-- Claude Code: manifest and plugin structure are verified. Live client loading and calls remain `UNVERIFIED`.
-- AI Plugins engineering score: `74.0%`. This is an acceptance score, not diagnostic accuracy.
+- Codex: `v0.2.0` passed a real model-driven session, authorized scan, evidence explanation and unauthorized-target rejection.
+- Claude Code: official CLI, plugin manifest and marketplace structure are verified. Account login is missing, so live calls remain `UNVERIFIED`.
+- AI Plugins engineering score: `75.0%`. This is an acceptance score, not diagnostic accuracy.
 
 See the [AI Plugins completeness matrix](docs/ai-plugin-completeness.md) for evidence. Windows, a graphical interface, automatic network repair, automatic packet capture and exact loss-device attribution are not available. Fake-IP/TUN behavior, public UDP 443 and HTTP/3 reachability can still depend on the local network.
 
