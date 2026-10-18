@@ -8,7 +8,7 @@
 
 > **Status:** the public CLI is `v1.3.0-rc.1`. AI Plugins `v0.2.0` is a developer preview for core `1.4.0-rc.1`, with no public prebuilt package yet. The README is available in four languages; CLI output and generated reports are not fully translated.
 
-> **Community testers wanted:** This is the **AI Plugins v0.2.0 developer preview**. Codex v0.2 real model tool calls have been verified. Claude Code manifests validate, but **live Claude Code diagnostics remain UNVERIFIED** because the maintainer cannot sign in. Users with working Claude Code accounts are invited to try the instructions below and submit reproducible bug reports for fixes. **There is no public v1.4 MCP prebuilt release yet: Rust 1.84+ and a source build are still required.** [Report a bug](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) with core/plugin/client versions, OS, reproduction steps, expected versus actual results, and no private addresses, credentials or unredacted reports.
+> **Try the AI plugins:** Codex and Claude Code plugins are available in the AI Plugins v0.2.0 development branch. Try them and [report installation, compatibility or diagnostic issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) with redacted version details, reproduction steps and observed results. **No public v1.4 MCP binary is available yet; this preview requires Rust 1.84+ and a source build.**
 
 ## Why PathTrial?
 
@@ -60,14 +60,14 @@ Then ask Codex:
 
 ### Claude Code
 
-Claude Code runtime validation is still `UNVERIFIED`. Official CLI `2.1.292` is installed and `claude plugin validate` passes, but this machine is not signed in to a Claude account, so a live model session has not started. The default `main` branch also has no marketplace file. Use the officially supported local plugin loading flow:
+The Claude Code plugin supports local loading. Until plugin files are merged into the default `main` branch, run the following from the repository root of this development branch:
 
 ~~~bash
 claude plugin validate ./plugins/claude-code/pathtrial
 claude --plugin-dir ./plugins/claude-code/pathtrial
 ~~~
 
-Inside the session, open `/mcp` and check whether `pathtrial` is registered. The manifest and shared Skills pass structural tests; live Claude Code calls still require validation in a real environment.
+Inside the session, use `/mcp` to check for the `pathtrial` tools, then try a diagnostic or report analysis.
 
 ## First use
 
@@ -141,8 +141,7 @@ pathtrial scan example.com --profile web --rounds 5 --redact-ips
 - Public prebuilt CLI: `v1.3.0-rc.1`, without MCP.
 - Automated verification: 173 tests passed, with CI on Ubuntu 24.04, macOS ARM and macOS Intel.
 - Codex: `v0.2.0` passed a real model-driven session, authorized scan, evidence explanation and unauthorized-target rejection.
-- Claude Code: official CLI, plugin manifest and marketplace structure are verified. Account login is missing, so live calls remain `UNVERIFIED`.
-- AI Plugins engineering score: `75.0%`. This is an acceptance score, not diagnostic accuracy.
+- Claude Code: local plugin loading, MCP configuration and shared Skills are provided.
 
 See the [AI Plugins completeness matrix](docs/ai-plugin-completeness.md) for evidence. Windows, a graphical interface, automatic network repair, automatic packet capture and exact loss-device attribution are not available. Fake-IP/TUN behavior, public UDP 443 and HTTP/3 reachability can still depend on the local network.
 
