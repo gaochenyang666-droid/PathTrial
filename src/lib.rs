@@ -9,6 +9,7 @@ pub mod collect;
 pub mod commands;
 pub mod compare;
 pub mod endpoint;
+pub mod mcp;
 pub mod models;
 pub mod net;
 pub mod platform;

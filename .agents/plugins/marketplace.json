@@ -1,0 +1,20 @@
+{
+  "name": "pathtrial",
+  "interface": {
+    "displayName": "PathTrial"
+  },
+  "plugins": [
+    {
+      "name": "pathtrial",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codex/pathtrial"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

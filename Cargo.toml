@@ -1,11 +1,11 @@
 [package]
 name = "pathtrial"
-version = "1.3.0-rc.1"
+version = "1.4.0-rc.1"
 edition = "2021"
 rust-version = "1.84"
 description = "Evidence-first network diagnostics CLI"
 license = "MIT"
-repository = "https://github.com/example/pathtrial"
+repository = "https://github.com/gaochenyang666-droid/PathTrial"
 readme = "README.md"
 keywords = ["network", "diagnostics", "tcp", "tls", "cli"]
 categories = ["command-line-utilities", "network-programming"]

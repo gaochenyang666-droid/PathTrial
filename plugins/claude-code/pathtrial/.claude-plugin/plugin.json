@@ -1,0 +1,22 @@
+{
+  "name": "pathtrial",
+  "displayName": "PathTrial Network Diagnostics",
+  "version": "0.2.0",
+  "description": "Evidence-first local network diagnostics for Claude Code, backed by the PathTrial CLI and MCP server.",
+  "author": {
+    "name": "gaochenyang666-droid",
+    "url": "https://github.com/gaochenyang666-droid"
+  },
+  "homepage": "https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/ai-integrations.md",
+  "repository": "https://github.com/gaochenyang666-droid/PathTrial",
+  "license": "MIT",
+  "keywords": [
+    "network",
+    "diagnostics",
+    "mcp",
+    "dns",
+    "tcp",
+    "tls",
+    "quic"
+  ]
+}
