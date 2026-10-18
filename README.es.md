@@ -8,7 +8,7 @@
 
 > **Estado:** el CLI público es `v1.3.0-rc.1`. AI Plugins `v0.2.0` es una vista previa para desarrolladores del núcleo `1.4.0-rc.1` y todavía no tiene un paquete precompilado público. El README está disponible en cuatro idiomas; la salida del CLI y los informes no están totalmente traducidos.
 
-> **Buscamos probadores de la comunidad:** Esta es la **versión preliminar AI Plugins v0.2.0**. Se han verificado llamadas reales de Codex v0.2. Los manifiestos de Claude Code son válidos, pero **aún no hay pruebas reales con Claude Code**, ya que el responsable del proyecto no ha podido iniciar sesión. Invitamos a los usuarios con acceso a Claude Code a probar las instrucciones siguientes e [informar de errores reproducibles](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md). **Aún no hay binarios públicos v1.4 con MCP; se necesitan Rust 1.84+ y compilación desde el código fuente.** Indica las versiones, el sistema, los pasos y los resultados, sin publicar direcciones privadas, credenciales ni informes sin anonimizar.
+> **Prueba los plugins de IA:** Los plugins de Codex y Claude Code están disponibles en la rama de desarrollo AI Plugins v0.2.0. Comparte errores de instalación, compatibilidad o diagnóstico en [GitHub Issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) con versiones, pasos y resultados, eliminando datos sensibles. **Todavía no hay binarios públicos v1.4 con MCP; esta versión requiere Rust 1.84+ y compilar desde el código fuente.**
 
 ## ¿Por qué usar PathTrial?
 
@@ -60,14 +60,14 @@ Después pide a Codex:
 
 ### Claude Code
 
-La ejecución real en Claude Code sigue en estado `UNVERIFIED`. El CLI oficial `2.1.292` está instalado y `claude plugin validate` pasa, pero esta máquina no ha iniciado sesión en una cuenta de Claude, por lo que todavía no se ha iniciado una sesión real del modelo. La rama `main` predeterminada tampoco contiene el archivo del Marketplace. Utiliza la carga local oficial:
+El plugin de Claude Code permite la carga local. Hasta que los archivos se integren en la rama `main`, ejecuta lo siguiente desde la raíz del repositorio de desarrollo:
 
 ~~~bash
 claude plugin validate ./plugins/claude-code/pathtrial
 claude --plugin-dir ./plugins/claude-code/pathtrial
 ~~~
 
-Dentro de la sesión, abre `/mcp` y comprueba si `pathtrial` está registrado. El manifiesto y las Skills compartidas superan las pruebas estructurales; las llamadas reales desde Claude Code todavía necesitan validación en un entorno real.
+Dentro de la sesión, utiliza `/mcp` para comprobar si las herramientas `pathtrial` están registradas y realiza una prueba de diagnóstico o análisis de informes.
 
 ## Primer uso
 
@@ -141,8 +141,7 @@ pathtrial scan example.com --profile web --rounds 5 --redact-ips
 - CLI precompilado público: `v1.3.0-rc.1`, sin MCP.
 - Verificación automática: 173 pruebas superadas y CI en Ubuntu 24.04, macOS ARM y macOS Intel.
 - Codex: `v0.2.0` superó una sesión real del modelo, un análisis autorizado, la explicación de pruebas y el rechazo de destinos no autorizados.
-- Claude Code: CLI oficial, manifiesto y estructura del Marketplace verificados. Falta iniciar sesión, por lo que las llamadas reales siguen en `UNVERIFIED`.
-- Puntuación de ingeniería de AI Plugins: `75.0%`. Es una puntuación de aceptación, no la precisión del diagnóstico.
+- Claude Code: se proporcionan carga local del plugin, configuración MCP y Skills compartidas.
 
 Consulta la [matriz de completitud de AI Plugins](docs/ai-plugin-completeness.md). No están disponibles Windows, una interfaz gráfica, la reparación automática de la red, la captura automática de paquetes ni la atribución exacta del equipo que pierde tráfico. Fake-IP/TUN, UDP 443 público y HTTP/3 todavía pueden depender de la red local.
 
