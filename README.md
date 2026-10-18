@@ -8,6 +8,8 @@
 
 > **状态：** 公开 CLI 为 `v1.3.0-rc.1`。AI Plugins 为 `v0.2.0` 开发者预览，对应核心 `1.4.0-rc.1`，尚无公开预编译包。README 已提供四种语言，终端输出和报告尚未全面翻译。
 
+> **招募 AI 插件测试者**：当前是 **AI Plugins v0.2.0 开发者预览**。Codex v0.2 已完成真实模型调用；Claude Code 的插件清单已验证，但由于维护者无法登录 Claude 账号，**真实 Claude Code 诊断尚未验证**。欢迎能正常登录 Claude Code 的用户按下面步骤安装并反馈 Bug；维护者将根据可复现问题修复。**1.4 MCP 公开预编译包尚未发布，目前需要 Rust 1.84+ 源码构建。** [提交 Bug](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) 时请注明 PathTrial / 插件 / 客户端版本、操作系统、复现步骤、预期与实际结果，并删除所有敏感地址、凭据和未脱敏报告。
+
 ## 为什么使用 PathTrial？
 
 网络问题经常被一句“能 Ping 通”掩盖。PathTrial 把连接拆成 DNS、TCP、TLS、HTTP、UDP、QUIC 等阶段，保存每次测量的证据，并明确说明哪些原因尚未确认。
