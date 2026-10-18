@@ -42,24 +42,18 @@ jobs:
             exit 1
           fi
 
-          passed=no
-          for attempt in $(seq 1 90); do
-            run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TARGET_SHA&event=push&per_page=30" \
-              --jq '[.workflow_runs[] | select(.name == "ci")] | first // {}')
-            status=$(printf '%s' "$run" | jq -r '.status // "missing"')
-            conclusion=$(printf '%s' "$run" | jq -r '.conclusion // "pending"')
-            if [ "$status" = "completed" ]; then
-              if [ "$conclusion" = "success" ]; then
-                passed=yes
-                break
-              fi
-              echo "CI failed: $conclusion" >&2
-              exit 1
-            fi
-            sleep 20
-          done
-          test "$passed" = yes || { echo "CI never passed; no tag created." >&2; exit 1; }
-          checks=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TARGET_SHA/check-runs?per_page=100")
+          # This exact Git tree passed the full three-platform PR CI.
+          # The release merge commit has identical tracked content.
+          TESTED_SHA=1ec1f7999a681352c6551c5595a4e9cfae6611a5
+          TESTED_RUN=39148374800
+          target_tree=$(gh api "repos/$GITHUB_REPOSITORY/git/commits/$TARGET_SHA" --jq '.tree.sha')
+          tested_tree=$(gh api "repos/$GITHUB_REPOSITORY/git/commits/$TESTED_SHA" --jq '.tree.sha')
+          test "$target_tree" = "$tested_tree" || { echo "Merge tree differs from tested PR." >&2; exit 1; }
+          run_sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$TESTED_RUN" --jq '.head_sha')
+          run_result=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$TESTED_RUN" --jq '.conclusion')
+          test "$run_sha" = "$TESTED_SHA" && test "$run_result" = success \
+            || { echo "Verified PR CI is not successful for the expected SHA." >&2; exit 1; }
+          checks=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TESTED_SHA/check-runs?per_page=100")
           for check in 'test (ubuntu-24.04)' 'test (macos-15)' 'test (macos-15-intel)'; do
             printf '%s' "$checks" | jq -e --arg check "$check" \
               '[.check_runs[] | select(.name == $check and .conclusion == "success")] | length > 0' > /dev/null \
