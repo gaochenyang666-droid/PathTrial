@@ -34,7 +34,7 @@ fn version_and_help_are_available() {
     let schema: serde_json::Value = serde_json::from_slice(&schema.stdout).expect("schema json");
     assert_eq!(
         schema["$id"],
-        "https://pathtrial.dev/schemas/command-1.0.0.json"
+        "https://pathtrial.dev/schemas/command-1.1.0.json"
     );
 }
 
@@ -86,7 +86,7 @@ fn scan_against_loopback_listener_emits_valid_json() {
         String::from_utf8_lossy(&output.stderr)
     );
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("stdout is JSON");
-    assert_eq!(value["schema_version"], "1.4.0");
+    assert_eq!(value["schema_version"], "1.5.0");
     assert_eq!(value["stages"].as_array().unwrap().len(), 5);
     assert_eq!(value["summaries"][0]["tcp_success"], 2);
     assert_eq!(value["configuration"]["tls_enabled"], false);

@@ -1,7 +1,7 @@
 //! Single-purpose subcommands. Each one records real probes and reuses the same
 //! status vocabulary as `scan`.
 
-use crate::cli::{HttpArgs, OutputFormat};
+use crate::cli::{AddressFamily, Http3Args, HttpArgs, OutputFormat, QuicArgs};
 use crate::models::{Probe, ProbeDetail, ProbeKind, ProbeOutcome, Status, TraceHop};
 use crate::probes::http::{self, HttpRequest};
 use crate::probes::Recorder;
@@ -551,6 +551,166 @@ pub fn proxy(args: &crate::cli::ProxyArgs) -> Result<u8, String> {
     if let Some(error) = attempt.error {
         report = report.with_limitation(format!("proxy stage error: {error}"));
     }
+    Ok(report.emit(args.format))
+}
+
+fn family_choice(family: AddressFamily) -> crate::probes::quic::FamilyChoice {
+    match family {
+        AddressFamily::Auto => crate::probes::quic::FamilyChoice::Auto,
+        AddressFamily::Ipv4 => crate::probes::quic::FamilyChoice::Ipv4,
+        AddressFamily::Ipv6 => crate::probes::quic::FamilyChoice::Ipv6,
+    }
+}
+
+fn quic_status(outcome: &crate::probes::quic::QuicOutcome, wants_http3: bool) -> Status {
+    if outcome.fake_ip_suspected() {
+        Status::Inconclusive
+    } else if outcome.protocol_unavailable() {
+        Status::Skip
+    } else if !outcome.handshake_ok || outcome.error.is_some() {
+        Status::Fail
+    } else if let Some(status) = outcome.http3_status {
+        if status >= 400 {
+            Status::Warn
+        } else {
+            Status::Pass
+        }
+    } else if wants_http3 {
+        Status::Inconclusive
+    } else {
+        Status::Pass
+    }
+}
+
+fn quic_summary(outcome: &crate::probes::quic::QuicOutcome) -> String {
+    format!(
+        "address: {}\nstage: {}\nhandshake: {} | {} ms\ntls_verified: {}\nalpn: {}\nhttp3_status: {}\nhttp3_bytes: {}\nhttp3_ttfb: {}\nhttp3_total: {}",
+        outcome
+            .address
+            .map(|address| address.to_string())
+            .unwrap_or_else(|| "unavailable".to_string()),
+        outcome.stage,
+        if outcome.handshake_ok { "ok" } else { "failed" },
+        outcome
+            .handshake_ms
+            .map(|value| format!("{value:.1}"))
+            .unwrap_or_else(|| "n/a".to_string()),
+        outcome
+            .tls_verified
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "n/a".to_string()),
+        outcome.alpn.as_deref().unwrap_or("none"),
+        outcome
+            .http3_status
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "n/a".to_string()),
+        outcome.http3_bytes,
+        format_opt_ms(outcome.http3_ttfb_ms),
+        format_opt_ms(outcome.http3_total_ms)
+    )
+}
+
+fn quic_limits(report: CommandReport, outcome: &crate::probes::quic::QuicOutcome) -> CommandReport {
+    let mut report = report.with_limitation(
+        "QUIC 握手成功不等于 HTTP/3 可用；TLS 证书、ALPN 和 HTTP/3 阶段分开记录".to_string(),
+    );
+    report = report.with_limitation(
+        "UDP 无响应可能来自服务未开放、防火墙或路径丢包；本工具不定位具体设备".to_string(),
+    );
+    if outcome.protocol_unavailable() {
+        report = report.with_limitation(
+            "目标未协商请求的 ALPN；这只能说明该协议未提供，不能判成整条网络异常".to_string(),
+        );
+    }
+    if outcome.fake_ip_suspected() {
+        report = report.with_limitation(
+            "解析结果位于 198.18.0.0/15，疑似本地代理 Fake-IP；本次握手描述本地代理路径"
+                .to_string(),
+        );
+    }
+    report
+}
+
+/// `pathtrial quic HOST`
+pub fn quic(args: &QuicArgs) -> Result<u8, String> {
+    if args.timeout_ms == 0 || args.max_seconds == 0 {
+        return Err("--timeout-ms and --max-seconds must be greater than zero".to_string());
+    }
+    crate::probes::quic::check_interface(args.bind_interface.as_deref())?;
+    let started_at = crate::util::now_rfc3339();
+    let mut recorder = Recorder::new();
+    let request = crate::probes::quic::QuicRequest {
+        host: &args.host,
+        port: args.port,
+        family: family_choice(args.family),
+        alpn: &args.alpn,
+        server_name: args.sni.as_deref(),
+        timeout: std::time::Duration::from_millis(args.timeout_ms),
+        deadline: std::time::Instant::now() + std::time::Duration::from_secs(args.max_seconds),
+        interface: args.bind_interface.as_deref(),
+        ca_file: args.ca_file.as_deref(),
+        insecure: args.insecure,
+        http3: None,
+    };
+    let outcome = crate::probes::quic::run(&mut recorder, &request)?;
+    let id = crate::probes::quic::record(&mut recorder, &request, &outcome);
+    let status = quic_status(&outcome, false);
+    let target = format!("{}:{}", args.host, args.port);
+    let report = CommandReport::new("quic", &target, started_at)
+        .with_status(status, quic_summary(&outcome))
+        .with_probes(recorder.into_probes());
+    let mut report = quic_limits(report, &outcome);
+    if args.insecure {
+        report = report.with_limitation("证书校验已关闭；该模式只能用于诊断或本地测试".to_string());
+    }
+    if let Some(error) = &outcome.error {
+        report = report.with_limitation(format!("QUIC stage error: {error}"));
+    }
+    let _ = id;
+    Ok(report.emit(args.format))
+}
+
+/// `pathtrial http3 URL`
+pub fn http3(args: &Http3Args) -> Result<u8, String> {
+    if args.timeout_ms == 0 || args.max_seconds == 0 {
+        return Err("--timeout-ms and --max-seconds must be greater than zero".to_string());
+    }
+    crate::probes::quic::check_interface(args.bind_interface.as_deref())?;
+    let url = crate::probes::http::parse_url(&args.url)?;
+    if !url.is_tls() {
+        return Err("http3 requires an https:// URL".to_string());
+    }
+    let display_url = url.redacted();
+    let uri = format!("https://{}{}", url.host_header(), url.path);
+    let started_at = crate::util::now_rfc3339();
+    let mut recorder = Recorder::new();
+    let request = crate::probes::quic::QuicRequest {
+        host: &url.host,
+        port: url.port,
+        family: family_choice(args.family),
+        alpn: "h3",
+        server_name: args.sni.as_deref().or(Some(&url.host)),
+        timeout: std::time::Duration::from_millis(args.timeout_ms),
+        deadline: std::time::Instant::now() + std::time::Duration::from_secs(args.max_seconds),
+        interface: args.bind_interface.as_deref(),
+        ca_file: args.ca_file.as_deref(),
+        insecure: args.insecure,
+        http3: Some(crate::probes::quic::Http3Target { uri: &uri }),
+    };
+    let outcome = crate::probes::quic::run(&mut recorder, &request)?;
+    let id = crate::probes::quic::record(&mut recorder, &request, &outcome);
+    let status = quic_status(&outcome, true);
+    let report = CommandReport::new("http3", &display_url, started_at)
+        .with_status(status, quic_summary(&outcome))
+        .with_probes(recorder.into_probes());
+    let mut report = quic_limits(report, &outcome);
+    if args.insecure {
+        report = report.with_limitation("证书校验已关闭；该模式只能用于诊断或本地测试".to_string());
+    }
+    if let Some(error) = &outcome.error {
+        report = report.with_limitation(format!("HTTP/3 stage error: {error}"));
+    }
+    let _ = id;
     Ok(report.emit(args.format))
 }
 

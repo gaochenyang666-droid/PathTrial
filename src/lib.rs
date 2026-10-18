@@ -5,6 +5,7 @@
 
 pub mod analysis;
 pub mod cli;
+pub mod collect;
 pub mod commands;
 pub mod compare;
 pub mod endpoint;

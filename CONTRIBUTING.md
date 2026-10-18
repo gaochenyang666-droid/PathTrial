@@ -10,20 +10,21 @@
 3. **No silent fallbacks.** If interface binding, DNS or TLS cannot be done as
    requested, report it. Do not degrade to a different measurement and keep the
    original label.
-4. **Do not broaden scope in V1.** UDP, QUIC, proxy checks, remote agents and
-   Windows are explicitly out of scope for this release.
+4. **Keep scope explicit.** Windows and automatic packet-capture analysis are
+   out of scope for this release. QUIC and dual-end reports must preserve their
+   documented evidence limits.
 
 ## Development
 
 ```bash
 cargo fmt --all
 cargo clippy --all-targets -- -D warnings
-cargo test --all-targets
+cargo test --locked --all-targets -- --test-threads=1
 cargo build --release
 ```
 
-All three checks must pass before a change is proposed. CI runs them on macOS
-and Linux.
+All checks must pass before a change is proposed. CI runs them on Ubuntu 24.04,
+macOS ARM and macOS Intel.
 
 ## Adding or changing a rule
 
@@ -43,6 +44,9 @@ and Linux.
 - Keep probes bounded: no scanning, no credential attempts, and respect
   `--max-seconds`.
 - Never write to system configuration.
+- QUIC probes must separate transport, certificate, ALPN and HTTP/3 failures.
+- Dual-end collection must write independent JSON and must not claim a packet
+  loss location without capture evidence.
 
 ## Fixtures
 
