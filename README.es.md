@@ -12,6 +12,8 @@
 
 > **¿Qué versión debo instalar?** La beta pública [v1.3.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.3.0-rc.1) permite utilizar el CLI sin compilar. La versión **v1.4.0-rc.1 / AI Plugins v0.2.0**, con MCP, sigue en desarrollo en el [PR #2](https://github.com/gaochenyang666-droid/PathTrial/pull/2): **todavía no existe un paquete precompilado público de v1.4**. El binario v1.3 no admite `pathtrial mcp`.
 
+> **Buscamos personas para probar los plugins (versión preliminar):** Invitamos a usuarios con acceso a **Codex o Claude Code** a probar la [rama de desarrollo AI Plugins v0.2.0](https://github.com/gaochenyang666-droid/PathTrial/tree/codex/ai-plugins-v0.1). Ya se han verificado llamadas reales al modelo con Codex v0.2. Los manifiestos de Claude Code superan la validación, pero las llamadas reales siguen **SIN VERIFICAR** porque el responsable del proyecto no ha podido iniciar sesión; agradecemos las pruebas de la comunidad. **Todavía no hay binarios públicos de v1.4 con MCP: se necesita Rust 1.84+ y compilar desde el código fuente.** Consulta la [guía de instalación de la rama](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/README.es.md). Puedes [informar de un error](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) indicando versiones, plataforma, pasos y resultados esperados/reales. **Elimina IP privadas, tokens, credenciales del proxy e informes sin anonimizar antes de publicarlos.**
+
 ## ¿Qué es PathTrial y para quién sirve?
 
 ¿Por qué una web no funciona aunque responda al Ping? ¿Por qué un VPS acepta conexiones TCP, pero el proxy falla? ¿Por qué IPv6 funciona y IPv4 es lento?
@@ -30,7 +32,7 @@ Por ejemplo, si TCP conecta, pero falla el intercambio TLS, PathTrial registra a
 
 PathTrial AI Plugins v0.2.0 permite que **Codex y Claude Code** utilicen el mismo servidor MCP local y las mismas Skills. El núcleo Rust realiza las mediciones reales; la IA interpreta las pruebas guardadas. **El servidor de diagnóstico no requiere una clave de API de IA, pero sí necesitas acceso a cada cliente de IA.**
 
-**Verificación:** v1.4.0-rc.1 pasó 173 pruebas y CI nativo en Ubuntu 24.04, macOS ARM y macOS Intel. Las nueve herramientas MCP tienen pruebas locales de protocolo. **Codex v0.1 realizó llamadas reales desde un modelo, pero no se repitió la sesión con v0.2; Claude Code sigue sin validación de carga ni llamadas reales.** La [evaluación independiente de los plugins es del 74 %](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/docs/ai-plugin-completeness.md), no una tasa de éxito de las pruebas de red.
+**Verificación:** v1.4.0-rc.1 pasó 173 pruebas y CI nativo en Ubuntu 24.04, macOS ARM y macOS Intel. Las nueve herramientas MCP tienen pruebas locales de protocolo. **Codex v0.2 pasó pruebas de llamadas reales del modelo (capacidades, TCP autorizado, explicación de informes y denegación no autorizada). Se han validado los manifiestos de Claude Code, pero sus llamadas reales aún no se han probado por problemas de inicio de sesión del responsable.** La [evaluación independiente de los plugins es del 75 %](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/docs/ai-plugin-completeness.md), no una tasa de éxito de las pruebas de red.
 
 **Compilar la vista previa (requiere Rust 1.84+; para usar solamente el CLI, instala v1.3):**
 
