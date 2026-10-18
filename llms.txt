@@ -6,11 +6,12 @@ This document is a navigation index for language models, readers, and search too
 
 ## Start here
 
-- [Simplified Chinese README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.md): introduction, download, installation, first scan, results, bug reporting.
-- [English README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.en.md): complete English beginner walkthrough.
-- [Spanish README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.es.md): guía completa en español.
-- [Russian README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.ru.md): полное руководство на русском языке.
+- [Simplified Chinese README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.md): plugin-first introduction, developer-preview compatibility requirements, authorization, CLI fallback and bug reporting.
+- [English README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.en.md): complete English plugin-first walkthrough.
+- [Spanish README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.es.md): guía completa en español con los plugins como entrada principal.
+- [Russian README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.ru.md): полное руководство с установкой плагинов в качестве основного сценария.
 - [GitHub Releases](https://github.com/gaochenyang666-droid/PathTrial/releases): prebuilt packages and SHA-256 checksum files. Version v1.3.0-rc.1 is a prerelease, not a stable final release.
+- [CLI guide](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/docs/cli.md): standalone HTTP, QUIC, UDP, proxy, collection, report and redaction commands.
 - [Bug reports](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md): installation and diagnostic feedback.
 
 ## Machine-readable data and contracts

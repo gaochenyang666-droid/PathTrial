@@ -40,6 +40,13 @@ PathTrial AI Plugins v0.2: Codex and Claude Code integration and hardening.
 - MCP reads client input on a separate thread and kills a running probe child
   when the client disconnects.
 
+### Changed
+
+- Reorganized all four READMEs around Codex and Claude Code installation,
+  with the developer-preview MCP dependency, target authorization, example
+  prompts and standalone CLI fallback stated explicitly. Detailed commands now
+  live in `docs/cli.md`.
+
 ### Verified
 
 - 173 tests: 78 unit, 41 CLI, 5 collect, 13 golden, 21 MCP, 5 plugin,
