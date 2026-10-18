@@ -19,6 +19,8 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Verify CI, create immutable release tag, dispatch native build
         env:
           GH_TOKEN: ${{ github.token }}
@@ -26,10 +28,11 @@ jobs:
         run: |
           set -euo pipefail
           TAG=v1.4.0-rc.1
-          version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
+          TARGET_SHA=073e814c9896f2f16732df7541f5c7c802fc6e98
+          version=$(git show "$TARGET_SHA:Cargo.toml" | sed -n 's/^version = "\([^"]*\)"/\1/p' | head -n 1)
           test "$version" = "1.4.0-rc.1"
-          grep -F 'VERSION="${PATHTRIAL_VERSION:-v1.4.0-rc.1}"' scripts/install.sh
-          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$GITHUB_SHA"
+          git show "$TARGET_SHA:scripts/install.sh" | grep -F 'VERSION="${PATHTRIAL_VERSION:-v1.4.0-rc.1}"'
+          git merge-base --is-ancestor "$TARGET_SHA" "$GITHUB_SHA"
           if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then
             echo "Release tag $TAG already exists; refusing to move it." >&2
             exit 1
@@ -41,7 +44,7 @@ jobs:
 
           passed=no
           for attempt in $(seq 1 90); do
-            run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&event=push&per_page=30" \
+            run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TARGET_SHA&event=push&per_page=30" \
               --jq '[.workflow_runs[] | select(.name == "ci")] | first // {}')
             status=$(printf '%s' "$run" | jq -r '.status // "missing"')
             conclusion=$(printf '%s' "$run" | jq -r '.conclusion // "pending"')
@@ -56,7 +59,7 @@ jobs:
             sleep 20
           done
           test "$passed" = yes || { echo "CI never passed; no tag created." >&2; exit 1; }
-          checks=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?per_page=100")
+          checks=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TARGET_SHA/check-runs?per_page=100")
           for check in 'test (ubuntu-24.04)' 'test (macos-15)' 'test (macos-15-intel)'; do
             printf '%s' "$checks" | jq -e --arg check "$check" \
               '[.check_runs[] | select(.name == $check and .conclusion == "success")] | length > 0' > /dev/null \
@@ -64,7 +67,7 @@ jobs:
           done
 
           gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" \
-            -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA" >/dev/null
+            -f ref="refs/tags/$TAG" -f sha="$TARGET_SHA" >/dev/null
           # Events created with GITHUB_TOKEN do not trigger push workflows:
           # explicit workflow_dispatch on the tag runs the existing release.yml.
           gh workflow run release.yml --ref "$TAG"
