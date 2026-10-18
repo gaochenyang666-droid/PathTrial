@@ -190,7 +190,7 @@ AI 插件不计入上面的 94.25% 核心 CLI 评分，单独记录如下：
 | 共享 Skills 一致性 | VERIFIED | 5 项插件结构测试与同步检查脚本 |
 | Codex marketplace 与插件安装 | VERIFIED | 临时 `CODEX_HOME` 实际安装，`codex mcp list` 可见 |
 | Codex 模型会话内真实工具调用 | VERIFIED | v0.2.0 完成 capabilities、未授权拒绝、授权扫描和 `tcp_ipv4_001` 解释 |
-| Claude Code 清单校验与加载 | PARTIAL | 官方 CLI 2.1.292、插件和 Marketplace 验证通过；账号未登录，真实调用未开始 |
+| Claude Code 清单校验与加载 | PARTIAL | 官方 CLI 2.1.292、插件和 Marketplace 清单校验通过；真实模型工具调用验收尚待补充 |
 | 含 MCP 的预编译发行包 | PARTIAL | Release 工作流已加固，尚未公开发布 1.4.0 包 |
 | Windows 插件 | UNVERIFIED | Windows 核心尚未实现 |
 
