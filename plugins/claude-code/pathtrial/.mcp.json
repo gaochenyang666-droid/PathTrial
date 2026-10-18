@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "pathtrial": {
+      "command": "pathtrial",
+      "args": [
+        "mcp"
+      ]
+    }
+  }
+}

@@ -128,21 +128,7 @@ pub struct FindingSnapshot {
 pub fn run(args: &CompareArgs) -> Result<u8, String> {
     let before_value = read_json(&args.before)?;
     let after_value = read_json(&args.after)?;
-    for (label, value) in [("before", &before_value), ("after", &after_value)] {
-        if value
-            .get("schema_version")
-            .and_then(Value::as_str)
-            .is_none()
-            || (value.get("run_id").is_none() && value.get("command").is_none())
-        {
-            return Err(format!(
-                "{label} is not a PathTrial report: missing schema_version, run_id or command"
-            ));
-        }
-    }
-    let before = snapshot(&args.before, &before_value);
-    let after = snapshot(&args.after, &after_value);
-    let report = build(before, after);
+    let report = compare_values(&before_value, &after_value)?;
     if let Some(prefix) = &args.out {
         write_outputs(prefix, &report)?;
     }
@@ -164,6 +150,29 @@ pub fn run(args: &CompareArgs) -> Result<u8, String> {
             0
         },
     )
+}
+
+/// Compare two in-memory reports using the same validation and comparability
+/// rules as the CLI. Used by the MCP server without creating temporary files.
+pub fn compare_values(
+    before_value: &Value,
+    after_value: &Value,
+) -> Result<ComparisonReport, String> {
+    for (label, value) in [("before", &before_value), ("after", &after_value)] {
+        if value
+            .get("schema_version")
+            .and_then(Value::as_str)
+            .is_none()
+            || (value.get("run_id").is_none() && value.get("command").is_none())
+        {
+            return Err(format!(
+                "{label} is not a PathTrial report: missing schema_version, run_id or command"
+            ));
+        }
+    }
+    let before = snapshot(Path::new("<before>"), before_value);
+    let after = snapshot(Path::new("<after>"), after_value);
+    Ok(build(before, after))
 }
 
 fn read_json(path: &PathBuf) -> Result<Value, String> {

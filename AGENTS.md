@@ -46,6 +46,20 @@ CI also runs tests on `ubuntu-24.04`, `macos-15`, and `macos-15-intel`. Merely c
 - Documentation localization **does not mean** CLI output or generated reports are localized. Do not claim translation of software behavior without implementation and verification.
 - Keep references to the original [RackNerd case](https://github.com/gaochenyang666-droid/racknerd-ipv6-troubleshooting) honest: it predates PathTrial; its results are not tool-generated retrospective measurements.
 
+## AI plugins and MCP
+
+- `plugins/shared/skills/` is the authoritative skill source. After edits run
+  `scripts/sync-plugin-skills.sh` and commit both generated copies.
+- Codex package: `plugins/codex/pathtrial/`. Claude Code package:
+  `plugins/claude-code/pathtrial/`.
+- MCP entrypoint: `pathtrial mcp`. Probe tools require an exact
+  `--allow-target` rule. Never add wildcard authorization, a silent fallback, a
+  generic file-reading tool, or a generic shell-execution tool.
+- MCP protocol tests are in `tests/mcp.rs`; manifest and skill consistency tests
+  are in `tests/plugins.rs`. Run both when changing plugin files.
+- Claude Code runtime validation and any Codex model-driven tool call must be
+  reported as UNVERIFIED until actually executed.
+
 ## Git and release safety
 
 - Inspect `git status`, current branch, remote, history, and existing tags before a write.

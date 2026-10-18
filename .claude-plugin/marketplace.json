@@ -1,0 +1,21 @@
+{
+  "name": "pathtrial",
+  "owner": {
+    "name": "gaochenyang666-droid",
+    "url": "https://github.com/gaochenyang666-droid"
+  },
+  "description": "Evidence-first network diagnostics for Claude Code.",
+  "plugins": [
+    {
+      "name": "pathtrial",
+      "source": "./plugins/claude-code/pathtrial",
+      "description": "PathTrial Network Diagnostics",
+      "category": "Developer Tools",
+      "tags": [
+        "network",
+        "diagnostics",
+        "mcp"
+      ]
+    }
+  ]
+}

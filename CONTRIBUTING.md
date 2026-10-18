@@ -21,10 +21,16 @@ cargo fmt --all
 cargo clippy --all-targets -- -D warnings
 cargo test --locked --all-targets -- --test-threads=1
 cargo build --release
+scripts/sync-plugin-skills.sh --check
 ```
 
 All checks must pass before a change is proposed. CI runs them on Ubuntu 24.04,
 macOS ARM and macOS Intel.
+
+MCP protocol tests live in `tests/mcp.rs`; plugin manifest and Skills checks
+live in `tests/plugins.rs`. The shared Skills under
+`plugins/shared/skills/` are authoritative. Run `scripts/sync-plugin-skills.sh`
+after editing them and commit both generated copies.
 
 ## Adding or changing a rule
 

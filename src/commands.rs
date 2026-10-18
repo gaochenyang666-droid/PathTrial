@@ -425,6 +425,8 @@ pub fn http(args: &HttpArgs) -> Result<u8, String> {
         interface: args.bind_interface.as_deref(),
         insecure: args.insecure,
         max_body: 64 * 1024,
+        server_name: args.sni.as_deref(),
+        host_header: args.host.as_deref(),
     };
     let outcome = http::run(&mut recorder, &request)?;
     let probes = recorder.into_probes();
@@ -480,6 +482,18 @@ pub fn proxy(args: &crate::cli::ProxyArgs) -> Result<u8, String> {
     let url = crate::probes::http::parse_url(&args.url)?;
     let display_url = url.redacted();
     let spec = crate::probes::proxy::parse_proxy(&args.proxy)?;
+    let target_ip = args
+        .target_ip
+        .as_deref()
+        .map(|value| {
+            value
+                .parse::<std::net::IpAddr>()
+                .map_err(|_| format!("invalid --target-ip {value}"))
+        })
+        .transpose()?;
+    let connect_host = target_ip
+        .map(|ip| ip.to_string())
+        .unwrap_or_else(|| url.host.clone());
     let timeout = std::time::Duration::from_millis(args.timeout_ms);
     if timeout.is_zero() {
         return Err("--timeout-ms must be greater than zero".to_string());
@@ -496,6 +510,8 @@ pub fn proxy(args: &crate::cli::ProxyArgs) -> Result<u8, String> {
             timeout,
             started_at,
             recorder,
+            &connect_host,
+            args.sni.as_deref(),
         );
     }
 
@@ -505,6 +521,8 @@ pub fn proxy(args: &crate::cli::ProxyArgs) -> Result<u8, String> {
         timeout,
         args.bind_interface.as_deref(),
         args.insecure,
+        &connect_host,
+        args.sni.as_deref(),
     );
     let proxy_status = if !attempt.tunnel_ok || attempt.error.is_some() {
         Status::Fail
@@ -771,6 +789,8 @@ fn proxy_once(
     timeout: std::time::Duration,
     interface: Option<&str>,
     insecure: bool,
+    connect_host: &str,
+    sni: Option<&str>,
 ) -> ProxyAttempt {
     let mut attempt = ProxyAttempt {
         proxy_tcp_ms: 0.0,
@@ -784,7 +804,7 @@ fn proxy_once(
         error: None,
     };
     let (stream, timings) =
-        match crate::probes::proxy::tunnel(spec, &url.host, url.port, timeout, interface) {
+        match crate::probes::proxy::tunnel(spec, connect_host, url.port, timeout, interface) {
             Ok(value) => value,
             Err(failure) => {
                 attempt.error = Some(failure.label());
@@ -800,7 +820,7 @@ fn proxy_once(
     let mut stream = stream;
     if url.is_tls() {
         let tls_started = std::time::Instant::now();
-        match crate::probes::tls::handshake(stream, &url.host, insecure) {
+        match crate::probes::tls::handshake(stream, sni.unwrap_or(&url.host), insecure) {
             Ok(mut session) => {
                 attempt.tls_ms = round2(tls_started.elapsed().as_secs_f64() * 1000.0);
                 attempt.tls_verified = Some(!insecure);
@@ -836,6 +856,7 @@ fn proxy_once(
     attempt
 }
 
+#[allow(clippy::too_many_arguments)]
 fn compare_direct(
     args: &crate::cli::ProxyArgs,
     url: &crate::probes::http::Url,
@@ -844,6 +865,8 @@ fn compare_direct(
     timeout: std::time::Duration,
     started_at: String,
     mut recorder: Recorder,
+    connect_host: &str,
+    sni: Option<&str>,
 ) -> Result<u8, String> {
     if args.rounds == 0 || args.rounds > 50 {
         return Err("--rounds must be between 1 and 50".to_string());
@@ -875,6 +898,8 @@ fn compare_direct(
             interface: args.bind_interface.as_deref(),
             insecure: args.insecure,
             max_body: 16 * 1024,
+            server_name: args.sni.as_deref(),
+            host_header: None,
         };
         let direct = crate::probes::http::run(&mut recorder, &request)?;
         direct_total += 1;
@@ -905,6 +930,8 @@ fn compare_direct(
             timeout,
             args.bind_interface.as_deref(),
             args.insecure,
+            connect_host,
+            sni,
         );
         record_proxy_attempt(
             &mut recorder,
