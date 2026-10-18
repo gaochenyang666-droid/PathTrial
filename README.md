@@ -8,7 +8,7 @@
 
 > **状态：** 公开 CLI 为 `v1.3.0-rc.1`。AI Plugins 为 `v0.2.0` 开发者预览，对应核心 `1.4.0-rc.1`，尚无公开预编译包。README 已提供四种语言，终端输出和报告尚未全面翻译。
 
-> **招募 AI 插件测试者**：当前是 **AI Plugins v0.2.0 开发者预览**。Codex v0.2 已完成真实模型调用；Claude Code 的插件清单已验证，但由于维护者无法登录 Claude 账号，**真实 Claude Code 诊断尚未验证**。欢迎能正常登录 Claude Code 的用户按下面步骤安装并反馈 Bug；维护者将根据可复现问题修复。**1.4 MCP 公开预编译包尚未发布，目前需要 Rust 1.84+ 源码构建。** [提交 Bug](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) 时请注明 PathTrial / 插件 / 客户端版本、操作系统、复现步骤、预期与实际结果，并删除所有敏感地址、凭据和未脱敏报告。
+> **欢迎参与 AI 插件测试**：Codex 与 Claude Code 插件已在 AI Plugins v0.2.0 开发分支提供。欢迎试用，并通过 [GitHub Issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) 反馈安装、兼容性和诊断问题。提交时请附脱敏的版本信息、复现步骤与实际结果。**目前尚无公开的 1.4 MCP 预编译包，试用需要 Rust 1.84+ 源码构建。**
 
 ## 为什么使用 PathTrial？
 
@@ -60,14 +60,14 @@ codex mcp list
 
 ### Claude Code
 
-Claude Code 运行时仍是 `UNVERIFIED`。官方 CLI `2.1.292` 已安装，`claude plugin validate` 已通过，但当前机器未登录 Claude 账号，真实模型会话尚未开始。默认 `main` 也没有 Marketplace 文件，因此这里只给出官方支持的本地插件加载方式。
+Claude Code 插件提供本地加载方式。由于插件文件尚未合并到默认 `main`，请先在当前开发分支的仓库根目录执行：
 
 ~~~bash
 claude plugin validate ./plugins/claude-code/pathtrial
 claude --plugin-dir ./plugins/claude-code/pathtrial
 ~~~
 
-进入会话后，用 `/mcp` 检查 `pathtrial` 是否已注册。本项目的清单和共享 Skills 已通过结构测试，真实 Claude Code 调用仍需用户环境验收。
+进入会话后，使用 `/mcp` 检查 `pathtrial` 工具是否已注册，再尝试诊断与报告分析。
 
 ## 第一次使用
 
@@ -141,8 +141,7 @@ pathtrial scan example.com --profile web --rounds 5 --redact-ips
 - 公开预编译 CLI：`v1.3.0-rc.1`，不包含 MCP。
 - 自动化验收：173 项测试通过，Ubuntu 24.04、macOS ARM、macOS Intel 三平台 CI 通过。
 - Codex：`v0.2.0` 已完成真实模型调用、授权扫描、证据解释和未授权拒绝。
-- Claude Code：官方 CLI、插件清单和 Marketplace 结构已验证；账号未登录，真实调用仍为 `UNVERIFIED`。
-- AI Plugins 工程完成度为 `75.0%`。这是验收矩阵得分，不代表诊断准确率。
+- Claude Code：支持通过本地插件目录加载，提供 MCP 配置及共享 Skills。
 
 完整证据见 [AI Plugins 完成度矩阵](docs/ai-plugin-completeness.md)。当前不支持 Windows、图形界面、自动修复网络、自动抓包和具体网元级丢包定位。Fake-IP/TUN、公共 UDP 443 和 HTTP/3 的可达性仍可能受本地网络影响。
 
