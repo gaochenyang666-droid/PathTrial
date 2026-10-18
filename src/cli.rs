@@ -150,6 +150,14 @@ pub enum Command {
     Udp(UdpArgs),
     /// Diagnose a SOCKS5 or HTTP CONNECT proxy path.
     Proxy(ProxyArgs),
+    /// Perform a real QUIC handshake with an explicit ALPN.
+    Quic(QuicArgs),
+    /// Perform a real HTTP/3 GET over QUIC.
+    Http3(Http3Args),
+    /// Collect one side of an offline two-endpoint test.
+    Collect(CollectArgs),
+    /// Correlate independently collected client and server JSON reports.
+    Correlate(CorrelateArgs),
     /// Compare two saved JSON reports with explicit comparability checks.
     Compare(CompareArgs),
     /// Run a temporary local endpoint for repeatable tests.
@@ -163,6 +171,14 @@ pub struct SchemaArgs {
     /// Print the single-command envelope schema instead of the scan schema.
     #[arg(long)]
     pub command: bool,
+
+    /// Print the collect report schema.
+    #[arg(long, conflicts_with_all = ["command"])]
+    pub collect: bool,
+
+    /// Print the correlation report schema.
+    #[arg(long, conflicts_with_all = ["command", "collect"])]
+    pub correlate: bool,
 }
 
 #[derive(Debug, Args)]
@@ -259,6 +275,167 @@ pub struct CompareArgs {
     pub format: OutputFormat,
 
     /// Write <PREFIX>.json and <PREFIX>.md with the comparison.
+    #[arg(long, value_name = "PREFIX")]
+    pub out: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum AddressFamily {
+    Auto,
+    Ipv4,
+    Ipv6,
+}
+
+#[derive(Debug, Args)]
+pub struct QuicArgs {
+    /// Hostname or literal IP address.
+    pub host: String,
+
+    /// UDP port for QUIC.
+    #[arg(long, default_value_t = 443)]
+    pub port: u16,
+
+    /// Address family selection.
+    #[arg(long, value_enum, default_value_t = AddressFamily::Auto)]
+    pub family: AddressFamily,
+
+    /// ALPN protocol to require. Defaults to h3.
+    #[arg(long, default_value = "h3")]
+    pub alpn: String,
+
+    /// Per-stage timeout in milliseconds.
+    #[arg(long, default_value_t = 5000)]
+    pub timeout_ms: u64,
+
+    /// Wall-clock budget for the whole probe in seconds.
+    #[arg(long, default_value_t = 15)]
+    pub max_seconds: u64,
+
+    /// Pin the UDP socket to a physical interface.
+    #[arg(long)]
+    pub bind_interface: Option<String>,
+
+    /// Additional PEM trust anchors for a local test server.
+    #[arg(long)]
+    pub ca_file: Option<PathBuf>,
+
+    /// TLS server name override, useful for a literal IP target.
+    #[arg(long)]
+    pub sni: Option<String>,
+
+    /// Diagnostic only: accept any QUIC certificate.
+    #[arg(long)]
+    pub insecure: bool,
+
+    /// Output format on stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Summary)]
+    pub format: OutputFormat,
+}
+
+#[derive(Debug, Args)]
+pub struct Http3Args {
+    /// Absolute https URL.
+    pub url: String,
+
+    /// Address family selection.
+    #[arg(long, value_enum, default_value_t = AddressFamily::Auto)]
+    pub family: AddressFamily,
+
+    /// Per-stage timeout in milliseconds.
+    #[arg(long, default_value_t = 5000)]
+    pub timeout_ms: u64,
+
+    /// Wall-clock budget for the whole probe in seconds.
+    #[arg(long, default_value_t = 15)]
+    pub max_seconds: u64,
+
+    /// Pin the UDP socket to a physical interface.
+    #[arg(long)]
+    pub bind_interface: Option<String>,
+
+    /// Additional PEM trust anchors for a local test server.
+    #[arg(long)]
+    pub ca_file: Option<PathBuf>,
+
+    /// TLS server name override, useful for a literal IP target.
+    #[arg(long)]
+    pub sni: Option<String>,
+
+    /// Diagnostic only: accept any QUIC certificate.
+    #[arg(long)]
+    pub insecure: bool,
+
+    /// Output format on stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Summary)]
+    pub format: OutputFormat,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum CollectRole {
+    Client,
+    Server,
+}
+
+#[derive(Debug, Args)]
+pub struct CollectArgs {
+    /// Run as the connecting client or the listening server.
+    #[arg(long, value_enum)]
+    pub role: CollectRole,
+
+    /// Shared identifier written into every client payload.
+    #[arg(long)]
+    pub task_id: String,
+
+    /// Client target as HOST:PORT.
+    #[arg(long)]
+    pub target: Option<String>,
+
+    /// Server listen address as IP:PORT.
+    #[arg(long)]
+    pub listen: Option<String>,
+
+    /// Client connection attempts.
+    #[arg(long, default_value_t = 10)]
+    pub rounds: u32,
+
+    /// Per-connection timeout in milliseconds.
+    #[arg(long, default_value_t = 1500)]
+    pub timeout_ms: u64,
+
+    /// Delay between client attempts in milliseconds.
+    #[arg(long, default_value_t = 200)]
+    pub interval_ms: u64,
+
+    /// Server collection window or client wall-clock budget in seconds.
+    #[arg(long, default_value_t = 30)]
+    pub max_seconds: u64,
+
+    /// Pin client sockets to a physical interface.
+    #[arg(long)]
+    pub bind_interface: Option<String>,
+
+    /// JSON output path.
+    #[arg(long, default_value = "collect.json")]
+    pub output: PathBuf,
+
+    /// Output format on stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Summary)]
+    pub format: OutputFormat,
+}
+
+#[derive(Debug, Args)]
+pub struct CorrelateArgs {
+    /// Client-side collect JSON.
+    pub client: PathBuf,
+
+    /// Server-side collect JSON.
+    pub server: PathBuf,
+
+    /// Output format on stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Summary)]
+    pub format: OutputFormat,
+
+    /// Write <PREFIX>.json and <PREFIX>.md.
     #[arg(long, value_name = "PREFIX")]
     pub out: Option<PathBuf>,
 }

@@ -60,7 +60,8 @@ fn parse_proc_net_route(text: &str) -> Option<(Option<String>, Option<String>)> 
             continue;
         }
         let gateway = u32::from_str_radix(fields[2], 16).ok()?;
-        let gateway = Ipv4Addr::from(u32::from_le(gateway));
+        // /proc/net/route stores the gateway in little-endian hex bytes.
+        let gateway = Ipv4Addr::from(gateway.to_le_bytes());
         return Some((Some(gateway.to_string()), Some(fields[0].to_string())));
     }
     None
