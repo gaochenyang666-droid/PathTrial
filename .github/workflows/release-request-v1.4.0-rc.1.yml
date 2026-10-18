@@ -12,7 +12,9 @@ permissions:
 
 jobs:
   request-release:
-    if: github.repository == 'gaochenyang666-droid/PathTrial' && github.event.head_commit.message == 'release: request v1.4.0-rc.1'
+    if: >-
+      github.repository == 'gaochenyang666-droid/PathTrial' &&
+      github.event.head_commit.message == 'release: request v1.4.0-rc.1'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
