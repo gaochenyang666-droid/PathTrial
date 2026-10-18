@@ -1,6 +1,6 @@
-# PathTrial
+# PathTrial — 网络诊断 CLI 与 Codex / Claude Code MCP 插件
 
-**让 AI 用真实网络测量解释网络问题。**
+**开源 Rust 网络诊断与故障排查工具（Network Diagnostics Tool）。** 检测 DNS、TCP、TLS、HTTP/3、QUIC、UDP、代理与 IPv4/IPv6 网络问题，为网站及 VPS 生成有证据依据的 JSON 报告；Codex 和 Claude Code 的本地 MCP 插件目前处于开发者预览阶段。
 
 **语言 / Languages / Idiomas / Языки:** **简体中文** · [English](README.en.md) · [Español](README.es.md) · [Русский](README.ru.md)
 
@@ -10,7 +10,7 @@
 
 > **欢迎参与 AI 插件测试**：Codex 与 Claude Code 插件已在 AI Plugins v0.2.0 开发分支提供。欢迎试用，并通过 [GitHub Issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) 反馈安装、兼容性和诊断问题。提交时请附脱敏的版本信息、复现步骤与实际结果。**目前尚无公开的 1.4 MCP 预编译包，试用需要 Rust 1.84+ 源码构建。**
 
-## 为什么使用 PathTrial？
+## PathTrial 能排查哪些网站、VPS 与 IPv4/IPv6 网络问题？
 
 网络问题经常被一句“能 Ping 通”掩盖。PathTrial 把连接拆成 DNS、TCP、TLS、HTTP、UDP、QUIC 等阶段，保存每次测量的证据，并明确说明哪些原因尚未确认。
 
@@ -144,6 +144,24 @@ pathtrial scan example.com --profile web --rounds 5 --redact-ips
 - Claude Code：支持通过本地插件目录加载，提供 MCP 配置及共享 Skills。
 
 完整证据见 [AI Plugins 完成度矩阵](docs/ai-plugin-completeness.md)。当前不支持 Windows、图形界面、自动修复网络、自动抓包和具体网元级丢包定位。Fake-IP/TUN、公共 UDP 443 和 HTTP/3 的可达性仍可能受本地网络影响。
+
+## 常见网络诊断问题（FAQ）
+
+### 网站打不开，如何判断是 DNS、TCP、TLS 还是 HTTP 故障？
+
+对已获授权的目标运行 `pathtrial scan example.com --profile web --rounds 5 --redact-ips`，再用 `pathtrial http https://example.com/` 查看 HTTP 响应。各阶段结果分别记录；Ping 通不代表网站可以正常访问。
+
+### PathTrial 能检查 VPS、IPv4/IPv6、SOCKS5 代理和 HTTP/3 吗？
+
+支持分层诊断 IPv4/IPv6、TCP/TLS、SOCKS5 与 HTTP CONNECT 代理、QUIC 握手和 HTTP/3 请求。目标需要真实支持对应协议。详细操作见 [CLI 使用指南](docs/cli.md)，不能仅凭 UDP 超时认定故障根因。
+
+### 如何在 Codex 或 Claude Code 中使用 PathTrial MCP 插件？
+
+查看上方的[AI 插件安装步骤](#快速安装-ai-插件)。插件调用本地 Rust 测量引擎；`v1.3.0-rc.1` 公开 CLI 不包含 MCP，开发预览需使用 `1.4.0-rc.1` 源码构建版本。网络探测需显式授权目标。
+
+### 安装 PathTrial 需要 Rust 吗？支持哪些系统？
+
+使用公开预编译 CLI 不需要 Rust，支持 macOS Apple Silicon、macOS Intel 和 Linux x86_64；Windows 暂不支持。源码构建及当前 MCP 开发预览需要 Rust 工具链。
 
 ## 反馈 Bug 与参与贡献
 
