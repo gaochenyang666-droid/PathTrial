@@ -13,6 +13,8 @@
 
 > **版本提示：** [公开可下载版 v1.3.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.3.0-rc.1) 可直接用于 CLI 网络诊断；带本地 MCP 的 **v1.4.0-rc.1 / AI Plugins v0.2.0** 仍在 [PR #2 开发测试](https://github.com/gaochenyang666-droid/PathTrial/pull/2)，**尚无 1.4 的公开预编译 Release**。不要用 1.3 安装包运行 `pathtrial mcp`。
 
+> **招募 AI 插件测试者（Developer Preview）**：我们正在邀请能够正常使用 **Codex 或 Claude Code** 的用户试用 [AI Plugins v0.2.0 开发分支](https://github.com/gaochenyang666-droid/PathTrial/tree/codex/ai-plugins-v0.1)。Codex v0.2 已完成真实模型调用；Claude Code 的插件清单通过校验，但维护者因账号登录问题尚未完成真实模型会话。欢迎社区用户帮助验证 Claude Code 安装、MCP 工具调用及诊断结果。**目前 v1.4 仍未发布预编译包，试用 AI 插件需要 Rust 1.84+ 源码构建**，见[开发分支安装说明](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/README.md)。遇到安装失败、工具调用异常或误判，请[提交 Bug](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md)，注明核心版本、插件版本、客户端及系统、复现步骤、预期与实际结果。**发布公开 Issue 前，请删除 IP、Token、代理凭据和未脱敏报告等敏感信息。**
+
 ## 这是什么？适合谁用？
 
 遇到“网站打不开”“VPS 的端口能连但代理不能用”“IPv4 很慢，IPv6 却正常”，通常不能只靠一次 Ping 找到原因。**PathTrial 是一个免费、开源的终端小工具**：按明确的步骤测量 DNS、TCP、TLS、HTTP 等环节，把每一步结果和证据记录下来，生成可分享的网络诊断报告。
@@ -28,7 +30,7 @@
 
 PathTrial AI Plugins v0.2.0 让 **Codex 和 Claude Code** 通过同一个本地 MCP Server 调用真实网络诊断，并结合共享 Skills 解读证据。**插件不需要单独购买 AI API；使用 Codex / Claude Code 本身仍需具备相应客户端访问权限。**
 
-**当前阶段：** 1.4.0-rc.1 代码已通过 173 项测试和 Ubuntu 24.04、macOS ARM、macOS Intel 三平台 CI；MCP 的 9 个工具均有本地协议级测试。**Codex v0.1 已通过实际 AI 调用，v0.2 尚未重跑模型会话；Claude Code 的真实客户端加载和调用仍未验证。** [AI 插件独立完成度：74%](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/docs/ai-plugin-completeness.md)（工程验收评分，不是功能成功率）。
+**当前阶段：** 1.4.0-rc.1 代码已通过 173 项测试和 Ubuntu 24.04、macOS ARM、macOS Intel 三平台 CI；MCP 的 9 个工具均有本地协议级测试。**Codex v0.2 已通过实际 AI 模型调用（capabilities、授权 TCP 扫描、报告解释和未授权拒绝）；Claude Code 的插件清单已验证，但真实模型调用因维护者账号登录问题尚未完成，欢迎社区测试。** [AI 插件独立完成度：75%](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/docs/ai-plugin-completeness.md)（工程验收评分，不是功能成功率）。
 
 **先试用开发分支（需要 Rust 1.84+；普通 CLI 用户请继续使用上面的 1.3 安装包）：**
 
