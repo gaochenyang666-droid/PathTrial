@@ -50,13 +50,15 @@ codex plugin list
 codex mcp list
 ~~~
 
+本版本的真实 Codex 模型会话已完成授权本地扫描和报告解释：TCP `1/1` 成功，证据 ID 为 `tcp_ipv4_001`，未授权目标返回 `target_not_allowed`。
+
 现在可以对 Codex 说：
 
 > 先调用 `pathtrial_capabilities`，确认 PathTrial 版本和 9 个 MCP 工具是否可用。
 
 ### Claude Code
 
-Claude Code 运行时仍是 `UNVERIFIED`。默认 `main` 没有 Marketplace 文件，远程分支安装语法也尚未完成真实客户端验收，因此这里只给出官方支持的本地插件加载方式。
+Claude Code 运行时仍是 `UNVERIFIED`。官方 CLI `2.1.292` 已安装，`claude plugin validate` 已通过，但当前机器未登录 Claude 账号，真实模型会话尚未开始。默认 `main` 也没有 Marketplace 文件，因此这里只给出官方支持的本地插件加载方式。
 
 ~~~bash
 claude plugin validate ./plugins/claude-code/pathtrial
@@ -136,9 +138,9 @@ pathtrial scan example.com --profile web --rounds 5 --redact-ips
 - AI Plugins：`0.2.0` 开发者预览。
 - 公开预编译 CLI：`v1.3.0-rc.1`，不包含 MCP。
 - 自动化验收：173 项测试通过，Ubuntu 24.04、macOS ARM、macOS Intel 三平台 CI 通过。
-- Codex：`v0.1.0` 基线完成真实模型调用；`v0.2.0` 完成安装和协议验收，模型会话未重录。
-- Claude Code：清单和插件结构已验证，真实客户端加载与调用仍为 `UNVERIFIED`。
-- AI Plugins 工程完成度为 `74.0%`。这是验收矩阵得分，不代表诊断准确率。
+- Codex：`v0.2.0` 已完成真实模型调用、授权扫描、证据解释和未授权拒绝。
+- Claude Code：官方 CLI、插件清单和 Marketplace 结构已验证；账号未登录，真实调用仍为 `UNVERIFIED`。
+- AI Plugins 工程完成度为 `75.0%`。这是验收矩阵得分，不代表诊断准确率。
 
 完整证据见 [AI Plugins 完成度矩阵](docs/ai-plugin-completeness.md)。当前不支持 Windows、图形界面、自动修复网络、自动抓包和具体网元级丢包定位。Fake-IP/TUN、公共 UDP 443 和 HTTP/3 的可达性仍可能受本地网络影响。
 

@@ -50,13 +50,15 @@ codex plugin list
 codex mcp list
 ~~~
 
+La sesión real del modelo con Codex `v0.2.0` completó un análisis local autorizado y la explicación del informe: TCP tuvo `1/1` éxitos, se obtuvo el identificador `tcp_ipv4_001` y un destino no autorizado fue rechazado con `target_not_allowed`.
+
 Después pide a Codex:
 
 > Llama primero a `pathtrial_capabilities` y confirma la versión de PathTrial y las nueve herramientas MCP.
 
 ### Claude Code
 
-La ejecución real en Claude Code sigue en estado `UNVERIFIED`. La rama `main` predeterminada no contiene el archivo del Marketplace y la instalación remota desde esta rama no se ha probado con un cliente real. Utiliza la carga local oficial:
+La ejecución real en Claude Code sigue en estado `UNVERIFIED`. El CLI oficial `2.1.292` está instalado y `claude plugin validate` pasa, pero esta máquina no ha iniciado sesión en una cuenta de Claude, por lo que todavía no se ha iniciado una sesión real del modelo. La rama `main` predeterminada tampoco contiene el archivo del Marketplace. Utiliza la carga local oficial:
 
 ~~~bash
 claude plugin validate ./plugins/claude-code/pathtrial
@@ -136,9 +138,9 @@ pathtrial scan example.com --profile web --rounds 5 --redact-ips
 - AI Plugins: vista previa para desarrolladores `0.2.0`.
 - CLI precompilado público: `v1.3.0-rc.1`, sin MCP.
 - Verificación automática: 173 pruebas superadas y CI en Ubuntu 24.04, macOS ARM y macOS Intel.
-- Codex: llamadas reales desde el modelo superadas en la base `v0.1.0`. `v0.2.0` superó la instalación y las pruebas de protocolo; la sesión de modelo no se repitió.
-- Claude Code: manifiesto y estructura verificados. La carga y las llamadas reales siguen en `UNVERIFIED`.
-- Puntuación de ingeniería de AI Plugins: `74.0%`. Es una puntuación de aceptación, no la precisión del diagnóstico.
+- Codex: `v0.2.0` superó una sesión real del modelo, un análisis autorizado, la explicación de pruebas y el rechazo de destinos no autorizados.
+- Claude Code: CLI oficial, manifiesto y estructura del Marketplace verificados. Falta iniciar sesión, por lo que las llamadas reales siguen en `UNVERIFIED`.
+- Puntuación de ingeniería de AI Plugins: `75.0%`. Es una puntuación de aceptación, no la precisión del diagnóstico.
 
 Consulta la [matriz de completitud de AI Plugins](docs/ai-plugin-completeness.md). No están disponibles Windows, una interfaz gráfica, la reparación automática de la red, la captura automática de paquetes ni la atribución exacta del equipo que pierde tráfico. Fake-IP/TUN, UDP 443 público y HTTP/3 todavía pueden depender de la red local.
 

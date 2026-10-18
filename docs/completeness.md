@@ -189,10 +189,10 @@ AI 插件不计入上面的 94.25% 核心 CLI 评分，单独记录如下：
 | 扫描、HTTP、QUIC、HTTP/3、代理、UDP、报告解释、报告比较 | VERIFIED | 9 个工具的 MCP 级本地协议测试 |
 | 共享 Skills 一致性 | VERIFIED | 5 项插件结构测试与同步检查脚本 |
 | Codex marketplace 与插件安装 | VERIFIED | 临时 `CODEX_HOME` 实际安装，`codex mcp list` 可见 |
-| Codex 模型会话内真实工具调用 | PARTIAL | v0.1.0 基线完成 capabilities、未授权拒绝、授权扫描和 `tcp_ipv4_001` 解释；v0.2.0 模型会话未重录 |
-| Claude Code 清单校验与加载 | UNVERIFIED | 官方安装器下载停滞，未完成 CLI 验证 |
+| Codex 模型会话内真实工具调用 | VERIFIED | v0.2.0 完成 capabilities、未授权拒绝、授权扫描和 `tcp_ipv4_001` 解释 |
+| Claude Code 清单校验与加载 | PARTIAL | 官方 CLI 2.1.292、插件和 Marketplace 验证通过；账号未登录，真实调用未开始 |
 | 含 MCP 的预编译发行包 | PARTIAL | Release 工作流已加固，尚未公开发布 1.4.0 包 |
 | Windows 插件 | UNVERIFIED | Windows 核心尚未实现 |
 
-AI Plugins 独立权重与当前 74.0% 计算见
+AI Plugins 独立权重与当前 75.0% 计算见
 [ai-plugin-completeness.md](ai-plugin-completeness.md)。
