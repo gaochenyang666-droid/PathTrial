@@ -1,7 +1,8 @@
 # PathTrial AI Plugins
 
-PathTrial AI Plugins v0.2 connects Codex and Claude Code to the existing
-PathTrial diagnostic engine through one local MCP stdio server.
+PathTrial AI Plugins connect Codex and Claude Code to the diagnostic engine
+through a local MCP stdio server. The published v1.4 binary exposes nine tools;
+the unreleased source on `main` exposes ten tools.
 
 ## Architecture
 
@@ -18,9 +19,11 @@ Claude plugin ┘
   only an address-free summary of that allowlist.
 - **AI Plugins** contain client-specific manifests and the same shared Skills.
 
-The public plugin version is `0.2.0`. The v1.5 development branch uses plugin
-`0.3.0` because it adds the tenth MCP tool. The plugin version is independent of
-the PathTrial CLI version.
+The published v1.4 core uses plugin `0.2.0` (nine tools). The merged, unreleased
+`main` source uses core `1.5.0-rc.1` and plugin `0.3.0` (ten tools), including
+`pathtrial_diagnose`. **Installing the main-branch marketplace plugin does not
+upgrade a prebuilt v1.4 executable.** Build the matching v1.5 core from `main`
+for the tenth tool. Plugin and CLI versions are independently numbered.
 
 ## Requirements
 
@@ -31,6 +34,9 @@ the PathTrial CLI version.
 
 The public `v1.4.0-rc.1` release includes the MCP subcommand. Install the
 verified prebuilt binary without Rust:
+
+> This installer provides **v1.4 with nine MCP tools**, not the merged but
+> unreleased v1.5 `diagnose` tool. Build v1.5 from `main` to use the new feature.
 
 ```bash
 curl -fsSLo pathtrial-install.sh \

@@ -5,10 +5,10 @@ This guide covers the standalone command-line interface. For Codex and Claude Co
 ## Versions
 
 - Public prebuilt CLI: `v1.4.0-rc.1`
-- Development CLI: `1.5.0-rc.1` with `diagnose` scenarios, not yet publicly released.
+- Unreleased CLI source on `main`: `1.5.0-rc.1` with `diagnose` scenarios. Build from source; the downloadable v1.4 binary has no `diagnose` subcommand.
 - MCP core included in the public release: `1.4.0-rc.1`
 - AI Plugins: `0.2.0`
-- AI Plugins development branch: `0.3.0` with the tenth MCP tool.
+- AI Plugins source on `main`: `0.3.0` with a tenth MCP tool; use a matching v1.5 core.
 - `v1.4.0-rc.1` includes `pathtrial mcp`; the older `v1.3.0-rc.1` does not.
 
 Run `pathtrial --help` or `pathtrial <command> --help` for the options supported by your installed binary.
@@ -73,7 +73,7 @@ Use a target you own or have permission to test.
 
 ## Guided diagnosis
 
-The development branch adds `diagnose` for common user-facing scenarios. It composes the existing scanners and keeps source probe IDs prefixed as `<source>:<probe_id>`.
+The merged, unreleased `main` source provides `diagnose` for common user-facing scenarios. It composes the existing scanners and keeps source probe IDs prefixed as `<source>:<probe_id>`.
 
 ~~~bash
 pathtrial diagnose --scenario web example.com
