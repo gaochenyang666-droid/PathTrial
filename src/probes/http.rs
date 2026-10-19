@@ -100,6 +100,18 @@ pub fn parse_url(input: &str) -> Result<Url, String> {
     if host.is_empty() {
         return Err("URL has an empty host".to_string());
     }
+    if host
+        .chars()
+        .any(|character| character.is_whitespace() || character.is_control())
+    {
+        return Err("URL host contains whitespace or control characters".to_string());
+    }
+    if path
+        .chars()
+        .any(|character| character == '\r' || character == '\n')
+    {
+        return Err("URL path contains a line break".to_string());
+    }
     Ok(Url {
         scheme,
         host,
@@ -162,6 +174,10 @@ pub struct HttpRequest<'a> {
     pub server_name: Option<&'a str>,
     /// HTTP Host header override, useful when connecting to a pre-authorized IP.
     pub host_header: Option<&'a str>,
+    /// Pre-authorized address used for the connection. When set, the URL host
+    /// is only used for SNI and the Host header, and no second resolution is
+    /// performed for the connect target.
+    pub connect_ip: Option<IpAddr>,
 }
 
 enum Channel {
@@ -199,7 +215,7 @@ pub fn run(recorder: &mut Recorder, request: &HttpRequest<'_>) -> Result<HttpOut
     // 1. Resolve.
     let dns_stage_start = Instant::now();
     let literal: Option<IpAddr> = url.host.parse().ok();
-    let address = match literal {
+    let address = match request.connect_ip.or(literal) {
         Some(ip) => ip,
         None => {
             // The request budget must cover DNS too: give resolution at most a
@@ -650,6 +666,8 @@ mod tests {
         assert!(parse_url("https://:443").is_err());
         assert!(parse_url("https://[2001:db8::1").is_err());
         assert!(parse_url("https://user:pass@example.com/").is_err());
+        assert!(parse_url("https://exa mple.com/").is_err());
+        assert!(parse_url("https://example.com/a\r\nX-Test: 1").is_err());
     }
 
     #[test]

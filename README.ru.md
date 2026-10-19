@@ -20,6 +20,20 @@
 
 PathTrial работает локально. Он не загружает отчёты и не меняет DNS, маршруты, межсетевой экран или настройки прокси. Codex и Claude Code используют один локальный MCP-сервер. Любая сетевая проверка запрещена до явного разрешения узла.
 
+## Единый вход в диагностику (ветка разработки v1.5)
+
+В ветке разработки добавлена команда `pathtrial diagnose`, объединяющая DNS, TCP, TLS, HTTP, задержку, потери, двойной стек, UDP/QUIC, прокси и локальную сеть в десять типовых сценариев:
+
+~~~bash
+pathtrial diagnose --scenario web example.com
+pathtrial diagnose --scenario vps YOUR_VPS_IP --port 22
+pathtrial diagnose --scenario latency example.com --rounds 10
+pathtrial diagnose --scenario proxy --url https://example.com/ --proxy socks5://127.0.0.1:1080
+pathtrial diagnose --scenario local
+~~~
+
+Также доступны `dns`, `tcp`, `tls`, `http`, `dual-stack` и `udp-quic`. Отчёт отдельно содержит `observed`, `possible`, `not_established` и `next_checks`; гипотеза не выдаётся за подтверждённую причину.
+
 ## Установка плагинов ИИ
 
 > **Публичный кандидат на выпуск:** сначала установите исполняемый файл PathTrial, затем плагин Codex или Claude Code. Плагин сам по себе не устанавливает диагностическую программу. Сетевые проверки требуют явного разрешения цели.
@@ -53,7 +67,7 @@ codex plugin list
 codex mcp list
 ~~~
 
-Codex v0.2 уже успешно выполнил реальные вызовы модели, разрешённую локальную TCP-проверку и анализ отчёта. Первый запрос: *«Вызови `pathtrial_capabilities` и проверь девять MCP-инструментов».*
+Codex v0.2 уже успешно выполнил реальные вызовы модели, разрешённую локальную TCP-проверку и анализ отчёта. Публичный плагин v1.4 содержит девять инструментов MCP. В версии разработки 0.3 добавлен `pathtrial_diagnose`, всего десять инструментов. Первый запрос: *«Вызови `pathtrial_capabilities` и проверь доступные инструменты MCP».*
 
 #### Плагин Claude Code
 

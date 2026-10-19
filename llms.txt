@@ -12,6 +12,8 @@ This document is a navigation index for language models, readers, and search too
 - [Russian README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.ru.md): полное руководство с установкой плагинов в качестве основного сценария.
 - [GitHub Releases](https://github.com/gaochenyang666-droid/PathTrial/releases): prebuilt packages and SHA-256 checksum files. Version v1.4.0-rc.1 is the current prerelease and includes MCP.
 - [CLI guide](https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/cli.md): standalone HTTP, QUIC, UDP, proxy, collection, report and redaction commands.
+- Guided diagnosis: `pathtrial diagnose --scenario web|vps|latency|proxy|local|dns|tcp|tls|http|dual-stack|udp-quic`.
+- Guided diagnosis schema: `schemas/diagnose.schema.json` in the development branch.
 - [Bug reports](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md): installation and diagnostic feedback.
 
 ## Machine-readable data and contracts
@@ -34,6 +36,7 @@ For specific options: `pathtrial --help` or `pathtrial <command> --help`.
 - Codex package: `plugins/codex/pathtrial/` with root `plugin.json`, `mcp.json` and `skills/`.
 - Claude Code package: `plugins/claude-code/pathtrial/` with `.claude-plugin/plugin.json`, `.mcp.json` and `skills/`.
 - MCP launch: `pathtrial mcp --allow-target example.com:443`.
+- The development branch adds `pathtrial_diagnose` as the tenth MCP tool.
 - Probe tools are denied by default. Report explanation and comparison do not perform network requests.
 
 ## What the output means
