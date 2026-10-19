@@ -31,6 +31,8 @@ Guided diagnosis for ten common network problem categories.
 
 ### Fixed
 
+- The MCP `pathtrial_diagnose` HTTP scenario now passes the supported
+  `--http-host` flag to the CLI instead of failing before the probe starts.
 - The collect server reassembles task payloads that arrive across multiple
   TCP reads, so a delivered payload is no longer recorded as an unrecognized
   connection.

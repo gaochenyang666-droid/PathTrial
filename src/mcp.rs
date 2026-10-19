@@ -385,7 +385,7 @@ fn tool_definitions() -> Vec<Value> {
         ),
         tool(
             "pathtrial_diagnose",
-            "Run a guided diagnosis scenario using authorized targets. Local scenarios inspect interfaces, routes, DHCP and Wi-Fi facts without network probes.",
+            "Run a guided diagnosis scenario using authorized targets. Use http for a concrete HTTP or HTTPS URL, web for a TLS web endpoint expressed as host and port, dns when the question is name resolution, and local for machine-only interface, route, DHCP and Wi-Fi facts. The result contains checks with evidence, observed and not_established fields; explain those checks directly.",
             json!({
                 "type": "object",
                 "additionalProperties": false,
@@ -393,12 +393,13 @@ fn tool_definitions() -> Vec<Value> {
                 "properties": {
                     "scenario": {
                         "type": "string",
-                        "enum": ["web", "vps", "latency", "proxy", "local", "dns", "tcp", "tls", "http", "dual-stack", "udp-quic"]
+                        "enum": ["web", "vps", "latency", "proxy", "local", "dns", "tcp", "tls", "http", "dual-stack", "udp-quic"],
+                        "description": "Scenario that matches the question. local performs no network probe."
                     },
-                    "target": {"type": "string", "minLength": 1, "maxLength": 2048},
-                    "url": {"type": "string", "minLength": 1, "maxLength": 2048},
-                    "proxy": {"type": "string", "minLength": 1, "maxLength": 512},
-                    "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+                    "target": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "Hostname or literal IP unless the scenario is local or a full URL is supplied."},
+                    "url": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "Absolute HTTP or HTTPS URL for http and proxy scenarios."},
+                    "proxy": {"type": "string", "minLength": 1, "maxLength": 512, "description": "Proxy URL for the proxy scenario."},
+                    "port": {"type": "integer", "minimum": 1, "maximum": 65535, "description": "Target port when the URL does not supply one."},
                     "rounds": {"type": "integer", "minimum": 1, "maximum": 50, "default": 5},
                     "timeout_ms": {"type": "integer", "minimum": 200, "maximum": MAX_TIMEOUT_MS, "default": 3000},
                     "max_seconds": {"type": "integer", "minimum": 5, "maximum": MAX_SECONDS, "default": 30},
@@ -423,7 +424,7 @@ fn tool_definitions() -> Vec<Value> {
         ),
         tool(
             "pathtrial_explain_report",
-            "Extract a deterministic evidence summary from a PathTrial report object without calling any external AI API.",
+            "Extract a deterministic evidence summary from a scan or probe report object without calling any external AI API. Diagnose reports with scenario, checks and sources are not accepted here; explain their checks directly.",
             json!({
                 "type": "object",
                 "additionalProperties": false,
@@ -1096,7 +1097,7 @@ fn plan_diagnose(
                     command.push("--sni".to_string());
                     command.push(normalized_host.clone());
                 }
-                command.push("--host".to_string());
+                command.push("--http-host".to_string());
                 command.push(url.host_header());
                 connect_ip = Some(authorized.ip);
             }
@@ -2115,7 +2116,7 @@ mod tests {
         assert!(joined.contains("--url https://origin.example:8443/path?q=1"));
         assert!(joined.contains("--target-ip 93.184.216.34"));
         assert!(joined.contains("--sni origin.example"));
-        assert!(joined.contains("--host origin.example:8443"));
+        assert!(joined.contains("--http-host origin.example:8443"));
         assert!(!joined.contains("https://93.184.216.34"));
     }
 
