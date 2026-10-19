@@ -4,20 +4,20 @@ This guide covers the standalone command-line interface. For Codex and Claude Co
 
 ## Versions
 
-- Public prebuilt CLI: `v1.3.0-rc.1`
-- MCP development core: `1.4.0-rc.1`
+- Public prebuilt CLI: `v1.4.0-rc.1`
+- MCP core included in the public release: `1.4.0-rc.1`
 - AI Plugins: `0.2.0`
-- Public `v1.3.0-rc.1` does not include `pathtrial mcp`.
+- `v1.4.0-rc.1` includes `pathtrial mcp`; the older `v1.3.0-rc.1` does not.
 
 Run `pathtrial --help` or `pathtrial <command> --help` for the options supported by your installed binary.
 
 ## Installation
 
-Download an archive from the [v1.3.0-rc.1 release](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.3.0-rc.1), or review and run the release installer:
+Download an archive from the [v1.4.0-rc.1 release](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1), or review and run the release installer:
 
 ~~~bash
 curl -fsSLo pathtrial-install.sh \
-  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/install.sh
+  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/install.sh
 less pathtrial-install.sh
 sh pathtrial-install.sh
 

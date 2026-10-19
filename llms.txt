@@ -10,18 +10,18 @@ This document is a navigation index for language models, readers, and search too
 - [English README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.en.md): complete English plugin-first walkthrough.
 - [Spanish README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.es.md): guía completa en español con los plugins como entrada principal.
 - [Russian README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.ru.md): полное руководство с установкой плагинов в качестве основного сценария.
-- [GitHub Releases](https://github.com/gaochenyang666-droid/PathTrial/releases): prebuilt packages and SHA-256 checksum files. Version v1.3.0-rc.1 is a prerelease, not a stable final release.
-- [CLI guide](https://github.com/gaochenyang666-droid/PathTrial/blob/codex/ai-plugins-v0.1/docs/cli.md): standalone HTTP, QUIC, UDP, proxy, collection, report and redaction commands.
+- [GitHub Releases](https://github.com/gaochenyang666-droid/PathTrial/releases): prebuilt packages and SHA-256 checksum files. Version v1.4.0-rc.1 is the current prerelease and includes MCP.
+- [CLI guide](https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/cli.md): standalone HTTP, QUIC, UDP, proxy, collection, report and redaction commands.
 - [Bug reports](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md): installation and diagnostic feedback.
 
 ## Machine-readable data and contracts
 
-For release-matching schemas, consult the published v1.3.0-rc.1 tag, not an arbitrary default-branch revision:
+For release-matching schemas, consult the published v1.4.0-rc.1 tag:
 
-- [Scan report JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.3.0-rc.1/schemas/report.schema.json): diagnostic report and evidence references.
-- [Single-command JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.3.0-rc.1/schemas/command.schema.json): CLI command output.
-- [Dual-end collection JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.3.0-rc.1/schemas/collect.schema.json): client/server event collections.
-- [Dual-end correlation JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.3.0-rc.1/schemas/correlate.schema.json): offline correlation.
+- [Scan report JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.4.0-rc.1/schemas/report.schema.json): diagnostic report and evidence references.
+- [Single-command JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.4.0-rc.1/schemas/command.schema.json): CLI command output.
+- [Dual-end collection JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.4.0-rc.1/schemas/collect.schema.json): client/server event collections.
+- [Dual-end correlation JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.4.0-rc.1/schemas/correlate.schema.json): offline correlation.
 - [Codebase/agent conventions](https://github.com/gaochenyang666-droid/PathTrial/blob/main/AGENTS.md): development and evidence-handling guidelines.
 
 For ordinary scans: `pathtrial scan example.com --format json --no-files`.
@@ -51,11 +51,11 @@ Do not infer deliberate blocking, an ISP's responsibility, a specific packet-los
 
 - [Historical RackNerd IPv4/IPv6 troubleshooting case](https://github.com/gaochenyang666-droid/racknerd-ipv6-troubleshooting): source of the evidence-first approach.
 - [Case reproduction guide (Chinese)](https://github.com/gaochenyang666-droid/racknerd-ipv6-troubleshooting/blob/main/docs/使用-PathTrial-复现排障.md): mapping manual diagnostic steps to PathTrial.
-- [Version-specific source tree](https://github.com/gaochenyang666-droid/PathTrial/tree/v1.3.0-rc.1): matches the prerelease.
-- [Milestone C pull request](https://github.com/gaochenyang666-droid/PathTrial/pull/1): development history; check its live merge status before describing any branch as current.
+- [Version-specific source tree](https://github.com/gaochenyang666-droid/PathTrial/tree/v1.4.0-rc.1): matches the current prerelease.
+- [Milestone C pull request](https://github.com/gaochenyang666-droid/PathTrial/pull/1): merged development history.
 
 The RackNerd measurements were taken before PathTrial existed. They must not be presented as historical PathTrial-generated results.
 
 ## Boundaries and privacy
 
-PathTrial currently supports macOS Apple Silicon, macOS Intel, and Linux x86_64; Windows support is not available in v1.3.0-rc.1. The program has no GUI or autonomous repairs. Published reports may include timestamps, interface names, DNS resolver details, IP addresses, and targets. Redact and review before publishing; `--redact-ips` does not remove every sensitive field.
+PathTrial currently supports macOS Apple Silicon, macOS Intel, and Linux x86_64; Windows support is not available in v1.4.0-rc.1. The program has no GUI or autonomous repairs. Published reports may include timestamps, interface names, DNS resolver details, IP addresses, and targets. Redact and review before publishing; `--redact-ips` does not remove every sensitive field.

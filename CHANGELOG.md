@@ -46,6 +46,8 @@ PathTrial AI Plugins v0.2: Codex and Claude Code integration and hardening.
   with the developer-preview MCP dependency, target authorization, example
   prompts and standalone CLI fallback stated explicitly. Detailed commands now
   live in `docs/cli.md`.
+- Removed the one-time `release-request-v1.4.0-rc.1.yml` workflow after the
+  public tag and assets were verified.
 
 ### Verified
 
@@ -62,6 +64,12 @@ PathTrial AI Plugins v0.2: Codex and Claude Code integration and hardening.
 - Claude Code CLI 2.1.292 is installed and both the plugin manifest and
   repository marketplace pass `claude plugin validate`. Live Claude Code calls
   have not yet been verified through a live model session.
+- Public `v1.4.0-rc.1` release smoke passed on macOS ARM, macOS Intel and
+  Ubuntu x86_64 using downloaded release assets, verified SHA-256 files, the
+  release installer, CLI help and a real MCP tool sequence.
+- Default-main Codex and Claude Code marketplace installation passed in
+  isolated homes. Codex completed a real v0.2 model tool chain; Claude Code
+  discovered four Skills and reported its MCP server as Connected.
 
 ### Security
 
