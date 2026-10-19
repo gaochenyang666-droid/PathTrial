@@ -215,20 +215,17 @@ fn parse_macos_airport(text: &str) -> (Option<i32>, Option<f64>) {
 fn parse_macos_dhcp(text: &str) -> Option<String> {
     let mut server = None;
     let mut lease = None;
+    let value_after = |line: &str| {
+        line.rsplit_once('=')
+            .or_else(|| line.rsplit_once(':'))
+            .map(|(_, value)| value.trim().to_string())
+    };
     for line in text.lines() {
         let trimmed = line.trim();
         if trimmed.starts_with("server_identifier") {
-            server = trimmed
-                .split('=')
-                .next_back()
-                .map(str::trim)
-                .map(str::to_string);
+            server = value_after(trimmed);
         } else if trimmed.starts_with("lease_time") {
-            lease = trimmed
-                .split('=')
-                .next_back()
-                .map(str::trim)
-                .map(str::to_string);
+            lease = value_after(trimmed);
         }
     }
     if server.is_none() && lease.is_none() {
