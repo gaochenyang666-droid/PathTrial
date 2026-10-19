@@ -102,6 +102,9 @@ Useful options:
 - `--redact-ips`
 - `--bind-interface`
 - `--sni`
+- `--requested-host` to keep the original hostname in the report
+- `--http-host` to set the Host header when the connection target is a literal IP
+- `--target-ip`, `--connect-ipv4` and `--connect-ipv6` to bind authorized addresses
 - `--server` for DNS comparison
 - `--latency-warn-ms` and `--latency-fail-ms` for environment-specific latency thresholds
 

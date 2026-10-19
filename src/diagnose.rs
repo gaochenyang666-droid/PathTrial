@@ -17,6 +17,7 @@ use crate::probes::{system, Recorder};
 use crate::util::{mean, median, new_run_id, now_rfc3339, percentile, IpMasker};
 
 pub const DIAGNOSE_SCHEMA_VERSION: &str = "1.0.0";
+const MAX_CHILD_OUTPUT: usize = 8 * 1024 * 1024;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiagnoseCheck {
@@ -60,7 +61,7 @@ impl DiagnoseReport {
             tool_version: env!("CARGO_PKG_VERSION").to_string(),
             run_id: new_run_id(),
             scenario: args.scenario.as_str().to_string(),
-            target: args.target.clone(),
+            target: args.requested_host.clone().or_else(|| args.target.clone()),
             started_at,
             finished_at: now_rfc3339(),
             status: Status::Skip,
@@ -194,21 +195,36 @@ pub fn run(args: &DiagnoseArgs) -> Result<u8, String> {
     let deadline = Instant::now() + std::time::Duration::from_secs(args.max_seconds);
     let mut report = DiagnoseReport::new(args, started_at);
 
-    match args.scenario {
-        DiagnoseScenario::Web => run_web(args, &mut report, deadline)?,
-        DiagnoseScenario::Vps => run_vps(args, &mut report, deadline)?,
-        DiagnoseScenario::Latency => run_latency(args, &mut report, deadline)?,
-        DiagnoseScenario::Proxy => run_proxy(args, &mut report, deadline)?,
-        DiagnoseScenario::Local => run_local(&mut report)?,
-        DiagnoseScenario::Dns => run_dns(args, &mut report, deadline)?,
-        DiagnoseScenario::Tcp => run_scan_scenario(args, &mut report, deadline, "tcp", false)?,
-        DiagnoseScenario::Tls => run_scan_scenario(args, &mut report, deadline, "web", true)?,
-        DiagnoseScenario::Http => run_http(args, &mut report, deadline)?,
+    let outcome = match args.scenario {
+        DiagnoseScenario::Web => run_web(args, &mut report, deadline),
+        DiagnoseScenario::Vps => run_vps(args, &mut report, deadline),
+        DiagnoseScenario::Latency => run_latency(args, &mut report, deadline),
+        DiagnoseScenario::Proxy => run_proxy(args, &mut report, deadline),
+        DiagnoseScenario::Local => run_local(&mut report),
+        DiagnoseScenario::Dns => run_dns(args, &mut report, deadline),
+        DiagnoseScenario::Tcp => run_scan_scenario(args, &mut report, deadline, "tcp", false),
+        DiagnoseScenario::Tls => run_scan_scenario(args, &mut report, deadline, "web", true),
+        DiagnoseScenario::Http => run_http(args, &mut report, deadline),
         DiagnoseScenario::DualStack => {
-            run_scan_scenario(args, &mut report, deadline, "tcp", false)?;
-            add_dual_stack_check(&mut report);
+            if args.connect_ipv4.is_some() || args.connect_ipv6.is_some() {
+                run_dual_stack_scans(args, &mut report, deadline)
+            } else {
+                let result = run_scan_scenario(args, &mut report, deadline, "tcp", false);
+                add_dual_stack_check(&mut report);
+                result
+            }
         }
-        DiagnoseScenario::UdpQuic => run_udp_quic(args, &mut report, deadline)?,
+        DiagnoseScenario::UdpQuic => run_udp_quic(args, &mut report, deadline),
+    };
+    if let Err(error) = outcome {
+        if !is_budget_error(&error) {
+            return Err(error);
+        }
+        report.checks.push(budget_check(&error));
+        report.limitations.push(
+            "The wall-clock budget ended before every stage returned evidence; unfinished checks are not successful results."
+                .to_string(),
+        );
     }
 
     Ok(report.finalize(args.redact_ips).emit(args.format))
@@ -240,19 +256,22 @@ fn run_vps(
         report.checks.push(timeout_check("icmp"));
     }
     if Instant::now() < deadline {
-        let trace = run_json(&[
-            "trace".to_string(),
-            target(args).to_string(),
-            "--max-hops".to_string(),
-            "15".to_string(),
-            "--timeout-ms".to_string(),
-            remaining_ms(deadline)
-                .min(args.timeout_ms.saturating_mul(10))
-                .to_string(),
-            "--format".to_string(),
-            "json".to_string(),
-        ])?;
-        add_report_check(report, "route-trace", "Route path", &trace, "trace");
+        let trace = run_json(
+            &[
+                "trace".to_string(),
+                target(args).to_string(),
+                "--max-hops".to_string(),
+                "15".to_string(),
+                "--timeout-ms".to_string(),
+                remaining_ms(deadline)
+                    .min(args.timeout_ms.saturating_mul(10))
+                    .to_string(),
+                "--format".to_string(),
+                "json".to_string(),
+            ],
+            deadline,
+        )?;
+        add_report_check(report, "trace", "Route path", &trace, "trace");
     }
     Ok(())
 }
@@ -294,8 +313,12 @@ fn run_proxy(
         "--format".to_string(),
         "json".to_string(),
     ];
+    if let Some(target_ip) = &args.target_ip {
+        command.push("--target-ip".to_string());
+        command.push(target_ip.clone());
+    }
     append_common_target_options(args, &mut command);
-    let result = run_json(&command)?;
+    let result = run_json(&command, deadline)?;
     add_report_check(report, "proxy", "Proxy comparison", &result, "proxy");
     if let Some(check) = report.checks.last_mut() {
         if check.status.is_problem() {
@@ -333,7 +356,7 @@ fn run_local(report: &mut DiagnoseReport) -> Result<(), String> {
             system_probe.environment.ipv4_local,
             system_probe.environment.ipv6_local
         ),
-        evidence: system_probe.probe_ids.clone(),
+        evidence: local_evidence(&system_probe.probe_ids),
         observed: interfaces
             .iter()
             .map(|interface| {
@@ -365,12 +388,14 @@ fn run_local(report: &mut DiagnoseReport) -> Result<(), String> {
         } else {
             "No IPv4 or IPv6 default route was reported.".to_string()
         },
-        evidence: system_probe
-            .probe_ids
-            .iter()
-            .filter(|id| id.starts_with("route_"))
-            .cloned()
-            .collect(),
+        evidence: local_evidence(
+            &system_probe
+                .probe_ids
+                .iter()
+                .filter(|id| id.starts_with("route_"))
+                .cloned()
+                .collect::<Vec<_>>(),
+        ),
         observed: vec![format!(
             "IPv4 default route present={}, IPv6 default route present={}",
             system_probe.environment.default_route_v4.is_some(),
@@ -426,7 +451,7 @@ fn run_local(report: &mut DiagnoseReport) -> Result<(), String> {
                 .collect::<Vec<_>>()
                 .join("; ")
         },
-        evidence: system_probe.probe_ids.clone(),
+        evidence: local_evidence(&system_probe.probe_ids),
         observed: wifi.iter().flat_map(|link| link.notes.clone()).collect(),
         possible: Vec::new(),
         not_established: vec![
@@ -460,7 +485,7 @@ fn run_local(report: &mut DiagnoseReport) -> Result<(), String> {
         } else {
             dhcp.join("; ")
         },
-        evidence: system_probe.probe_ids.clone(),
+        evidence: local_evidence(&system_probe.probe_ids),
         observed: links.iter().flat_map(|link| link.notes.clone()).collect(),
         possible: Vec::new(),
         not_established: vec![
@@ -487,6 +512,10 @@ fn run_local(report: &mut DiagnoseReport) -> Result<(), String> {
     Ok(())
 }
 
+fn local_evidence(ids: &[String]) -> Vec<String> {
+    ids.iter().map(|id| format!("local:{id}")).collect()
+}
+
 fn run_dns(
     args: &DiagnoseArgs,
     report: &mut DiagnoseReport,
@@ -504,7 +533,7 @@ fn run_dns(
         command.push("--server".to_string());
         command.push(server.clone());
     }
-    let result = run_json(&command)?;
+    let result = run_json(&command, deadline)?;
     add_report_check(report, "dns", "DNS", &result, "dns");
     classify_dns(report, &result);
     Ok(())
@@ -524,7 +553,15 @@ fn run_http(
         "json".to_string(),
     ];
     append_common_target_options(args, &mut command);
-    let result = run_json(&command)?;
+    if let Some(host) = &args.http_host {
+        command.push("--host".to_string());
+        command.push(host.clone());
+    }
+    if let Some(target_ip) = &args.target_ip {
+        command.push("--target-ip".to_string());
+        command.push(target_ip.clone());
+    }
+    let result = run_json(&command, deadline)?;
     add_report_check(report, "http", "HTTP", &result, "http");
     classify_http(report, &result);
     Ok(())
@@ -537,20 +574,23 @@ fn run_udp_quic(
 ) -> Result<(), String> {
     let port = args.effective_port();
     if Instant::now() < deadline {
-        let udp = run_json(&[
-            "udp".to_string(),
-            "--target".to_string(),
-            socket_target(args),
-            "--rounds".to_string(),
-            args.rounds.to_string(),
-            "--timeout-ms".to_string(),
-            args.timeout_ms.to_string(),
-            "--max-seconds".to_string(),
-            remaining_seconds(deadline).to_string(),
-            "--format".to_string(),
-            "json".to_string(),
-        ])?;
-        add_report_check(report, "udp-echo", "UDP Echo", &udp, "udp");
+        let udp = run_json(
+            &[
+                "udp".to_string(),
+                "--target".to_string(),
+                socket_target(args),
+                "--rounds".to_string(),
+                args.rounds.to_string(),
+                "--timeout-ms".to_string(),
+                args.timeout_ms.to_string(),
+                "--max-seconds".to_string(),
+                remaining_seconds(deadline).to_string(),
+                "--format".to_string(),
+                "json".to_string(),
+            ],
+            deadline,
+        )?;
+        add_report_check(report, "udp", "UDP Echo", &udp, "udp");
         if let Some(check) = report.checks.last_mut() {
             check.not_established.push(
                 "Echo timeout does not prove UDP blocking; the target may not run an Echo service."
@@ -574,7 +614,7 @@ fn run_udp_quic(
             "json".to_string(),
         ];
         append_common_target_options(args, &mut quic_args);
-        let quic = run_json(&quic_args)?;
+        let quic = run_json(&quic_args, deadline)?;
         add_report_check(report, "quic", "QUIC", &quic, "quic");
     }
     if Instant::now() < deadline {
@@ -591,7 +631,7 @@ fn run_udp_quic(
             "json".to_string(),
         ];
         append_common_target_options(args, &mut http3_args);
-        let http3 = run_json(&http3_args)?;
+        let http3 = run_json(&http3_args, deadline)?;
         add_report_check(report, "http3", "HTTP/3", &http3, "http3");
     }
     Ok(())
@@ -625,7 +665,7 @@ fn run_scan_scenario(
         command.push("--no-tls".to_string());
     }
     append_common_target_options(args, &mut command);
-    let result = run_json(&command)?;
+    let result = run_json(&command, deadline)?;
     add_scan_checks(report, &result, tls);
     Ok(())
 }
@@ -635,38 +675,45 @@ fn run_ping(
     report: &mut DiagnoseReport,
     deadline: Instant,
 ) -> Result<(), String> {
-    let result = run_json(&[
-        "ping".to_string(),
-        target(args).to_string(),
-        "--count".to_string(),
-        args.rounds.to_string(),
-        "--timeout-ms".to_string(),
-        remaining_ms(deadline)
-            .min(args.timeout_ms.saturating_mul(4))
-            .to_string(),
-        "--format".to_string(),
-        "json".to_string(),
-    ])?;
-    add_report_check(report, "icmp", "ICMP latency and loss", &result, "ping");
+    let result = run_json(
+        &[
+            "ping".to_string(),
+            target(args).to_string(),
+            "--count".to_string(),
+            args.rounds.to_string(),
+            "--timeout-ms".to_string(),
+            remaining_ms(deadline)
+                .min(args.timeout_ms.saturating_mul(4))
+                .to_string(),
+            "--format".to_string(),
+            "json".to_string(),
+        ],
+        deadline,
+    )?;
+    add_report_check(report, "ping", "ICMP latency and loss", &result, "ping");
     classify_icmp(report, &result);
     Ok(())
 }
 
-fn run_json(args: &[String]) -> Result<Value, String> {
+fn run_json(args: &[String], deadline: Instant) -> Result<Value, String> {
+    if Instant::now() >= deadline {
+        return Err("diagnosis budget exhausted before child probe started".to_string());
+    }
     let exe =
         std::env::current_exe().map_err(|error| format!("locate PathTrial executable: {error}"))?;
-    let output = Command::new(exe)
-        .args(args)
-        .output()
-        .map_err(|error| format!("run {}: {error}", args.join(" ")))?;
-    let text = String::from_utf8_lossy(&output.stdout);
+    let mut command = Command::new(exe);
+    command.args(args);
+    let (status, stdout, stderr) =
+        crate::process::run_limited(command, deadline, MAX_CHILD_OUTPUT, None)
+            .map_err(|error| error.message())?;
+    let text = String::from_utf8_lossy(&stdout);
     match serde_json::from_str(&text) {
         Ok(value) => Ok(value),
         Err(error) => Err(format!(
             "{} did not return JSON ({error}); status={}; stderr={}",
             args.first().map(String::as_str).unwrap_or("command"),
-            output.status,
-            String::from_utf8_lossy(&output.stderr).trim()
+            status,
+            String::from_utf8_lossy(&stderr).trim()
         )),
     }
 }
@@ -858,10 +905,17 @@ fn add_latency_stats(args: &DiagnoseArgs, report: &mut DiagnoseReport) {
         }
     }
     if samples.is_empty() {
+        let status = if total > 0 && success == 0 {
+            Status::Fail
+        } else if success < total {
+            Status::Warn
+        } else {
+            Status::Inconclusive
+        };
         report.checks.push(DiagnoseCheck {
             id: "latency-stats".to_string(),
             name: "Latency statistics".to_string(),
-            status: Status::Inconclusive,
+            status,
             summary: "No successful TCP timing samples were available.".to_string(),
             evidence: Vec::new(),
             observed: vec![format!("TCP success {success}/{total}")],
@@ -877,22 +931,13 @@ fn add_latency_stats(args: &DiagnoseArgs, report: &mut DiagnoseReport) {
     let p95 = percentile(&samples, 0.95);
     let max = samples.iter().copied().reduce(f64::max);
     let average = mean(&samples);
-    let mut status = Status::Pass;
-    if let Some(threshold) = args.latency_fail_ms {
-        if max.is_some_and(|value| value >= threshold) {
-            status = Status::Fail;
-        }
-    }
-    if status == Status::Pass {
-        if let Some(threshold) = args.latency_warn_ms {
-            if max.is_some_and(|value| value >= threshold) {
-                status = Status::Warn;
-            }
-        }
-    }
-    if success < total {
-        status = Status::Warn;
-    }
+    let status = latency_verdict(
+        max,
+        success,
+        total,
+        args.latency_warn_ms,
+        args.latency_fail_ms,
+    );
     let mut check = DiagnoseCheck {
         id: "latency-stats".to_string(),
         name: "Latency statistics".to_string(),
@@ -923,6 +968,34 @@ fn add_latency_stats(args: &DiagnoseArgs, report: &mut DiagnoseReport) {
         );
     }
     report.checks.push(check);
+}
+
+/// Combine latency thresholds with connection outcomes so a high-severity
+/// latency failure is never downgraded by a lower-severity partial failure.
+fn latency_verdict(
+    max_ms: Option<f64>,
+    success: usize,
+    total: usize,
+    warn_ms: Option<f64>,
+    fail_ms: Option<f64>,
+) -> Status {
+    if total > 0 && success == 0 {
+        return Status::Fail;
+    }
+    let mut status = Status::Pass;
+    if fail_ms.is_some_and(|threshold| max_ms.is_some_and(|value| value >= threshold)) {
+        status = Status::Fail;
+    } else if warn_ms.is_some_and(|threshold| max_ms.is_some_and(|value| value >= threshold)) {
+        status = Status::Warn;
+    }
+    worst_status(
+        status,
+        if success < total {
+            Status::Warn
+        } else {
+            Status::Pass
+        },
+    )
 }
 
 fn classify_icmp(report: &mut DiagnoseReport, value: &Value) {
@@ -1145,6 +1218,118 @@ fn add_dual_stack_check(report: &mut DiagnoseReport) {
     });
 }
 
+fn run_dual_stack_scans(
+    args: &DiagnoseArgs,
+    report: &mut DiagnoseReport,
+    deadline: Instant,
+) -> Result<(), String> {
+    let port = args.effective_port();
+    let mut observed = Vec::new();
+    let mut evidence = Vec::new();
+    let mut successful_families = 0usize;
+    let mut failed_families = 0usize;
+    for (source, family, address) in [
+        ("scan-v4", "ipv4", args.connect_ipv4.as_deref()),
+        ("scan-v6", "ipv6", args.connect_ipv6.as_deref()),
+    ] {
+        let Some(address) = address else {
+            observed.push(format!("{family}: SKIP (no authorized address)"));
+            continue;
+        };
+        if Instant::now() >= deadline {
+            return Err("diagnosis budget exhausted during dual-stack comparison".to_string());
+        }
+        let mut command = vec![
+            "scan".to_string(),
+            address.to_string(),
+            "--profile".to_string(),
+            "tcp".to_string(),
+            "--port".to_string(),
+            port.to_string(),
+            "--rounds".to_string(),
+            args.rounds.to_string(),
+            "--timeout-ms".to_string(),
+            args.timeout_ms.to_string(),
+            "--max-seconds".to_string(),
+            remaining_seconds(deadline).to_string(),
+            "--format".to_string(),
+            "json".to_string(),
+            "--no-files".to_string(),
+            "--no-tls".to_string(),
+        ];
+        if let Some(interface) = &args.bind_interface {
+            command.push("--bind-interface".to_string());
+            command.push(interface.clone());
+        }
+        let scan = run_json(&command, deadline)?;
+        report.add_source(source, scan.clone());
+        if let Some(summaries) = scan.get("summaries").and_then(Value::as_array) {
+            for summary in summaries {
+                let total = summary
+                    .get("tcp_total")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0);
+                let success = summary
+                    .get("tcp_success")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0);
+                let median = summary
+                    .get("tcp_median_ms")
+                    .and_then(Value::as_f64)
+                    .map(|value| format!("{value:.1} ms"))
+                    .unwrap_or_else(|| "unavailable".to_string());
+                observed.push(format!("{family}: {success}/{total}, median {median}"));
+                if success == total && total > 0 {
+                    successful_families += 1;
+                } else {
+                    failed_families += 1;
+                }
+                if let Some(ids) = summary.get("probe_ids").and_then(Value::as_array) {
+                    evidence.extend(
+                        ids.iter()
+                            .filter_map(Value::as_str)
+                            .map(|id| format!("{source}:{id}")),
+                    );
+                }
+            }
+        }
+    }
+    let measured_families = successful_families + failed_families;
+    let status = if measured_families == 0 {
+        Status::Inconclusive
+    } else if failed_families > 0 {
+        Status::Warn
+    } else if measured_families == 1 {
+        Status::Skip
+    } else {
+        Status::Pass
+    };
+    report.checks.push(DiagnoseCheck {
+        id: "dual-stack".to_string(),
+        name: "IPv4 / IPv6 comparison".to_string(),
+        status,
+        summary: if measured_families < 2 {
+            "Only one address family had an authorized address; the other family was SKIP."
+                .to_string()
+        } else {
+            "IPv4 and IPv6 used separately authorized literal addresses.".to_string()
+        },
+        evidence,
+        observed,
+        possible: if failed_families > 0 {
+            vec!["One family may be unreachable on this path.".to_string()]
+        } else {
+            Vec::new()
+        },
+        not_established: vec![
+            "A difference between families does not prove the cause without route and server-side evidence."
+                .to_string(),
+        ],
+        next_checks: Vec::new(),
+    });
+    Ok(())
+}
+
 fn timeout_check(name: &str) -> DiagnoseCheck {
     DiagnoseCheck {
         id: format!("{name}-budget"),
@@ -1156,6 +1341,29 @@ fn timeout_check(name: &str) -> DiagnoseCheck {
         possible: Vec::new(),
         not_established: vec!["No measurement was collected for this check.".to_string()],
         next_checks: vec!["Increase --max-seconds or reduce --rounds.".to_string()],
+    }
+}
+
+fn is_budget_error(error: &str) -> bool {
+    error.starts_with("timeout:") || error.contains("budget exhausted")
+}
+
+fn budget_check(error: &str) -> DiagnoseCheck {
+    DiagnoseCheck {
+        id: "scenario-budget".to_string(),
+        name: "Scenario budget".to_string(),
+        status: Status::Inconclusive,
+        summary: "The wall-clock budget ended before this stage returned evidence.".to_string(),
+        evidence: Vec::new(),
+        observed: vec![format!("stopped with: {error}")],
+        possible: Vec::new(),
+        not_established: vec![
+            "Checks that did not finish carry no success or failure conclusion.".to_string(),
+        ],
+        next_checks: vec![
+            "Increase --max-seconds, reduce --rounds, or lower --timeout-ms and re-run."
+                .to_string(),
+        ],
     }
 }
 
@@ -1322,11 +1530,74 @@ mod tests {
             redact_ips: false,
             bind_interface: None,
             sni: None,
+            requested_host: None,
+            http_host: None,
+            target_ip: None,
+            connect_ipv4: None,
+            connect_ipv6: None,
             latency_warn_ms: None,
             latency_fail_ms: None,
             format: OutputFormat::Summary,
         };
         assert_eq!(scenario_url(&args), "https://[::1]:8443/");
+    }
+
+    #[test]
+    fn latency_verdict_keeps_fail_above_partial_warning() {
+        assert_eq!(
+            latency_verdict(Some(900.0), 9, 10, Some(200.0), Some(800.0)),
+            Status::Fail
+        );
+        assert_eq!(
+            latency_verdict(Some(900.0), 10, 10, Some(200.0), Some(800.0)),
+            Status::Fail
+        );
+    }
+
+    #[test]
+    fn latency_verdict_warns_only_above_warn_threshold() {
+        assert_eq!(
+            latency_verdict(Some(250.0), 10, 10, Some(200.0), Some(800.0)),
+            Status::Warn
+        );
+        assert_eq!(
+            latency_verdict(Some(250.0), 9, 10, Some(200.0), Some(800.0)),
+            Status::Warn
+        );
+    }
+
+    #[test]
+    fn latency_verdict_passes_when_all_samples_succeed() {
+        assert_eq!(
+            latency_verdict(Some(120.0), 10, 10, Some(200.0), Some(800.0)),
+            Status::Pass
+        );
+        assert_eq!(
+            latency_verdict(Some(120.0), 10, 10, None, None),
+            Status::Pass
+        );
+    }
+
+    #[test]
+    fn latency_verdict_fails_without_successful_samples() {
+        assert_eq!(
+            latency_verdict(None, 0, 10, Some(200.0), Some(800.0)),
+            Status::Fail
+        );
+    }
+
+    #[test]
+    fn only_budget_related_child_errors_become_incomplete_reports() {
+        assert!(is_budget_error("timeout:child process"));
+        assert!(is_budget_error(
+            "diagnosis budget exhausted before child probe started"
+        ));
+        assert!(!is_budget_error("command did not return JSON"));
+        assert!(!is_budget_error("start child process: no such file"));
+        assert_eq!(
+            budget_check("timeout:child process").status,
+            Status::Inconclusive
+        );
     }
 
     #[test]

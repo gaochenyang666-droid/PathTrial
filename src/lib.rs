@@ -15,6 +15,7 @@ pub mod models;
 pub mod net;
 pub mod platform;
 pub mod probes;
+pub mod process;
 pub mod report;
 pub mod scan;
 pub mod single;

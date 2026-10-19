@@ -34,6 +34,10 @@ pathtrial diagnose --scenario local
 
 支持的场景还包括 `dns`、`tcp`、`tls`、`http`、`dual-stack` 和 `udp-quic`。报告分别列出 `observed`、`possible`、`not_established` 和 `next_checks`，不会把推测写成确定根因。
 
+需要把手动解析的地址与原始域名分开时，可以使用 `--requested-host` 保留报告中的目标名称，`--sni` 指定 TLS 服务器名称，`--http-host` 指定 HTTP Host 头，并用 `--target-ip`、`--connect-ipv4` 或 `--connect-ipv6` 固定实际连接地址。MCP 的 `pathtrial_diagnose` 会自动完成这套绑定，DNS 场景始终查询用户指定的原始域名，双栈场景分别校验并测试两个地址族。所有证据引用采用 `<source>:<probe_id>` 形式，可在对应来源报告的 `probes` 中反查。
+
+每个场景受 `--max-seconds` 的绝对墙钟预算约束。预算耗尽时，已经收集的检查会保留，未完成的阶段标记为 `INCONCLUSIVE`，不会被写成成功结果。
+
 ## 快速安装 AI 插件
 
 > **公开测试版（Release Candidate）：** 请先安装 PathTrial 核心，再安装 Codex 或 Claude Code 插件。插件不会自动安装诊断程序。网络探测默认拒绝，只有显式授权的目标才可测试。
