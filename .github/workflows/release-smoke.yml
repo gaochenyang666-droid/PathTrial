@@ -1,0 +1,40 @@
+name: release-smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/release-smoke.yml"
+      - "scripts/verify-release.sh"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - macos-15
+          - macos-15-intel
+          - ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify public release without Rust
+        shell: bash
+        env:
+          PATHTRIAL_VERSION: v1.4.0-rc.1
+        run: |
+          set -euo pipefail
+          if command -v cargo >/dev/null 2>&1; then
+            echo "Runner has cargo preinstalled; verification intentionally excludes it from PATH."
+          fi
+          bash scripts/verify-release.sh
