@@ -5,7 +5,7 @@
 set -eu
 
 REPO="gaochenyang666-droid/PathTrial"
-VERSION="${PATHTRIAL_VERSION:-v1.4.0-rc.1}"
+VERSION="${PATHTRIAL_VERSION:-v1.5.0-rc.1}"
 BASE_URL="${PATHTRIAL_BASE_URL:-https://github.com/${REPO}/releases/download/${VERSION}}"
 INSTALL_DIR="${PATHTRIAL_INSTALL_DIR:-${HOME}/.local/bin}"
 
