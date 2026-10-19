@@ -105,6 +105,13 @@ fn collect_pair_once(rounds: u32) -> Result<(std::path::PathBuf, std::path::Path
     if !status.success() {
         return Err(format!("collect server exited with {status}"));
     }
+    let (status, value) = correlate(&client_path, &server_path);
+    if !status.success() {
+        return Err(format!(
+            "baseline collection did not correlate: status={status}; finding={}; issues={}",
+            value["finding"]["status"], value["comparability"]["issues"]
+        ));
+    }
     Ok((client_path, server_path))
 }
 

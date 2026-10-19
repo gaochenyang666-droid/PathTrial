@@ -309,20 +309,135 @@ fn read_task_id(stream: &TcpStream) -> (Option<String>, Option<String>) {
         Ok(stream) => stream,
         Err(error) => return (None, Some(format!("clone: {error}"))),
     };
-    let _ = stream.set_read_timeout(Some(Duration::from_millis(300)));
-    let mut buffer = [0u8; 256];
-    match stream.read(&mut buffer) {
-        Ok(0) => (None, None),
-        Ok(read) => {
-            let text = String::from_utf8_lossy(&buffer[..read]);
-            let mut parts = text.lines().next().unwrap_or("").split_whitespace();
-            if parts.next() == Some("PTCT") {
-                (parts.next().map(str::to_string), None)
-            } else {
-                (None, Some("unrecognized client payload".to_string()))
-            }
+    let deadline = Instant::now() + Duration::from_millis(300);
+    let mut buffer = Vec::with_capacity(256);
+    let mut chunk = [0u8; 256];
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            break;
         }
-        Err(error) => (None, Some(format!("read: {error}"))),
+        let _ = stream.set_read_timeout(Some(remaining.min(Duration::from_millis(100))));
+        match stream.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(read) => {
+                let room = 256 - buffer.len();
+                buffer.extend_from_slice(&chunk[..read.min(room)]);
+                if buffer.len() >= 256 || buffer.contains(&b'\n') {
+                    break;
+                }
+            }
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+                ) =>
+            {
+                if buffer.is_empty() {
+                    return (None, Some(format!("read: {error}")));
+                }
+                if Instant::now() >= deadline {
+                    break;
+                }
+            }
+            Err(error) => return (None, Some(format!("read: {error}"))),
+        }
+    }
+    if buffer.is_empty() {
+        return (None, None);
+    }
+    let text = String::from_utf8_lossy(&buffer);
+    let mut parts = text.lines().next().unwrap_or("").split_whitespace();
+    if parts.next() == Some("PTCT") {
+        (parts.next().map(str::to_string), None)
+    } else {
+        (None, Some("unrecognized client payload".to_string()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn task_payload_split_across_reads_is_reassembled() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let writer = std::thread::spawn(move || {
+            let mut stream = std::net::TcpStream::connect(address).unwrap();
+            stream.write_all(b"PT").unwrap();
+            stream.flush().unwrap();
+            std::thread::sleep(Duration::from_millis(80));
+            stream.write_all(b"CT task-split 1\n").unwrap();
+        });
+        let (stream, _) = listener.accept().unwrap();
+        let (task, error) = read_task_id(&stream);
+        writer.join().unwrap();
+        assert_eq!(task.as_deref(), Some("task-split"));
+        assert_eq!(error, None);
+    }
+
+    fn report(role: &str, schema_version: &str, events: usize) -> CollectReport {
+        let kind = if role == "client" {
+            "connect_ok"
+        } else {
+            "accept"
+        };
+        CollectReport {
+            schema_version: schema_version.to_string(),
+            tool_version: "test".to_string(),
+            kind: "collect".to_string(),
+            task_id: "task-a".to_string(),
+            role: role.to_string(),
+            protocol: "tcp".to_string(),
+            target: (role == "client").then(|| "127.0.0.1:40000".to_string()),
+            listen: (role == "server").then(|| "127.0.0.1:40000".to_string()),
+            window: Window {
+                started_at: "2026-10-19T00:00:00Z".to_string(),
+                finished_at: "2026-10-19T00:00:01Z".to_string(),
+            },
+            clock: ClockInfo {
+                source: "system clock".to_string(),
+                synchronized: false,
+                note: "test".to_string(),
+            },
+            resolved_addresses: if role == "client" {
+                vec!["127.0.0.1".to_string()]
+            } else {
+                Vec::new()
+            },
+            events: (1..=events)
+                .map(|sequence| CollectEvent {
+                    id: format!("{role}_{sequence:03}"),
+                    at: "2026-10-19T00:00:00Z".to_string(),
+                    kind: kind.to_string(),
+                    peer: Some("127.0.0.1:40001".to_string()),
+                    local: Some("127.0.0.1:40000".to_string()),
+                    sequence: sequence as u32,
+                    task_id_seen: Some("task-a".to_string()),
+                    duration_ms: Some(1.0),
+                    error: None,
+                })
+                .collect(),
+            summary: String::new(),
+            limitations: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn schema_difference_is_a_limit_not_a_failure() {
+        let report = build_correlation(
+            report("client", COLLECT_SCHEMA_VERSION, 2),
+            report("server", "0.9.0", 2),
+        );
+        assert_eq!(report.finding.status, "PASS");
+        assert_eq!(report.comparability.verdict, "DIRECTLY COMPARABLE");
+        assert!(report
+            .comparability
+            .limits
+            .iter()
+            .any(|limit| limit.contains("schema versions differ")));
     }
 }
 
