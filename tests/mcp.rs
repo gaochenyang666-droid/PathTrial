@@ -1053,3 +1053,102 @@ fn mcp_explain_rejects_missing_evidence_ids() {
         .contains("missing evidence"));
     client.close();
 }
+
+#[test]
+fn diagnose_http_report_can_be_explained_with_source_scoped_evidence() {
+    let port = http_stub();
+    let target = format!("127.0.0.1:{port}");
+    let mut client = McpClient::start(&[&target]);
+    let diagnosis = client.call(
+        2,
+        "pathtrial_diagnose",
+        json!({"scenario": "http", "url": format!("http://127.0.0.1:{port}/"), "max_seconds": 5}),
+    );
+    assert_eq!(diagnosis["result"]["isError"], false, "{diagnosis}");
+    let report = diagnosis["result"]["structuredContent"]["report"].clone();
+    let explained = client.call(3, "pathtrial_explain_report", json!({"report": report}));
+    assert_eq!(explained["result"]["isError"], false, "{explained}");
+    let result = &explained["result"]["structuredContent"];
+    assert_eq!(result["report_type"], "diagnose");
+    assert_eq!(result["scenario"], "http");
+    assert_eq!(result["status"], "PASS");
+    assert!(result["verified_evidence_refs"].as_u64().unwrap() > 0);
+    assert!(result["missing_evidence"].as_array().unwrap().is_empty());
+    assert!(result["checks"][0]["observed"].is_array());
+    assert!(result["checks"][0]["possible"].is_array());
+    assert!(result["checks"][0]["not_established"].is_array());
+    assert!(result["checks"][0]["next_checks"].is_array());
+    client.close();
+}
+
+#[test]
+fn diagnose_local_report_can_be_explained_without_network_allowlist() {
+    let mut client = McpClient::start(&[]);
+    let diagnosis = client.call(2, "pathtrial_diagnose", json!({"scenario": "local"}));
+    assert_eq!(diagnosis["result"]["isError"], false, "{diagnosis}");
+    let report = diagnosis["result"]["structuredContent"]["report"].clone();
+    let explained = client.call(3, "pathtrial_explain_report", json!({"report": report}));
+    assert_eq!(explained["result"]["isError"], false, "{explained}");
+    let result = &explained["result"]["structuredContent"];
+    assert_eq!(result["report_type"], "diagnose");
+    assert_eq!(result["scenario"], "local");
+    assert!(result["check_count"].as_u64().unwrap() >= 4);
+    assert!(result["limitations"].is_array());
+    client.close();
+}
+
+#[test]
+fn diagnose_explanation_rejects_forged_and_malformed_evidence() {
+    let mut client = McpClient::start(&[]);
+    let diagnosis = client.call(2, "pathtrial_diagnose", json!({"scenario": "local"}));
+    assert_eq!(diagnosis["result"]["isError"], false, "{diagnosis}");
+    let original = diagnosis["result"]["structuredContent"]["report"].clone();
+
+    let mut forged = original.clone();
+    forged["checks"][0]["evidence"] = json!(["local:nonexistent_999"]);
+    let invalid = client.call(3, "pathtrial_explain_report", json!({"report": forged}));
+    assert_eq!(invalid["result"]["isError"], true, "{invalid}");
+    assert!(invalid["result"]["structuredContent"]["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("missing evidence ID"));
+
+    let mut wrong_schema = original.clone();
+    wrong_schema["schema_version"] = json!("8.0.0");
+    let invalid = client.call(4, "pathtrial_explain_report", json!({"report": wrong_schema}));
+    assert_eq!(invalid["result"]["isError"], true, "{invalid}");
+    assert!(invalid["result"]["structuredContent"]["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("unsupported diagnose schema_version"));
+
+    let mut missing_source = original;
+    missing_source["sources"] = json!([]);
+    let invalid = client.call(5, "pathtrial_explain_report", json!({"report": missing_source}));
+    assert_eq!(invalid["result"]["isError"], true, "{invalid}");
+    client.close();
+}
+
+#[test]
+fn diagnose_explanation_masks_nested_ips_in_structured_output() {
+    let port = http_stub();
+    let target = format!("127.0.0.1:{port}");
+    let mut client = McpClient::start(&[&target]);
+    let diagnosis = client.call(
+        2,
+        "pathtrial_diagnose",
+        json!({"scenario": "http", "url": format!("http://127.0.0.1:{port}/"), "max_seconds": 5}),
+    );
+    assert_eq!(diagnosis["result"]["isError"], false, "{diagnosis}");
+    let report = diagnosis["result"]["structuredContent"]["report"].clone();
+    let explained = client.call(
+        3,
+        "pathtrial_explain_report",
+        json!({"report": report, "redact_ips": true}),
+    );
+    assert_eq!(explained["result"]["isError"], false, "{explained}");
+    let text = explained.to_string();
+    assert!(!text.contains("127.0.0.1"), "{text}");
+    assert!(text.contains("<ipv4-"), "{text}");
+    client.close();
+}
