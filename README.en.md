@@ -1,5 +1,6 @@
 # PathTrial — Open-source Network Diagnostics CLI & MCP Plugins for Codex / Claude Code
 **PathTrial is an open-source Rust network diagnostics CLI and local MCP server** for DNS troubleshooting, website connectivity checks, VPS port testing, proxy failures, and IPv4/IPv6, TCP, TLS, UDP, QUIC and HTTP/3 diagnostics. It exports evidence-backed JSON reports, runs independently on macOS and Linux, and integrates with Codex and Claude Code through local MCP plugins.
+**Website languages:** [简体中文](https://gaochenyang666-droid.github.io/PathTrial/) · [English](https://gaochenyang666-droid.github.io/PathTrial/en/) · [Español](https://gaochenyang666-droid.github.io/PathTrial/es/) · [Русский](https://gaochenyang666-droid.github.io/PathTrial/ru/)
 **Languages:** [简体中文](README.md) · **English** · [Español](README.es.md) · [Русский](README.ru.md)
 [**Download v1.5.0-rc.1 prerelease**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) · [**Report a bug**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**AI integration guide**](docs/ai-integrations.md) · [**CLI guide**](docs/cli.md)
 > **Current release:** PathTrial Core `v1.5.0-rc.1` is a public release candidate with guided `diagnose` and local MCP support. AI Plugins `0.3.0` exposes ten tools. Prebuilt downloads cover macOS Apple Silicon, macOS Intel and Linux x86_64; installation does not require Rust.
@@ -34,7 +35,7 @@ export PATH="$HOME/.local/bin:$PATH"
 pathtrial --version
 pathtrial mcp --help
 ~~~
-Confirm version `1.4.0-rc.1` and a working `pathtrial mcp --help`. The `pathtrial` executable must also be visible in the `PATH` inherited by your AI client.
+Confirm version `1.5.0-rc.1` and a working `pathtrial mcp --help`. The `pathtrial` executable must also be visible in the `PATH` inherited by your AI client.
 ### Step 2: Choose an AI client
 #### OpenAI Codex plugin
 Install the plugin from the default `main` marketplace:

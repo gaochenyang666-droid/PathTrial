@@ -1,5 +1,6 @@
 # PathTrial — открытый инструмент диагностики сети | CLI и MCP-плагины для Codex и Claude Code
 **PathTrial — открытая CLI-утилита для диагностики сети на Rust с локальным MCP-сервером.** Она проверяет DNS, доступность сайтов, порты VPS, прокси и соединения IPv4/IPv6, TCP, TLS, UDP, QUIC и HTTP/3. Результаты сохраняются в JSON-отчётах с измеренными данными. Программа работает самостоятельно на macOS и Linux и через MCP-плагины Codex и Claude Code.
+**Языки сайта:** [简体中文](https://gaochenyang666-droid.github.io/PathTrial/) · [English](https://gaochenyang666-droid.github.io/PathTrial/en/) · [Español](https://gaochenyang666-droid.github.io/PathTrial/es/) · [Русский](https://gaochenyang666-droid.github.io/PathTrial/ru/)
 **Языки:** [简体中文](README.md) · [English](README.en.md) · [Español](README.es.md) · **Русский**
 [**Скачать v1.5.0-rc.1**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) · [**Сообщить об ошибке**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**Руководство по интеграции с ИИ**](docs/ai-integrations.md) · [**Руководство по CLI**](docs/cli.md)
 > **Текущая версия:** PathTrial Core `v1.5.0-rc.1` выпущена как кандидат на выпуск с командой `diagnose` и локальным MCP. Версия AI Plugins — `0.3.0` (десять инструментов). Готовые пакеты есть для macOS Apple Silicon, macOS Intel и Linux x86_64, Rust для установки не нужен.
@@ -34,7 +35,7 @@ export PATH="$HOME/.local/bin:$PATH"
 pathtrial --version
 pathtrial mcp --help
 ~~~
-Проверьте версию `1.4.0-rc.1` и работу `pathtrial mcp --help`. Исполняемый файл должен быть доступен через `PATH`, который наследует ИИ-клиент.
+Проверьте версию `1.5.0-rc.1` и работу `pathtrial mcp --help`. Исполняемый файл должен быть доступен через `PATH`, который наследует ИИ-клиент.
 ### Шаг 2. Выберите ИИ-клиент
 #### Плагин OpenAI Codex
 Установите плагин из Marketplace основной ветки `main`:
