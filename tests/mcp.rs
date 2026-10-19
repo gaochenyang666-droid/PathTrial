@@ -1115,7 +1115,11 @@ fn diagnose_explanation_rejects_forged_and_malformed_evidence() {
 
     let mut wrong_schema = original.clone();
     wrong_schema["schema_version"] = json!("8.0.0");
-    let invalid = client.call(4, "pathtrial_explain_report", json!({"report": wrong_schema}));
+    let invalid = client.call(
+        4,
+        "pathtrial_explain_report",
+        json!({"report": wrong_schema}),
+    );
     assert_eq!(invalid["result"]["isError"], true, "{invalid}");
     assert!(invalid["result"]["structuredContent"]["error"]["message"]
         .as_str()
@@ -1124,7 +1128,11 @@ fn diagnose_explanation_rejects_forged_and_malformed_evidence() {
 
     let mut missing_source = original;
     missing_source["sources"] = json!([]);
-    let invalid = client.call(5, "pathtrial_explain_report", json!({"report": missing_source}));
+    let invalid = client.call(
+        5,
+        "pathtrial_explain_report",
+        json!({"report": missing_source}),
+    );
     assert_eq!(invalid["result"]["isError"], true, "{invalid}");
     client.close();
 }
