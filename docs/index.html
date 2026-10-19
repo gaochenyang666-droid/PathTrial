@@ -7,7 +7,11 @@
   <meta name="description" content="PathTrial 是开源 Rust 网络诊断 CLI 与 MCP 插件，检查 DNS、TCP、TLS、QUIC、HTTP/3、IPv4/IPv6、代理和 VPS 连通性。支持 Codex、Claude Code，macOS 与 Linux 免 Rust 安装。">
   <meta name="robots" content="index,follow">
   <link rel="canonical" href="https://gaochenyang666-droid.github.io/PathTrial/">
-  <link rel="alternate" hreflang="zh-CN" href="https://gaochenyang666-droid.github.io/PathTrial/">
+    <link rel="alternate" hreflang="zh-CN" href="https://gaochenyang666-droid.github.io/PathTrial/">
+  <link rel="alternate" hreflang="en" href="https://gaochenyang666-droid.github.io/PathTrial/en/">
+  <link rel="alternate" hreflang="es" href="https://gaochenyang666-droid.github.io/PathTrial/es/">
+  <link rel="alternate" hreflang="ru" href="https://gaochenyang666-droid.github.io/PathTrial/ru/">
+  <link rel="alternate" hreflang="x-default" href="https://gaochenyang666-droid.github.io/PathTrial/en/">
   <link rel="stylesheet" href="./site.css">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect rx='12' width='64' height='64' fill='%230b101a'/%3E%3Cpath d='M15 21l13 11-13 11m18 0h16' stroke='%236bd5b6' stroke-width='6' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
   <meta property="og:type" content="website">
@@ -17,7 +21,7 @@
   <meta name="twitter:card" content="summary">
   <title>PathTrial — 开源网络诊断、VPS 排障与 MCP 插件</title>
   <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"SoftwareApplication","name":"PathTrial","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux","softwareVersion":"1.4.0-rc.1","description":"Open-source evidence-first Rust network diagnostics CLI and MCP plugins for Codex and Claude Code.","downloadUrl":"https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1","codeRepository":"https://github.com/gaochenyang666-droid/PathTrial","license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+  {"@context":"https://schema.org","@type":"SoftwareApplication","name":"PathTrial","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux","softwareVersion":"1.5.0-rc.1","description":"Open-source evidence-first Rust network diagnostics CLI and MCP plugins for Codex and Claude Code.","downloadUrl":"https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1","codeRepository":"https://github.com/gaochenyang666-droid/PathTrial","license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
   </script>
 </head>
 <body>
@@ -26,11 +30,12 @@
   <a class="brand" href="./" aria-label="PathTrial 首页"><span class="brand-mark" aria-hidden="true">&gt;_</span>PathTrial</a>
   <nav aria-label="主要导航">
     <a href="#features">诊断能力</a>
-    <a href="#guided-diagnosis">v1.5 源码</a>
+    <a href="#guided-diagnosis">v1.5 诊断</a>
     <a href="#integrations">AI / MCP</a>
     <a href="./download.html">下载</a>
     <a href="https://github.com/gaochenyang666-droid/PathTrial">GitHub</a>
   </nav>
+  <nav class="languages" aria-label="切换语言"><a href="https://gaochenyang666-droid.github.io/PathTrial/" lang="zh-CN" aria-current="page">中文</a><a href="https://gaochenyang666-droid.github.io/PathTrial/en/" lang="en">English</a><a href="https://gaochenyang666-droid.github.io/PathTrial/es/" lang="es">Español</a><a href="https://gaochenyang666-droid.github.io/PathTrial/ru/" lang="ru">Русский</a></nav>
 </div></header>
 <main id="main">
   <section class="container hero" aria-labelledby="hero-title">
@@ -59,7 +64,7 @@
   </div></section>
   <section id="guided-diagnosis" class="section"><div class="container">
     <div class="section-head"><h2>v1.5 综合诊断已正式发布为 Release Candidate</h2><p>新增 <code class="inline-code">pathtrial diagnose</code>，提供 11 种引导式场景，覆盖 DNS、TCP、TLS、HTTP、延迟、丢包、IPv4/IPv6、UDP/QUIC、代理及本地网络状态。结果区分实际观察、可能原因、未证实项和下一步排障建议。</p></div>
-    <div class="codebox" aria-label="v1.5 源码命令示例"><pre><span class="comment"># v1.5.0-rc.1 预编译包直接支持 diagnose</span>
+    <div class="codebox" aria-label="v1.5 命令示例"><pre><span class="comment"># v1.5.0-rc.1 预编译包直接支持 diagnose</span>
 pathtrial diagnose --scenario web example.com
 pathtrial diagnose --scenario latency example.com --rounds 10
 pathtrial diagnose --scenario local</pre></div>
@@ -75,7 +80,7 @@ pathtrial diagnose --scenario local</pre></div>
     </div>
     <div class="codebox" aria-label="示例命令"><pre><span class="comment"># 下载并检查官方安装脚本后执行</span>
 <span class="prompt">$</span> pathtrial --version
-<span class="comment"># 1.4.0-rc.1</span>
+<span class="comment"># 1.5.0-rc.1</span>
 
 <span class="prompt">$</span> pathtrial scan example.com \
     --profile web --rounds 5 \

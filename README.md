@@ -1,5 +1,6 @@
 # PathTrial — 开源网络诊断与 VPS 排障工具 | Codex / Claude Code MCP 插件
 **PathTrial 是开源 Rust 网络诊断 CLI 与 MCP 工具**，用于 DNS 解析检测、网站连接故障排查、VPS 端口测试、代理连接诊断，以及 IPv4/IPv6、TCP、TLS、UDP、QUIC 与 HTTP/3 测量。它生成可追溯探测证据的 JSON 报告，支持 macOS / Linux 独立运行，也可通过本地 MCP 插件接入 Codex 和 Claude Code。
+**网站语言：** [简体中文](https://gaochenyang666-droid.github.io/PathTrial/) · [English](https://gaochenyang666-droid.github.io/PathTrial/en/) · [Español](https://gaochenyang666-droid.github.io/PathTrial/es/) · [Русский](https://gaochenyang666-droid.github.io/PathTrial/ru/)
 **语言 / Languages / Idiomas / Языки:** **简体中文** · [English](README.en.md) · [Español](README.es.md) · [Русский](README.ru.md)
 [**下载 v1.5.0-rc.1 测试版**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) · [**报告 Bug**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**AI 集成指南**](docs/ai-integrations.md) · [**CLI 使用指南**](docs/cli.md)
 > **当前版本：** PathTrial Core `v1.5.0-rc.1` 已公开发布为 Release Candidate，支持 CLI、引导式 `diagnose` 和本地 MCP；AI Plugins `0.3.0`，共 10 个 MCP 工具。提供 macOS Apple Silicon、macOS Intel 与 Linux x86_64 预编译包，无需 Rust。CLI 和报告暂未全面本地化。
@@ -36,7 +37,7 @@ export PATH="$HOME/.local/bin:$PATH"
 pathtrial --version
 pathtrial mcp --help
 ~~~
-预期版本为 `1.4.0-rc.1`，且 `pathtrial mcp --help` 可正常执行。确保启动 Codex / Claude Code 时也能在 `PATH` 找到 `pathtrial`。
+预期版本为 `1.5.0-rc.1`，且 `pathtrial mcp --help` 可正常执行。确保启动 Codex / Claude Code 时也能在 `PATH` 找到 `pathtrial`。
 ### 第 2 步：选择 AI 客户端
 #### OpenAI Codex 插件
 在 Codex CLI 安装默认 `main` 分支的 Marketplace 插件：

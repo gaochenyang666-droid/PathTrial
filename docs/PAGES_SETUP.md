@@ -34,3 +34,9 @@ in both HTML pages, the sitemap if page paths change, and the README.
 Only link to assets confirmed in the published GitHub Release. The website
 does not install software in the browser or run diagnostics on visitors.
 Do not include private addresses, telemetry tokens, or credentials.
+
+## Translated website pages
+
+The default URLs remain Simplified Chinese. Static English, Spanish and Russian pages are served from `docs/en/`, `docs/es/`, and `docs/ru/` respectively. Each locale has an `index.html` and `download.html`. Use the header language switcher on either page; every page includes canonical and hreflang links, and `docs/sitemap.xml` lists all eight URLs. Updating a README translation alone does not translate GitHub Pages.
+
+When changing the public release, update all four localized download pages and the Chinese download page, as well as all four READMEs. Verify published assets before changing URLs; keep the historical releases untouched.

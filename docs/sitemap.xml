@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://gaochenyang666-droid.github.io/PathTrial/</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://gaochenyang666-droid.github.io/PathTrial/en/</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://gaochenyang666-droid.github.io/PathTrial/es/</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://gaochenyang666-droid.github.io/PathTrial/ru/</loc><changefreq>monthly</changefreq></url>
   <url><loc>https://gaochenyang666-droid.github.io/PathTrial/download.html</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://gaochenyang666-droid.github.io/PathTrial/en/download.html</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://gaochenyang666-droid.github.io/PathTrial/es/download.html</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://gaochenyang666-droid.github.io/PathTrial/ru/download.html</loc><changefreq>monthly</changefreq></url>
 </urlset>
