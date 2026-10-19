@@ -3,9 +3,9 @@
 All notable changes to PathTrial. The format follows Keep a Changelog, and the
 project uses semantic versioning for both the binary and the report schema.
 
-## [Unreleased: 1.5.0-rc.1]
+## [1.5.0-rc.1] - 2026-10-19
 
-- [PR #5](https://github.com/gaochenyang666-droid/PathTrial/pull/5) merged into `main` on 2026-10-19 after evidence-schema, MCP target/authorization, bounded subprocess and latency severity corrections. The [three-platform CI](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39235804316) passed 225 tests. This is **source availability only**; no new public Release has been published.
+- [PR #5](https://github.com/gaochenyang666-droid/PathTrial/pull/5) merged into `main` on 2026-10-19 after evidence-schema, MCP target/authorization, bounded subprocess and latency severity corrections. The [three-platform CI](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39235804316) passed 225 tests. Now published as a [three-platform prerelease](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) with verified SHA-256 assets. Release workflow [39255364100](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39255364100) succeeded.
 
 Guided diagnosis for ten common network problem categories.
 
@@ -26,8 +26,8 @@ Guided diagnosis for ten common network problem categories.
 
 ### Changed
 
-- Development version is `1.5.0-rc.1`; AI Plugin development version is `0.3.0`.
-- Previously published `v1.4.0-rc.1` tags and release assets are untouched; the installer shipped with v1.5 will default to `v1.5.0-rc.1`.
+- Release version is `1.5.0-rc.1`; bundled AI Plugin version is `0.3.0` (ten MCP tools).
+- Previously published `v1.4.0-rc.1` tag and assets remain untouched; the v1.5 installer defaults to `v1.5.0-rc.1`.
 
 ### Fixed
 
