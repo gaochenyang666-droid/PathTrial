@@ -8,6 +8,8 @@
 
 > **Versión actual:** PathTrial Core `v1.4.0-rc.1` se ha publicado como versión candidata (RC), con CLI y MCP local. AI Plugins es la versión `0.2.0`. Hay paquetes precompilados para macOS Apple Silicon, macOS Intel y Linux x86_64; no hace falta Rust. Los README están disponibles en cuatro idiomas; la salida del CLI y los informes aún no están completamente traducidos.
 
+> **Código de `main` (sin publicar):** PR #5 está fusionado. El núcleo `1.5.0-rc.1` y el plugin `0.3.0` añaden `diagnose` y una décima herramienta MCP. El binario v1.4 **no incluye** estas funciones; compila el núcleo v1.5 desde `main` para probarlas.
+
 > **Prueba la versión candidata:** los plugins Codex y Claude Code están en la rama predeterminada `main`. Puedes [informar de errores de instalación, compatibilidad o diagnóstico](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) indicando versiones, pasos y resultados esperados y observados, sin datos sensibles.
 
 ## Diagnóstico de DNS, puertos VPS, proxies e IPv4/IPv6
@@ -20,9 +22,9 @@ Que un Ping funcione no demuestra que DNS, TCP, TLS, HTTP y la aplicación esté
 
 PathTrial se ejecuta localmente. No sube informes ni modifica DNS, rutas, cortafuegos o ajustes de proxy. Codex y Claude Code utilizan el mismo motor mediante un servidor MCP local. Todas las pruebas de red se bloquean hasta autorizar el destino de forma explícita.
 
-## Entrada de diagnóstico guiado (rama de desarrollo v1.5)
+## Diagnóstico guiado (código v1.5 en main, aún sin publicar)
 
-La rama de desarrollo añade `pathtrial diagnose`, que agrupa DNS, TCP, TLS, HTTP, latencia, pérdida, doble pila, UDP/QUIC, proxy y red local en diez escenarios habituales:
+El código fusionado en `main` incluye `pathtrial diagnose`, que agrupa DNS, TCP, TLS, HTTP, latencia, pérdida, doble pila, UDP/QUIC, proxy y red local en diez escenarios habituales:
 
 ~~~bash
 pathtrial diagnose --scenario web example.com
@@ -67,7 +69,7 @@ codex plugin list
 codex mcp list
 ~~~
 
-Codex v0.2 ya realizó llamadas reales del modelo, una prueba TCP local autorizada y la explicación de informes con pruebas. El plugin público v1.4 tiene nueve herramientas MCP. La versión de desarrollo 0.3 añade `pathtrial_diagnose` y suma diez. Puedes pedirle: *«Llama a `pathtrial_capabilities` y comprueba las herramientas MCP disponibles».*
+Codex v0.2 ya realizó llamadas reales del modelo, una prueba TCP local autorizada y la explicación de informes con pruebas. El plugin público v1.4 tiene nueve herramientas MCP. El plugin 0.3 de `main` añade `pathtrial_diagnose` y suma diez. Puedes pedirle: *«Llama a `pathtrial_capabilities` y comprueba las herramientas MCP disponibles».*
 
 #### Plugin de Claude Code
 
@@ -140,9 +142,9 @@ Consulta la [guía del CLI](docs/cli.md) para HTTP, QUIC, UDP, proxies, recopila
 ## Estado de la beta y límites conocidos
 
 - Núcleo: `v1.4.0-rc.1`, publicado como **versión candidata**, no estable.
-- AI Plugins: `0.2.0`, con manifiestos de Codex y Claude Code en `main`.
+- AI Plugins: el núcleo publicado v1.4 usa `0.2.0` (9 herramientas); el plugin `0.3.0` de `main` no se ha publicado (10 herramientas) y requiere el núcleo v1.5 compilado desde el código para el nuevo diagnóstico.
 - Paquetes: macOS ARM64, macOS Intel y Linux x86_64, compilados correctamente con SHA-256.
-- Pruebas: 173 tests y CI en tres plataformas superados; Codex v0.2 realizó llamadas reales del modelo y una comprobación autorizada.
+- Pruebas: base histórica v1.4 de 173 tests; el código v1.5 en `main` superó 225 tests y [CI en tres plataformas](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39235804316). La nueva herramienta aún no se ha probado en sesiones reales de Codex/Claude.
 - Las pruebas de red requieren permisos explícitos; Windows, interfaz gráfica y reparación automática no son compatibles.
 
 Consulta la [matriz de aceptación](docs/ai-plugin-completeness.md) y el [flujo de publicación](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39149532255). Puedes [informar de errores reproducibles](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md).

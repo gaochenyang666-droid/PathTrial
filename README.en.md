@@ -8,6 +8,8 @@
 
 > **Current release:** PathTrial Core `v1.4.0-rc.1` is a public release candidate with both CLI and local MCP support. AI Plugins are version `0.2.0`. Prebuilt archives cover macOS Apple Silicon, macOS Intel and Linux x86_64; Rust is not required to install. README files are translated into four languages; CLI output and reports are not fully localized.
 
+> **Unreleased source on `main`:** PR #5 is merged. Core `1.5.0-rc.1` and plugin `0.3.0` add `diagnose` and a tenth MCP tool. The public v1.4 binary **does not** include them; build the matching v1.5 core from `main` to test these features.
+
 > **Community beta testers welcome:** Codex and Claude Code plugins are now available on the default `main` branch. Please [report installation, compatibility or diagnostic issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) with redacted versions, reproduction steps and expected versus observed results.
 
 ## Diagnose DNS failures, VPS ports, proxies and IPv4/IPv6
@@ -20,9 +22,9 @@ A successful Ping does not prove that DNS, TCP, TLS, HTTP and the application ar
 
 PathTrial runs locally. It does not upload reports or change DNS, routes, firewall rules or proxy settings. Codex and Claude Code use the same diagnostic engine through a local MCP server. Every network probe is denied until its target is explicitly authorized.
 
-## Guided diagnosis entry point (v1.5 development branch)
+## Guided diagnosis entry point (v1.5 source on main, unreleased)
 
-The development branch adds `pathtrial diagnose`, grouping DNS, TCP, TLS, HTTP, latency, packet loss, dual-stack, UDP/QUIC, proxy and local-network checks into ten common problem scenarios:
+The merged `main` source includes `pathtrial diagnose`, grouping DNS, TCP, TLS, HTTP, latency, packet loss, dual-stack, UDP/QUIC, proxy and local-network checks into ten common problem scenarios:
 
 ~~~bash
 pathtrial diagnose --scenario web example.com
@@ -67,7 +69,7 @@ codex plugin list
 codex mcp list
 ~~~
 
-Codex v0.2 has completed real model-driven calls, an authorized local TCP scan and evidence-based report explanation. The public v1.4 plugin has nine MCP tools. Development plugin v0.3 adds `pathtrial_diagnose` for ten tools. First prompt: *“Call `pathtrial_capabilities` and verify the available MCP tools.”*
+Codex v0.2 has completed real model-driven calls, an authorized local TCP scan and evidence-based report explanation. The public v1.4 plugin has nine MCP tools. The merged `main` plugin v0.3 adds `pathtrial_diagnose` for ten tools. First prompt: *“Call `pathtrial_capabilities` and verify the available MCP tools.”*
 
 #### Claude Code plugin
 
@@ -140,9 +142,9 @@ See the [CLI guide](docs/cli.md) for HTTP, QUIC, UDP, proxies, two-ended collect
 ## Beta status and known limits
 
 - Core: `v1.4.0-rc.1` publicly released as a **release candidate, not a stable release**.
-- AI Plugins: `0.2.0`, with Codex and Claude Code plugin manifests on `main`.
+- AI Plugins: published v1.4 core uses `0.2.0` (nine tools); unreleased `main` plugin `0.3.0` (ten tools) requires a matching source-built v1.5 core for guided diagnosis.
 - Prebuilt archives: macOS ARM64, macOS Intel and Linux x86_64, all built successfully with SHA-256 files.
-- Automated checks: 173 tests and three-platform CI passed; Codex v0.2 completed real model-driven tool calls and an authorized scan.
+- Automated checks: v1.4 baseline 173 tests; merged v1.5 source passed 225 tests and [three-platform CI](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39235804316). New diagnose tool not yet verified in real Codex/Claude model sessions.
 - Network probing requires explicit target authorization. Windows, a GUI and automatic network repair are not supported.
 
 See the [engineering acceptance matrix](docs/ai-plugin-completeness.md) and [release workflow](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39149532255). Please [report reproducible beta issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md).
