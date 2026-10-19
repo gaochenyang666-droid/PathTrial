@@ -8,6 +8,8 @@
 
 > **当前版本：** PathTrial Core `v1.4.0-rc.1` 已公开发布为 Release Candidate，支持 CLI 和本地 MCP；AI Plugins 为 `v0.2.0`。预编译包支持 macOS Apple Silicon、macOS Intel、Linux x86_64，普通用户无需安装 Rust。README 提供四种语言，CLI 输出与报告尚未全面翻译。
 
+> **main 源码开发版（未发行）：** PR #5 已合并，核心 `1.5.0-rc.1`、插件 `0.3.0`，包含 `diagnose` 和第 10 个 MCP 工具。公开的 v1.4 预编译包**不包含**这些功能；试用请从 `main` 编译，并确保 AI 插件调用的是相匹配的核心版本。
+
 > **欢迎测试与反馈：** Codex 和 Claude Code 插件已进入默认 `main` 分支。欢迎通过 [GitHub Issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) 报告安装、兼容性或诊断问题，附上脱敏后的版本信息、复现步骤及预期和实际结果。
 
 ## 网络诊断场景：DNS 故障、VPS 端口、代理与 IPv4/IPv6
@@ -20,9 +22,9 @@
 
 PathTrial 在本机运行，不上传报告，也不修改 DNS、路由、防火墙或代理设置。Codex 与 Claude Code 通过本地 MCP Server 调用同一套诊断能力。网络探测默认全部拒绝，必须显式授权目标。
 
-## 综合诊断入口（v1.5 开发分支）
+## 综合诊断入口（v1.5 main 源码，尚未发布）
 
-开发分支新增 `pathtrial diagnose`，把 DNS、TCP、TLS、HTTP、延迟、丢包、双栈、UDP/QUIC、代理和本地网络检查组织成十类常见问题场景：
+`main` 源码已包含 `pathtrial diagnose`，把 DNS、TCP、TLS、HTTP、延迟、丢包、双栈、UDP/QUIC、代理和本地网络检查组织成十类常见问题场景：
 
 ~~~bash
 pathtrial diagnose --scenario web example.com
@@ -71,7 +73,7 @@ codex plugin list
 codex mcp list
 ~~~
 
-已完成 Codex v0.2 实际模型调用、授权本地 TCP 扫描及报告证据解释测试。公开 v1.4 插件包含 9 个 MCP 工具；开发分支 v0.3 新增 `pathtrial_diagnose`，共 10 个工具。第一次使用可以询问：*“请调用 `pathtrial_capabilities`，检查可用的 MCP 工具。”*
+已完成 Codex v0.2 实际模型调用、授权本地 TCP 扫描及报告证据解释测试。公开 v1.4 插件包含 9 个 MCP 工具；已合并的 main 插件 v0.3 新增 `pathtrial_diagnose`，共 10 个工具。第一次使用可以询问：*“请调用 `pathtrial_capabilities`，检查可用的 MCP 工具。”*
 
 #### Claude Code 插件
 
@@ -144,9 +146,9 @@ pathtrial scan example.com --profile web --rounds 5 --redact-ips
 ## 测试版状态与已知限制
 
 - PathTrial Core：`v1.4.0-rc.1`，已公开发布为 Release Candidate，**不是稳定正式版**。
-- AI Plugins：`0.2.0`，Codex / Claude Code 插件清单已包含在 `main`。
+- AI Plugins：已发布 v1.4 核心使用 `0.2.0`（9 工具）；`main` 的未发布插件为 `0.3.0`（10 工具），需配合从源码构建的 v1.5 核心使用新增诊断工具。
 - 平台：macOS ARM64、macOS Intel、Linux x86_64 的 Release 构建均成功，附 SHA-256。
-- 自动化测试：173 项通过，三平台 CI 通过；Codex v0.2 已完成模型工具调用及授权扫描测试。
+- 自动化测试：v1.4 历史验收基线为 173 项；v1.5 main 源码有 225 项测试且[三平台 CI 通过](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39235804316)。新增 MCP 诊断工具的真实 Codex/Claude 模型会话尚未重新验证。
 - 网络目标必须由用户明确授权；Windows、图形界面和自动网络修复暂不支持。
 
 查看 [工程验收矩阵](docs/ai-plugin-completeness.md) 和 [发行工作流](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39149532255)。后续社区兼容性和诊断问题欢迎通过 [Issue](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) 反馈。
