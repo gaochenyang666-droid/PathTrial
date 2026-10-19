@@ -177,9 +177,9 @@ macOS Intel 三个 Job 全部通过。
 剩余缺口：Windows 尚未实现；当前 Mac 的 UDP 443 路径对公共 HTTP/3 目标超时，
 公共 HTTP/3 验证仍需在可用 UDP 出口上重复。
 
-## v1.5 综合诊断（已合并 main，尚未发布）
+## v1.5 综合诊断（v1.5.0-rc.1 已发布预发布版）
 
-[PR #5](https://github.com/gaochenyang666-droid/PathTrial/pull/5) 已合并进 `main`，新增 `pathtrial diagnose` 和 `pathtrial_diagnose`。`1.5.0-rc.1` 目前仅存在于源码，**未发布新安装包**；公开下载的 v1.4 版本仍不支持新命令，且旧标签和资产没有改变。
+[PR #5](https://github.com/gaochenyang666-droid/PathTrial/pull/5) 与 [PR #6](https://github.com/gaochenyang666-droid/PathTrial/pull/6) 均已合并进 `main`。`v1.5.0-rc.1` 已通过三平台 [Release 工作流](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39255364100) 发布为 Prerelease，含 `pathtrial diagnose`、第十个 MCP 工具及支持 diagnose 报告的 `pathtrial_explain_report`。SHA-256 已在发布工作流验证。历史 v1.4 标签及资产不变。
 
 | 十类问题 | 状态 | 当前证据 |
 | --- | --- | --- |
@@ -206,12 +206,12 @@ AI 插件不计入上面的 94.25% 核心 CLI 评分，单独记录如下：
 | DNS 授权、确定性 IP 绑定与代理双端授权 | VERIFIED | 12 项安全与子进程单元测试和 MCP 集成测试 |
 | 客户端断开取消、授权摘要脱敏、重定向脱敏 | VERIFIED | 断开测试、capabilities 隐私测试、查询参数和重定向测试 |
 | 扫描、HTTP、QUIC、HTTP/3、代理、UDP、报告解释、报告比较 | VERIFIED | 9 个工具的 MCP 级本地协议测试 |
-| v1.5 `pathtrial_diagnose`（未发布） | PARTIAL | 本地场景、授权 TCP、未授权拒绝和 11 个场景参数已验证；真实 Codex/Claude 会话尚未重跑 |
+| v1.5 `pathtrial_diagnose`（已发布 RC） | PARTIAL | 三平台 CI、10 工具发现、真实 Codex HTTP/local 场景均已完成；Claude Code 真实模型会话由项目方报告完成，尚缺独立复测及完整公网双栈/QUIC 验收 |
 | 共享 Skills 一致性 | VERIFIED | 5 项插件结构测试与同步检查脚本 |
 | Codex marketplace 与插件安装 | VERIFIED | 临时 `CODEX_HOME` 实际安装，`codex mcp list` 可见 |
 | Codex 模型会话内真实工具调用 | VERIFIED | v0.2.0 完成 capabilities、未授权拒绝、授权扫描和 `tcp_ipv4_001` 解释 |
 | Claude Code 清单校验与加载 | PARTIAL | 官方 CLI 2.1.292；默认 main 安装、4 个 Skills 和 MCP Connected 已验证；真实模型工具调用尚待补充 |
-| 含 MCP 的预编译发行包 | VERIFIED | `v1.4.0-rc.1` 公开 Release；三平台免 Rust 安装、SHA-256、CLI 和 MCP 验收通过 |
+| 含 MCP 的预编译发行包 | VERIFIED | 最新 `v1.5.0-rc.1` Prerelease 三平台构建、归档 SHA-256 校验及 MCP smoke 均通过；历史 `v1.4.0-rc.1` 保留 |
 | Windows 插件 | UNVERIFIED | Windows 核心尚未实现 |
 
 AI Plugins 独立权重与当前 85.0% 计算见
