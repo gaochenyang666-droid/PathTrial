@@ -1434,25 +1434,41 @@ fn explain_diagnose_report(report: &Value) -> Result<Value, String> {
     let mut probe_counts = std::collections::BTreeMap::<String, usize>::new();
     let mut error_counts = std::collections::BTreeMap::<String, usize>::new();
     for source in &parsed.sources {
-        if source.name.is_empty() || source.name.contains(':')
+        if source.name.is_empty()
+            || source.name.contains(':')
             || !source_names.insert(source.name.as_str())
         {
-            return Err(format!("invalid or duplicate diagnose source {}", source.name));
+            return Err(format!(
+                "invalid or duplicate diagnose source {}",
+                source.name
+            ));
         }
-        let probes = source.report.get("probes").and_then(Value::as_array)
+        let probes = source
+            .report
+            .get("probes")
+            .and_then(Value::as_array)
             .ok_or_else(|| format!("source {} must contain probes", source.name))?;
         for probe in probes {
-            let id = probe.get("id").and_then(Value::as_str)
+            let id = probe
+                .get("id")
+                .and_then(Value::as_str)
                 .filter(|id| !id.is_empty())
                 .ok_or_else(|| format!("source {} contains a probe without id", source.name))?;
             if id.contains(':') || !known_ids.insert(format!("{}:{id}", source.name)) {
-                return Err(format!("duplicate or invalid probe ID {}:{id}", source.name));
+                return Err(format!(
+                    "duplicate or invalid probe ID {}:{id}",
+                    source.name
+                ));
             }
-            let kind = probe.get("kind").and_then(Value::as_str)
+            let kind = probe
+                .get("kind")
+                .and_then(Value::as_str)
                 .ok_or_else(|| format!("probe {}:{id} is missing kind", source.name))?;
             *probe_counts.entry(kind.to_string()).or_default() += 1;
-            if let Some(error) = probe.get("detail")
-                .and_then(|detail| detail.get("error")).and_then(Value::as_str)
+            if let Some(error) = probe
+                .get("detail")
+                .and_then(|detail| detail.get("error"))
+                .and_then(Value::as_str)
             {
                 *error_counts.entry(error.to_string()).or_default() += 1;
             }
@@ -1467,7 +1483,10 @@ fn explain_diagnose_report(report: &Value) -> Result<Value, String> {
         }
         for reference in &check.evidence {
             if !known_ids.contains(reference) {
-                return Err(format!("diagnose check {} references missing evidence ID {reference}", check.id));
+                return Err(format!(
+                    "diagnose check {} references missing evidence ID {reference}",
+                    check.id
+                ));
             }
             cited += 1;
         }
