@@ -305,6 +305,45 @@ fn every_diagnose_evidence_reference_resolves_to_a_recorded_probe() {
     ])
     .1;
     assert_evidence_refs_exist(&web);
+
+    let vps = run(&[
+        "diagnose",
+        "127.0.0.1",
+        "--scenario",
+        "vps",
+        "--port",
+        &port_text,
+        "--rounds",
+        "1",
+        "--timeout-ms",
+        "500",
+        "--max-seconds",
+        "10",
+        "--format",
+        "json",
+    ])
+    .1;
+    assert_evidence_refs_exist(&vps);
+
+    let closed = free_port().to_string();
+    let udp_quic = run(&[
+        "diagnose",
+        "127.0.0.1",
+        "--scenario",
+        "udp-quic",
+        "--port",
+        &closed,
+        "--rounds",
+        "1",
+        "--timeout-ms",
+        "300",
+        "--max-seconds",
+        "10",
+        "--format",
+        "json",
+    ])
+    .1;
+    assert_evidence_refs_exist(&udp_quic);
 }
 
 #[test]
