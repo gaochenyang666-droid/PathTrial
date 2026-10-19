@@ -20,6 +20,20 @@ Que un Ping funcione no demuestra que DNS, TCP, TLS, HTTP y la aplicación esté
 
 PathTrial se ejecuta localmente. No sube informes ni modifica DNS, rutas, cortafuegos o ajustes de proxy. Codex y Claude Code utilizan el mismo motor mediante un servidor MCP local. Todas las pruebas de red se bloquean hasta autorizar el destino de forma explícita.
 
+## Entrada de diagnóstico guiado (rama de desarrollo v1.5)
+
+La rama de desarrollo añade `pathtrial diagnose`, que agrupa DNS, TCP, TLS, HTTP, latencia, pérdida, doble pila, UDP/QUIC, proxy y red local en diez escenarios habituales:
+
+~~~bash
+pathtrial diagnose --scenario web example.com
+pathtrial diagnose --scenario vps YOUR_VPS_IP --port 22
+pathtrial diagnose --scenario latency example.com --rounds 10
+pathtrial diagnose --scenario proxy --url https://example.com/ --proxy socks5://127.0.0.1:1080
+pathtrial diagnose --scenario local
+~~~
+
+También incluye `dns`, `tcp`, `tls`, `http`, `dual-stack` y `udp-quic`. El informe separa `observed`, `possible`, `not_established` y `next_checks`; una hipótesis no se presenta como causa confirmada.
+
 ## Instalar los plugins de IA
 
 > **Versión candidata pública:** instala primero el ejecutable PathTrial y después el plugin de Codex o Claude Code. El plugin no instala el programa principal. Las pruebas de red requieren una autorización explícita para cada destino.
@@ -51,7 +65,7 @@ codex plugin list
 codex mcp list
 ~~~
 
-Codex v0.2 ya realizó llamadas reales del modelo, una prueba TCP local autorizada y la explicación de informes con pruebas. Puedes pedirle: *«Llama a `pathtrial_capabilities` y comprueba las nueve herramientas MCP».*
+Codex v0.2 ya realizó llamadas reales del modelo, una prueba TCP local autorizada y la explicación de informes con pruebas. El plugin público v1.4 tiene nueve herramientas MCP. La versión de desarrollo 0.3 añade `pathtrial_diagnose` y suma diez. Puedes pedirle: *«Llama a `pathtrial_capabilities` y comprueba las herramientas MCP disponibles».*
 
 ### Paso 2: Plugin de Claude Code
 

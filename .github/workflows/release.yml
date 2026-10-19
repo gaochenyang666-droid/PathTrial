@@ -64,7 +64,7 @@ jobs:
               text=True, capture_output=True, check=True)
           responses = [json.loads(line) for line in proc.stdout.splitlines()]
           assert responses[0]["result"]["serverInfo"]["name"] == "pathtrial"
-          assert len(responses[1]["result"]["tools"]) == 9
+          assert len(responses[1]["result"]["tools"]) == 10
           PY
       - name: Package
         shell: bash

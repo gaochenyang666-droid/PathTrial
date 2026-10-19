@@ -57,6 +57,10 @@ CI also runs tests on `ubuntu-24.04`, `macos-15`, and `macos-15-intel`. Merely c
   generic file-reading tool, or a generic shell-execution tool.
 - MCP protocol tests are in `tests/mcp.rs`; manifest and skill consistency tests
   are in `tests/plugins.rs`. Run both when changing plugin files.
+- `pathtrial diagnose` is a scenario layer over existing probes. Its local
+  scenario is read-only and target-free; every network scenario must retain the
+  same exact-target authorization, deterministic DNS binding and no-mutation
+  guarantees as the underlying commands.
 - Claude Code runtime validation and any Codex model-driven tool call must be
   reported as UNVERIFIED until actually executed.
 

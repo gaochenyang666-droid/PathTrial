@@ -222,9 +222,7 @@ fn tls_scenario_separates_plain_tcp_from_tls_failure() {
     assert_eq!(status.code(), Some(2));
     let tcp_tls = check(&value, "TCP and TLS");
     assert_eq!(tcp_tls["status"], "FAIL");
-    assert!(tcp_tls["observed"]
-        .to_string()
-        .contains("TLS transport 0/"));
+    assert!(tcp_tls["observed"].to_string().contains("TLS transport 0/"));
 }
 
 #[test]

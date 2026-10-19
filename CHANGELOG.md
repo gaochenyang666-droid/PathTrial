@@ -3,6 +3,30 @@
 All notable changes to PathTrial. The format follows Keep a Changelog, and the
 project uses semantic versioning for both the binary and the report schema.
 
+## [Unreleased: 1.5.0-rc.1]
+
+Guided diagnosis for ten common network problem categories.
+
+### Added
+
+- `pathtrial diagnose` with web, vps, latency, proxy, local, dns, tcp, tls,
+  http, dual-stack and udp-quic scenarios.
+- User-facing diagnosis checks with `observed`, `possible`, `not_established`
+  and `next_checks`, while source reports retain their real probe IDs.
+- TCP P50/P95/max statistics, ICMP loss and jitter classification, DNS rcode
+  classification, TLS transport versus certificate classification, and HTTP
+  4xx/5xx including 502/503/504 guidance.
+- Read-only local interface, route, DHCP lease and Wi-Fi metrics where the OS
+  exposes them without elevated privileges.
+- `schemas/diagnose.schema.json` and `pathtrial schema --diagnose`.
+- `pathtrial_diagnose` as the tenth MCP tool with the existing default-deny
+  authorization model. The `local` scenario performs no network probe.
+
+### Changed
+
+- Development version is `1.5.0-rc.1`; AI Plugin development version is `0.3.0`.
+- Published `v1.4.0-rc.1` tags, assets and installer defaults remain unchanged.
+
 ## [1.4.0-rc.1] - 2026-10-17
 
 PathTrial AI Plugins v0.2: Codex and Claude Code integration and hardening.
