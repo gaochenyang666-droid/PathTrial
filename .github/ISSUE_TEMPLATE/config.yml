@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 下载 PathTrial 测试版
+    url: https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1
+    about: 获取 macOS / Linux 安装包和 SHA-256 文件
+  - name: 查阅安装及网络目标授权
+    url: https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/ai-integrations.md
+    about: Codex / Claude Code 插件、MCP Server 与安全允许列表

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://gaochenyang666-droid.github.io/PathTrial/sitemap.xml
