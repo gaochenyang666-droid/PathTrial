@@ -34,7 +34,9 @@ verified prebuilt binary without Rust:
 curl -fsSLo pathtrial-install.sh \
   https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/install.sh
 sh pathtrial-install.sh
-pathtrial mcp --allow-target example.com:443
+export PATH="$HOME/.local/bin:$PATH"
+pathtrial --version
+pathtrial mcp --help
 ```
 
 ## Probe authorization
@@ -48,8 +50,21 @@ pathtrial mcp --allow-target example.com:443
 pathtrial mcp --allow-target 203.0.113.10:22 --allow-target api.example.com:443
 ```
 
-The same rules can be supplied through
-`PATHTRIAL_MCP_ALLOW_TARGETS`, separated by commas or spaces.
+For marketplace-installed Codex or Claude Code plugins, **prefer a temporary
+environment variable over editing a version-specific plugin cache**. Start the
+client from the same terminal so its MCP child process inherits the value:
+
+```bash
+export PATHTRIAL_MCP_ALLOW_TARGETS="example.com:443"
+codex
+# Or launch claude instead
+```
+
+The `PATHTRIAL_MCP_ALLOW_TARGETS` variable accepts multiple explicit targets
+separated by commas or spaces. The executable parses it at MCP startup. A
+desktop GUI launched outside that terminal may **not** inherit its environment:
+use that client's supported MCP environment settings or an explicit
+`--allow-target` argument, and restart the client after changing authorization.
 
 An entry without a port authorizes any port for that exact host or IP. A
 hostname rule only authorizes public resolved addresses. A private, loopback
@@ -95,7 +110,8 @@ codex mcp list
 ```
 
 The Codex desktop app can also show the repo marketplace in the Plugins
-Directory. Restart Codex after changing `mcp.json`.
+Directory. Avoid relying on version-specific plugin-cache paths. Restart Codex
+after changing the MCP server startup environment or arguments.
 
 The plugin `mcp.json` starts:
 
@@ -107,7 +123,8 @@ The plugin `mcp.json` starts:
 }
 ```
 
-Add authorized targets to the `args` array:
+For advanced manual MCP configuration, authorization can also be passed in
+the server's `args` array:
 
 ```json
 "args": ["mcp", "--allow-target", "example.com:443"]
@@ -144,8 +161,11 @@ claude plugin validate ./plugins/claude-code/pathtrial
 claude --plugin-dir ./plugins/claude-code/pathtrial
 ```
 
-Add authorized targets to `plugins/claude-code/pathtrial/.mcp.json` in the
-same way as the Codex plugin.
+For marketplace-installed Claude Code plugins, use the same startup
+`PATHTRIAL_MCP_ALLOW_TARGETS` approach described under Probe authorization.
+The source-checkout file `plugins/claude-code/pathtrial/.mcp.json` is for local
+plugin development with `--plugin-dir`; it is not the path a marketplace user
+must edit.
 
 ## MCP tools
 
