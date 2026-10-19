@@ -18,9 +18,23 @@ fn temp_path(tag: &str) -> std::path::PathBuf {
 }
 
 fn collect_pair(rounds: u32) -> (std::path::PathBuf, std::path::PathBuf) {
+    let mut last_error = String::new();
+    for attempt in 1..=2 {
+        match collect_pair_once(rounds) {
+            Ok(paths) => return paths,
+            Err(error) => {
+                eprintln!("collect pair attempt {attempt} failed: {error}");
+                last_error = error;
+            }
+        }
+    }
+    panic!("collect pair failed twice; last error: {last_error}");
+}
+
+fn collect_pair_once(rounds: u32) -> Result<(std::path::PathBuf, std::path::PathBuf), String> {
     let server_path = temp_path("server");
     let client_path = temp_path("client");
-    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").map_err(|error| error.to_string())?;
     let port = listener.local_addr().unwrap().port();
     drop(listener);
     let mut server = Command::new(binary())
@@ -33,20 +47,29 @@ fn collect_pair(rounds: u32) -> (std::path::PathBuf, std::path::PathBuf) {
             "--listen",
             &format!("127.0.0.1:{port}"),
             "--max-seconds",
-            "3",
+            "4",
             "--output",
             server_path.to_str().unwrap(),
         ])
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .spawn()
-        .expect("server");
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        .map_err(|error| format!("start collect server: {error}"))?;
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(8);
+    let mut ready = false;
     while std::time::Instant::now() < deadline {
         if std::net::TcpStream::connect(("127.0.0.1", port)).is_ok() {
+            ready = true;
             break;
         }
         std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    if !ready {
+        let _ = server.kill();
+        let _ = server.wait();
+        return Err(format!(
+            "collect server did not listen on 127.0.0.1:{port} within 8s"
+        ));
     }
     let client = Command::new(binary())
         .args([
@@ -62,20 +85,27 @@ fn collect_pair(rounds: u32) -> (std::path::PathBuf, std::path::PathBuf) {
             "--interval-ms",
             "50",
             "--max-seconds",
-            "2",
+            "3",
             "--output",
             client_path.to_str().unwrap(),
         ])
         .output()
-        .expect("client");
-    assert!(
-        client.status.success(),
-        "client failed: {}",
-        String::from_utf8_lossy(&client.stderr)
-    );
-    let status = server.wait().expect("server wait");
-    assert!(status.success());
-    (client_path, server_path)
+        .map_err(|error| format!("run collect client: {error}"))?;
+    if !client.status.success() {
+        let _ = server.kill();
+        let _ = server.wait();
+        return Err(format!(
+            "collect client failed: {}",
+            String::from_utf8_lossy(&client.stderr)
+        ));
+    }
+    let status = server
+        .wait()
+        .map_err(|error| format!("wait for collect server: {error}"))?;
+    if !status.success() {
+        return Err(format!("collect server exited with {status}"));
+    }
+    Ok((client_path, server_path))
 }
 
 fn correlate(

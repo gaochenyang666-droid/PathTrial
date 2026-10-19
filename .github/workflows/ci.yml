@@ -34,6 +34,9 @@ jobs:
       - name: Test collect
         timeout-minutes: 5
         run: cargo test --locked --test collect -- --test-threads=1 --nocapture
+      - name: Test diagnose
+        timeout-minutes: 5
+        run: cargo test --locked --test diagnose -- --test-threads=1 --nocapture
       - name: Test QUIC
         timeout-minutes: 5
         run: cargo test --locked --test quic -- --test-threads=1 --nocapture
@@ -79,7 +82,7 @@ jobs:
               text=True, capture_output=True, check=True)
           responses = [json.loads(line) for line in proc.stdout.splitlines()]
           assert responses[0]["result"]["serverInfo"]["name"] == "pathtrial"
-          assert len(responses[1]["result"]["tools"]) == 9
+          assert len(responses[1]["result"]["tools"]) == 10
           PY
           python3 - <<'PY'
           import json

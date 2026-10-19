@@ -20,6 +20,20 @@ A successful Ping does not prove that DNS, TCP, TLS, HTTP and the application ar
 
 PathTrial runs locally. It does not upload reports or change DNS, routes, firewall rules or proxy settings. Codex and Claude Code use the same diagnostic engine through a local MCP server. Every network probe is denied until its target is explicitly authorized.
 
+## Guided diagnosis entry point (v1.5 development branch)
+
+The development branch adds `pathtrial diagnose`, grouping DNS, TCP, TLS, HTTP, latency, packet loss, dual-stack, UDP/QUIC, proxy and local-network checks into ten common problem scenarios:
+
+~~~bash
+pathtrial diagnose --scenario web example.com
+pathtrial diagnose --scenario vps YOUR_VPS_IP --port 22
+pathtrial diagnose --scenario latency example.com --rounds 10
+pathtrial diagnose --scenario proxy --url https://example.com/ --proxy socks5://127.0.0.1:1080
+pathtrial diagnose --scenario local
+~~~
+
+Focused scenarios also include `dns`, `tcp`, `tls`, `http`, `dual-stack` and `udp-quic`. Reports separate `observed`, `possible`, `not_established` and `next_checks`; hypotheses are never presented as confirmed root causes.
+
 ## Install the AI plugins
 
 > **Public release candidate:** Install the PathTrial executable before installing the Codex or Claude Code plugin. A plugin does not install the diagnostic engine. Network probes are denied by default until a target is explicitly authorized.
@@ -53,7 +67,7 @@ codex plugin list
 codex mcp list
 ~~~
 
-Codex v0.2 has completed real model-driven calls, an authorized local TCP scan and evidence-based report explanation. First prompt: *“Call `pathtrial_capabilities` and verify the nine MCP tools.”*
+Codex v0.2 has completed real model-driven calls, an authorized local TCP scan and evidence-based report explanation. The public v1.4 plugin has nine MCP tools. Development plugin v0.3 adds `pathtrial_diagnose` for ten tools. First prompt: *“Call `pathtrial_capabilities` and verify the available MCP tools.”*
 
 #### Claude Code plugin
 

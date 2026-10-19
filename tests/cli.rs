@@ -401,6 +401,22 @@ fn http_4xx_without_expectation_is_warn_not_unreachable() {
 }
 
 #[test]
+fn http_rejects_host_header_injection() {
+    let port = http_stub("HTTP/1.1 200 OK", "ok");
+    let output = Command::new(binary())
+        .args([
+            "http",
+            &format!("http://127.0.0.1:{port}/"),
+            "--host",
+            "127.0.0.1\r\nX-Injected: 1",
+        ])
+        .output()
+        .expect("run");
+    assert_eq!(output.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("control characters"));
+}
+
+#[test]
 fn http_connection_refused_is_reported() {
     let port = free_port();
     let output = Command::new(binary())

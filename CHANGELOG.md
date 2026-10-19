@@ -3,6 +3,51 @@
 All notable changes to PathTrial. The format follows Keep a Changelog, and the
 project uses semantic versioning for both the binary and the report schema.
 
+## [Unreleased: 1.5.0-rc.1]
+
+Guided diagnosis for ten common network problem categories.
+
+### Added
+
+- `pathtrial diagnose` with web, vps, latency, proxy, local, dns, tcp, tls,
+  http, dual-stack and udp-quic scenarios.
+- User-facing diagnosis checks with `observed`, `possible`, `not_established`
+  and `next_checks`, while source reports retain their real probe IDs.
+- TCP P50/P95/max statistics, ICMP loss and jitter classification, DNS rcode
+  classification, TLS transport versus certificate classification, and HTTP
+  4xx/5xx including 502/503/504 guidance.
+- Read-only local interface, route, DHCP lease and Wi-Fi metrics where the OS
+  exposes them without elevated privileges.
+- `schemas/diagnose.schema.json` and `pathtrial schema --diagnose`.
+- `pathtrial_diagnose` as the tenth MCP tool with the existing default-deny
+  authorization model. The `local` scenario performs no network probe.
+
+### Changed
+
+- Development version is `1.5.0-rc.1`; AI Plugin development version is `0.3.0`.
+- Published `v1.4.0-rc.1` tags, assets and installer defaults remain unchanged.
+
+### Fixed
+
+- Diagnosis evidence now consistently uses `<source>:<probe_id>`. Three
+  source/prefix mismatches (ICMP, route trace and UDP Echo) are corrected, and
+  a regression test resolves every evidence reference against
+  `sources[].report.probes[]`.
+- `pathtrial_diagnose` keeps the requested hostname distinct from the
+  authorized connection address. DNS queries the original name, HTTP keeps the
+  original URL, Host header and TLS SNI, and dual-stack authorization and
+  execution are performed per address family.
+- `target` and `url` must agree on hostname and port. Proxy target and proxy
+  endpoint still require independent authorization.
+- Child probes share one absolute wall-clock deadline. Timeout or client
+  cancellation terminates the process group, drains stdout and stderr without
+  blocking, and reports an incomplete diagnosis instead of a success.
+- A latency result above `--latency-fail-ms` is no longer downgraded to `WARN`
+  by partial connection failures. Results without successful samples never
+  produce a fabricated average.
+- Child output that is exactly at the configured limit is accepted; only
+  additional bytes are treated as overflow.
+
 ## [1.4.0-rc.1] - 2026-10-17
 
 PathTrial AI Plugins v0.2: Codex and Claude Code integration and hardening.

@@ -212,6 +212,22 @@ pub fn as_literal_ip(text: &str) -> Option<IpAddr> {
     trimmed.parse::<IpAddr>().ok()
 }
 
+/// Reject values that would break an HTTP header line or a host authority.
+pub fn validate_host_token(label: &str, value: &str) -> Result<(), String> {
+    if value.is_empty() || value.len() > 255 {
+        return Err(format!("{label} must be between 1 and 255 characters"));
+    }
+    if value
+        .chars()
+        .any(|character| character.is_whitespace() || character.is_control() || character == '/')
+    {
+        return Err(format!(
+            "{label} must not contain whitespace, control characters or '/'"
+        ));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -235,6 +251,15 @@ mod tests {
         assert!(as_literal_ip("192.0.2.1").is_some());
         assert!(as_literal_ip("[2001:db8::1]").is_some());
         assert!(as_literal_ip("example.com").is_none());
+    }
+
+    #[test]
+    fn host_tokens_reject_header_injection() {
+        assert!(validate_host_token("--host", "example.com:443").is_ok());
+        assert!(validate_host_token("--host", "[::1]:8443").is_ok());
+        assert!(validate_host_token("--host", "example.com\r\nX-Test: 1").is_err());
+        assert!(validate_host_token("--host", "example.com /").is_err());
+        assert!(validate_host_token("--host", "").is_err());
     }
 
     #[test]

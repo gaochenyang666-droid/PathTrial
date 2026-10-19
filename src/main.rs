@@ -27,6 +27,8 @@ fn main() -> ExitCode {
         Command::Schema(args) => {
             if args.command {
                 print!("{}", include_str!("../schemas/command.schema.json"));
+            } else if args.diagnose {
+                print!("{}", include_str!("../schemas/diagnose.schema.json"));
             } else if args.collect {
                 print!("{}", include_str!("../schemas/collect.schema.json"));
             } else if args.correlate {
@@ -37,6 +39,13 @@ fn main() -> ExitCode {
             ExitCode::from(EXIT_OK)
         }
         Command::Http(args) => match pathtrial::commands::http(&args) {
+            Ok(code) => ExitCode::from(code),
+            Err(message) => {
+                eprintln!("error: {message}");
+                ExitCode::from(EXIT_TOOL_ERROR)
+            }
+        },
+        Command::Diagnose(args) => match pathtrial::diagnose::run(&args) {
             Ok(code) => ExitCode::from(code),
             Err(message) => {
                 eprintln!("error: {message}");

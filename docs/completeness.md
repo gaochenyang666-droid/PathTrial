@@ -177,6 +177,27 @@ macOS Intel 三个 Job 全部通过。
 剩余缺口：Windows 尚未实现；当前 Mac 的 UDP 443 路径对公共 HTTP/3 目标超时，
 公共 HTTP/3 验证仍需在可用 UDP 出口上重复。
 
+## v1.5 综合诊断开发分支（未发布）
+
+`codex/v1.5-diagnose` 新增 `pathtrial diagnose` 和 `pathtrial_diagnose`，不改变已发布的
+`v1.4.0-rc.1` 标签或发行资产。
+
+| 十类问题 | 状态 | 当前证据 |
+| --- | --- | --- |
+| 01 DNS 解析异常 | PARTIAL | 已有 A/AAAA、多解析器、超时与 rcode；diagnose 规则区分超时、SERVFAIL、NXDOMAIN 和“无法证明污染” |
+| 02 TCP 连接失败 | VERIFIED | 成功、拒绝、超时分类沿用现有引擎；diagnose 本地成功与拒绝测试通过 |
+| 03 网络延迟高 | PARTIAL | TCP P50/P95/max 与 ICMP RTT 分离；尚缺长期基线 |
+| 04 丢包和抖动 | PARTIAL | ICMP 丢包与抖动、UDP Echo、TCP 超时保持分项；尚缺抓包级定位 |
+| 05 TLS / HTTPS 异常 | PARTIAL | TLS 传输、证书验证和明文端口失败分离；三平台证书场景沿用现有测试 |
+| 06 HTTP 服务异常 | VERIFIED | 200 与 502 场景通过，401/403/404/429/5xx 有确定性解释规则 |
+| 07 IPv4 / IPv6 异常 | PARTIAL | 双栈摘要和单栈 SKIP 已验证；测试环境未覆盖真实双栈公网路径 |
+| 08 UDP / QUIC 异常 | PARTIAL | UDP Echo、QUIC、HTTP/3 保持独立；QUIC 无监听场景通过，diagnose 成功路径复用现有协议测试 |
+| 09 代理连接异常 | VERIFIED | direct/proxy 对照、隧道成功和拒绝分类通过本地测试 |
+| 10 本地网络异常 | PARTIAL | 只读网卡、默认路由、DHCP、Wi-Fi 和 TUN 提示已实现；无线信号和无权限场景可能 SKIP |
+
+新增测试：13 项 diagnose 集成测试、3 项 diagnose 单元测试、1 项 MCP diagnose 权限测试；
+原有 173 项测试保留。
+
 ## AI Plugins v0.2（独立验收）
 
 AI 插件不计入上面的 94.25% 核心 CLI 评分，单独记录如下：
@@ -187,6 +208,7 @@ AI 插件不计入上面的 94.25% 核心 CLI 评分，单独记录如下：
 | DNS 授权、确定性 IP 绑定与代理双端授权 | VERIFIED | 12 项安全与子进程单元测试和 MCP 集成测试 |
 | 客户端断开取消、授权摘要脱敏、重定向脱敏 | VERIFIED | 断开测试、capabilities 隐私测试、查询参数和重定向测试 |
 | 扫描、HTTP、QUIC、HTTP/3、代理、UDP、报告解释、报告比较 | VERIFIED | 9 个工具的 MCP 级本地协议测试 |
+| v1.5 `pathtrial_diagnose`（未发布） | PARTIAL | 本地场景、授权 TCP、未授权拒绝和 11 个场景参数已验证；真实 Codex/Claude 会话尚未重跑 |
 | 共享 Skills 一致性 | VERIFIED | 5 项插件结构测试与同步检查脚本 |
 | Codex marketplace 与插件安装 | VERIFIED | 临时 `CODEX_HOME` 实际安装，`codex mcp list` 可见 |
 | Codex 模型会话内真实工具调用 | VERIFIED | v0.2.0 完成 capabilities、未授权拒绝、授权扫描和 `tcp_ipv4_001` 解释 |
