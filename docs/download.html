@@ -1,175 +1,69 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>下载 PathTrial</title>
-  <style>
-    :root {
-      color-scheme: dark;
-      --bg: #0b1020;
-      --panel: #131a2e;
-      --line: #26304a;
-      --text: #edf2ff;
-      --muted: #aab6d3;
-      --accent: #6ee7b7;
-      --accent-ink: #06281b;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: radial-gradient(circle at 15% 0%, #1c2b52 0, var(--bg) 42%);
-      color: var(--text);
-      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    main {
-      width: min(860px, calc(100% - 32px));
-      margin: 0 auto;
-      padding: 64px 0 48px;
-    }
-    .eyebrow {
-      color: var(--accent);
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-    }
-    h1 {
-      margin: 8px 0 12px;
-      font-size: clamp(34px, 7vw, 58px);
-      line-height: 1.05;
-      letter-spacing: -.03em;
-    }
-    .lead {
-      max-width: 680px;
-      margin: 0 0 28px;
-      color: var(--muted);
-      font-size: 18px;
-    }
-    .install {
-      display: flex;
-      gap: 8px;
-      align-items: stretch;
-      margin: 0 0 34px;
-      padding: 10px;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: #080c18;
-    }
-    code {
-      flex: 1;
-      overflow-x: auto;
-      padding: 8px 10px;
-      color: var(--accent);
-      font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
-      white-space: nowrap;
-    }
-    button, .button {
-      border: 0;
-      border-radius: 9px;
-      padding: 10px 14px;
-      background: var(--accent);
-      color: var(--accent-ink);
-      font: inherit;
-      font-weight: 700;
-      text-decoration: none;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    button:hover, .button:hover { filter: brightness(1.08); }
-    h2 {
-      margin: 0 0 14px;
-      font-size: 18px;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 12px;
-    }
-    .card {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      padding: 18px;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: linear-gradient(180deg, var(--panel), #0e1425);
-    }
-    .card.recommended {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px var(--accent) inset;
-    }
-    .card strong { font-size: 17px; }
-    .card span { color: var(--muted); font-size: 13px; }
-    .card .button { margin-top: 10px; text-align: center; }
-    .meta {
-      margin-top: 30px;
-      padding-top: 20px;
-      border-top: 1px solid var(--line);
-      color: var(--muted);
-      font-size: 14px;
-    }
-    a { color: var(--accent); }
-  </style>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1">
+ <meta name="theme-color" content="#0b101a">
+ <meta name="description" content="下载 PathTrial v1.4.0-rc.1：macOS Apple Silicon、Intel 与 Linux x86_64 网络诊断 CLI、MCP Server 预编译包，附 SHA-256 校验。无需 Rust。">
+ <meta name="robots" content="index,follow">
+ <link rel="canonical" href="https://gaochenyang666-droid.github.io/PathTrial/download.html">
+ <link rel="stylesheet" href="./site.css">
+ <meta property="og:title" content="下载 PathTrial — macOS 与 Linux 网络诊断 CLI / MCP">
+ <meta property="og:description" content="下载 v1.4.0-rc.1 预编译包、SHA-256 校验和安装脚本。">
+ <meta property="og:url" content="https://gaochenyang666-droid.github.io/PathTrial/download.html">
+ <meta name="twitter:card" content="summary">
+ <title>下载 PathTrial v1.4.0-rc.1 — macOS / Linux 网络诊断 CLI 与 MCP</title>
 </head>
 <body>
-<main>
-  <div class="eyebrow">PathTrial 1.4.0-rc.1</div>
-  <h1>下载应用</h1>
-  <p class="lead">
-    基于可验证证据的网络诊断 CLI。选择对应平台，或使用安装脚本自动识别
-    macOS Apple Silicon、macOS Intel 和 Linux x86_64。
-  </p>
-
-  <div class="install">
-    <code id="install-command">curl -fsSL https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/install.sh | sh</code>
-    <button id="copy" type="button">复制</button>
-  </div>
-
-  <h2>直接下载</h2>
-  <div class="grid">
-    <div class="card" data-os="mac-arm">
-      <strong>macOS Apple Silicon</strong>
-      <span>适用于 M1、M2、M3、M4</span>
-      <a class="button" href="https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz">下载 .tar.gz</a>
+<a class="skip" href="#main">跳转到正文</a>
+<header><div class="container topbar">
+  <a class="brand" href="./" aria-label="PathTrial 首页"><span class="brand-mark" aria-hidden="true">&gt;_</span>PathTrial</a>
+  <nav aria-label="主要导航"><a href="./">产品介绍</a><a href="./download.html" aria-current="page">下载</a><a href="https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/ai-integrations.md">插件安装</a><a href="https://github.com/gaochenyang666-droid/PathTrial">GitHub</a></nav>
+</div></header>
+<main class="container" id="main">
+  <section class="hero">
+    <span class="kicker">Public Release Candidate · Free &amp; Open Source</span>
+    <h1>下载 PathTrial</h1>
+    <p class="lead">v1.4.0-rc.1 网络诊断 CLI + 本地 MCP Server。macOS Apple Silicon、macOS Intel 和 Linux x86_64 均有原生预编译包；安装无需 Rust、Cargo 或 Git 克隆。</p>
+    <p class="eyeline">这是公开测试版，不是稳定正式版。发布资产来自 <a href="https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1">GitHub Releases</a>，每个压缩包都提供 SHA-256 文件。</p>
+  </section>
+  <section class="section" style="padding-top:25px" aria-labelledby="downloads-heading">
+    <div class="section-head"><h2 id="downloads-heading">选择你的操作系统</h2><p>根据实际 CPU 架构选择；不要依赖浏览器自动识别 Apple Silicon。</p></div>
+    <div class="grid">
+      <article class="card download-card"><h3>macOS Apple Silicon</h3><p>适用于 ARM64 / Apple M 系列 Mac。</p><p class="arch mono">aarch64-apple-darwin</p><a class="btn primary" href="https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz">下载 .tar.gz ↗</a><p style="margin-top:11px;font-size:12px"><a href="https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz.sha256">SHA-256 校验文件</a></p></article>
+      <article class="card download-card"><h3>macOS Intel</h3><p>适用于 Intel x86_64 Mac。</p><p class="arch mono">x86_64-apple-darwin</p><a class="btn primary" href="https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz">下载 .tar.gz ↗</a><p style="margin-top:11px;font-size:12px"><a href="https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz.sha256">SHA-256 校验文件</a></p></article>
+      <article class="card download-card"><h3>Linux x86_64</h3><p>适用于 Ubuntu 24.04 等 x86_64 Linux 系统。</p><p class="arch mono">x86_64-unknown-linux-gnu</p><a class="btn primary" href="https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz">下载 .tar.gz ↗</a><p style="margin-top:11px;font-size:12px"><a href="https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz.sha256">SHA-256 校验文件</a></p></article>
     </div>
-    <div class="card" data-os="mac-intel">
-      <strong>macOS Intel</strong>
-      <span>适用于 x86_64 Mac</span>
-      <a class="button" href="https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz">下载 .tar.gz</a>
+    <p class="footnote" style="margin-top:19px">Windows 和 Linux ARM64 暂无官方预编译包。每个发行资产都可从 <a href="https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1">GitHub Release 文件列表</a>独立核对。</p>
+  </section>
+  <section class="section" id="install">
+    <div class="section-head"><h2>通过官方安装脚本安装</h2><p>推荐先下载并检查安装脚本，再执行它。脚本按平台下载匹配的压缩包，验证 SHA-256 后安装到 <code class="inline-code">~/.local/bin</code>。</p></div>
+    <div class="codebox"><button id="copy-install" type="button" class="btn secondary" style="position:absolute;right:12px;top:11px;min-height:34px;padding:5px 12px" aria-label="复制安装命令">复制</button><pre id="install-command">curl -fsSLo pathtrial-install.sh \
+  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/install.sh
+less pathtrial-install.sh
+sh pathtrial-install.sh
+export PATH="$HOME/.local/bin:$PATH"
+pathtrial --version
+pathtrial mcp --help</pre></div>
+    <div class="notice"><p><strong>安全提示：</strong>不建议直接将远程脚本通过管道传入 Shell；请先阅读脚本内容。如选择手动安装，请先检查压缩包对应的 SHA-256 文件。</p></div>
+  </section>
+  <section class="section" id="verify">
+    <h2>安装后检查</h2>
+    <div class="grid two">
+      <div class="card"><h3>独立 CLI</h3><p>在终端运行 <code class="inline-code">pathtrial --version</code>、<code class="inline-code">pathtrial scan --help</code>。试用网络诊断前确认目标是你有权检测的设备或服务。</p></div>
+      <div class="card"><h3>MCP / AI 插件</h3><p>运行 <code class="inline-code">pathtrial mcp --help</code>，然后根据 <a href="https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/ai-integrations.md">集成指南</a>安装 Codex 或 Claude Code 的 Marketplace 插件。</p></div>
     </div>
-    <div class="card" data-os="linux">
-      <strong>Linux x86_64</strong>
-      <span>适用于 Ubuntu 24.04 等 x86_64 发行版</span>
-      <a class="button" href="https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz">下载 .tar.gz</a>
-    </div>
-  </div>
-
-  <div class="meta">
-    <p>所有压缩包均附带 SHA-256 校验文件，安装脚本会在安装前验证。</p>
-    <p>Windows 尚未支持。查看 <a href="https://github.com/gaochenyang666-droid/PathTrial/releases">全部版本与校验和</a>。</p>
-  </div>
+    <p style="margin-top:24px"><a href="https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/cli.md">CLI 使用说明</a> · <a href="https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md">报告安装问题</a> · <a href="https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39209255302">三平台公开包验收记录</a></p>
+  </section>
 </main>
+<footer><div class="container"><span>PathTrial v1.4.0-rc.1 · MIT License · Release Candidate</span><span><a href="./">产品首页</a> · <a href="https://github.com/gaochenyang666-droid/PathTrial/releases">所有版本</a> · <a href="https://github.com/gaochenyang666-droid/PathTrial/issues">反馈</a></span></div></footer>
 <script>
-  const ua = navigator.userAgent;
-  let key = "";
-  if (/Mac/.test(ua)) key = /ARM|arm64|aarch64/.test(ua) ? "mac-arm" : "mac-intel";
-  if (/Linux/.test(ua) && !/Android/.test(ua)) key = "linux";
-  const card = key && document.querySelector(`[data-os="${key}"]`);
-  if (card) card.classList.add("recommended");
-
-  const copy = document.getElementById("copy");
-  copy.addEventListener("click", async () => {
-    const text = document.getElementById("install-command").textContent;
-    try {
-      await navigator.clipboard.writeText(text);
-      copy.textContent = "已复制";
-      setTimeout(() => { copy.textContent = "复制"; }, 1500);
-    } catch {
-      copy.textContent = "请手动复制";
-    }
-  });
+const btn=document.getElementById("copy-install");
+btn?.addEventListener("click",async()=>{
+ const value=document.getElementById("install-command")?.textContent||"";
+ if(!navigator.clipboard?.writeText){btn.textContent="请手动选中复制";return;}
+ try{await navigator.clipboard.writeText(value);btn.textContent="已复制";}catch{btn.textContent="请手动选中复制";}
+});
 </script>
 </body>
 </html>
