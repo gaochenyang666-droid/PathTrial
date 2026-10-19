@@ -76,13 +76,17 @@ jobs:
           cp "target/${{ matrix.target }}/release/pathtrial" "dist/${name}/"
           cp README.md LICENSE CHANGELOG.md "dist/${name}/"
           tar -C dist -czf "dist/${name}.tar.gz" "${name}"
-          shasum -a 256 "dist/${name}.tar.gz" > "dist/${name}.tar.gz.sha256" 2>/dev/null \
-            || sha256sum "dist/${name}.tar.gz" > "dist/${name}.tar.gz.sha256"
-          cp "dist/${name}.tar.gz" "dist/pathtrial-${{ matrix.target }}.tar.gz"
-          shasum -a 256 "dist/pathtrial-${{ matrix.target }}.tar.gz" \
-            > "dist/pathtrial-${{ matrix.target }}.tar.gz.sha256" 2>/dev/null \
-            || sha256sum "dist/pathtrial-${{ matrix.target }}.tar.gz" \
-              > "dist/pathtrial-${{ matrix.target }}.tar.gz.sha256"
+          # Checksums must name the downloadable asset (not the build-local dist/ path).
+          (
+            cd dist
+            shasum -a 256 "${name}.tar.gz" > "${name}.tar.gz.sha256" 2>/dev/null \
+              || sha256sum "${name}.tar.gz" > "${name}.tar.gz.sha256"
+            cp "${name}.tar.gz" "pathtrial-${{ matrix.target }}.tar.gz"
+            shasum -a 256 "pathtrial-${{ matrix.target }}.tar.gz" \
+              > "pathtrial-${{ matrix.target }}.tar.gz.sha256" 2>/dev/null \
+              || sha256sum "pathtrial-${{ matrix.target }}.tar.gz" \
+                > "pathtrial-${{ matrix.target }}.tar.gz.sha256"
+          )
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
@@ -105,7 +109,15 @@ jobs:
           find release -type f -exec cp {} assets/ \;
           cp scripts/install.sh assets/install.sh
           chmod +x assets/install.sh
-          sha256sum assets/install.sh > assets/install.sh.sha256
+          (cd assets && sha256sum install.sh > install.sh.sha256)
+      - name: Verify archived checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd assets
+          for checksum in *.sha256; do
+            sha256sum -c "$checksum"
+          done
       - name: Publish GitHub release
         shell: bash
         env:
@@ -118,7 +130,12 @@ jobs:
             *-rc.*|*-beta.*|*-alpha.*) prerelease="--prerelease" ;;
           esac
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" assets/* --clobber
+            echo "Release $tag already exists; refusing to overwrite its assets."
+            exit 0
+          fi
+          if [ "$tag" = "v1.5.0-rc.1" ]; then
+            gh release create "$tag" assets/* --title "$tag" \
+              --notes-file docs/releases/v1.5.0-rc.1.md $prerelease
           else
             gh release create "$tag" assets/* --title "$tag" \
               --generate-notes $prerelease
