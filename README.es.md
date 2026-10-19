@@ -1,31 +1,18 @@
 # PathTrial — Diagnóstico de redes de código abierto | CLI y plugins MCP para Codex y Claude Code
-
 **PathTrial es una herramienta CLI de diagnóstico de redes de código abierto en Rust, con servidor MCP local.** Analiza problemas de DNS, conectividad de sitios web, puertos de VPS, proxies y conexiones IPv4/IPv6, TCP, TLS, UDP, QUIC y HTTP/3. Genera informes JSON con pruebas verificables, funciona sin IA en macOS y Linux e incluye plugins MCP para Codex y Claude Code.
-
 **Idiomas:** [简体中文](README.md) · [English](README.en.md) · **Español** · [Русский](README.ru.md)
-
-[**Descargar v1.4.0-rc.1**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) · [**Informar de un error**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**Guía de integración con IA**](docs/ai-integrations.md) · [**Guía del CLI**](docs/cli.md)
-
-> **Versión actual:** PathTrial Core `v1.4.0-rc.1` se ha publicado como versión candidata (RC), con CLI y MCP local. AI Plugins es la versión `0.2.0`. Hay paquetes precompilados para macOS Apple Silicon, macOS Intel y Linux x86_64; no hace falta Rust. Los README están disponibles en cuatro idiomas; la salida del CLI y los informes aún no están completamente traducidos.
-
-> **Código de `main` (sin publicar):** PR #5 está fusionado. El núcleo `1.5.0-rc.1` y el plugin `0.3.0` añaden `diagnose` y una décima herramienta MCP. El binario v1.4 **no incluye** estas funciones; compila el núcleo v1.5 desde `main` para probarlas.
-
+[**Descargar v1.5.0-rc.1**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) · [**Informar de un error**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**Guía de integración con IA**](docs/ai-integrations.md) · [**Guía del CLI**](docs/cli.md)
+> **Versión actual:** PathTrial Core `v1.5.0-rc.1` es una versión candidata pública con diagnóstico guiado y servidor MCP local. AI Plugins `0.3.0` incluye diez herramientas. Hay binarios para macOS Apple Silicon, macOS Intel y Linux x86_64; no hace falta Rust.
+> **Versión anterior:** [v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) sigue disponible (nueve herramientas MCP). v1.5 añade `pathtrial_diagnose` y permite explicar informes diagnose mediante `pathtrial_explain_report`.
 > **Prueba la versión candidata:** los plugins Codex y Claude Code están en la rama predeterminada `main`. Puedes [informar de errores de instalación, compatibilidad o diagnóstico](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) indicando versiones, pasos y resultados esperados y observados, sin datos sensibles.
-
 ## Diagnóstico de DNS, puertos VPS, proxies e IPv4/IPv6
-
 Que un Ping funcione no demuestra que DNS, TCP, TLS, HTTP y la aplicación estén sanos. PathTrial mide cada capa por separado, conserva las pruebas y explica qué causas siguen sin demostrarse.
-
 - **Una web abre de forma intermitente:** separa DNS, conexión TCP, TLS y estado HTTP.
 - **El VPS acepta conexiones, pero el proxy falla:** revisa TCP, UDP Echo, QUIC, HTTP/3 y la ruta del proxy.
 - **IPv4 e IPv6 se comportan de forma distinta:** compara éxito y latencia con el mismo destino, puerto, rondas y tiempo de espera.
-
 PathTrial se ejecuta localmente. No sube informes ni modifica DNS, rutas, cortafuegos o ajustes de proxy. Codex y Claude Code utilizan el mismo motor mediante un servidor MCP local. Todas las pruebas de red se bloquean hasta autorizar el destino de forma explícita.
-
-## Diagnóstico guiado (código v1.5 en main, aún sin publicar)
-
-El código fusionado en `main` incluye `pathtrial diagnose`, que agrupa DNS, TCP, TLS, HTTP, latencia, pérdida, doble pila, UDP/QUIC, proxy y red local en diez escenarios habituales:
-
+## Diagnóstico guiado (versión candidata v1.5)
+La versión candidata v1.5 incluye `pathtrial diagnose`, que reúne DNS, TCP, TLS, HTTP, latencia, pérdida, doble pila, UDP/QUIC, proxy y red local en diez categorías:
 ~~~bash
 pathtrial diagnose --scenario web example.com
 pathtrial diagnose --scenario vps YOUR_VPS_IP --port 22
@@ -33,156 +20,97 @@ pathtrial diagnose --scenario latency example.com --rounds 10
 pathtrial diagnose --scenario proxy --url https://example.com/ --proxy socks5://127.0.0.1:1080
 pathtrial diagnose --scenario local
 ~~~
-
 También incluye `dns`, `tcp`, `tls`, `http`, `dual-stack` y `udp-quic`. El informe separa `observed`, `possible`, `not_established` y `next_checks`; una hipótesis no se presenta como causa confirmada.
-
 ## Instalar los plugins de IA
-
 > **Versión candidata pública:** instala primero el ejecutable PathTrial y después el plugin de Codex o Claude Code. El plugin no instala el programa principal. Las pruebas de red requieren una autorización explícita para cada destino.
-
 ### Paso 1: Instalar PathTrial (sin Rust)
-
-Descarga y revisa el instalador oficial del [lanzamiento v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1):
-
+Descarga y revisa el instalador oficial del [lanzamiento v1.5.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1):
 ~~~bash
 curl -fsSLo pathtrial-install.sh \
-  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/install.sh
+  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/install.sh
 less pathtrial-install.sh
 sh pathtrial-install.sh
 export PATH="$HOME/.local/bin:$PATH"
 pathtrial --version
 pathtrial mcp --help
 ~~~
-
 Comprueba la versión `1.4.0-rc.1` y que funcione `pathtrial mcp --help`. El ejecutable también debe estar en el `PATH` que recibe tu cliente de IA.
-
 ### Paso 2: Elegir un cliente de IA
-
 #### Plugin de OpenAI Codex
-
 Instala el plugin desde el Marketplace de la rama predeterminada `main`:
-
 ~~~bash
 codex plugin marketplace add gaochenyang666-droid/PathTrial
 codex plugin add pathtrial@pathtrial
 codex plugin list
 codex mcp list
 ~~~
-
-Codex v0.2 ya realizó llamadas reales del modelo, una prueba TCP local autorizada y la explicación de informes con pruebas. El plugin público v1.4 tiene nueve herramientas MCP. El plugin 0.3 de `main` añade `pathtrial_diagnose` y suma diez. Puedes pedirle: *«Llama a `pathtrial_capabilities` y comprueba las herramientas MCP disponibles».*
-
+El plugin v1.5 `0.3.0` ofrece diez herramientas MCP, y `pathtrial_explain_report` también admite informes diagnose. Puedes pedirle: *«Llama a `pathtrial_capabilities` y comprueba las herramientas MCP disponibles».*
 #### Plugin de Claude Code
-
 Dentro de Claude Code, añade el Marketplace e instala el plugin. Consulta las herramientas con `/mcp`:
-
 ~~~text
 /plugin marketplace add gaochenyang666-droid/PathTrial
 /plugin install pathtrial@pathtrial
 /mcp
 ~~~
-
 Para permisos y resolución de problemas, consulta la [guía de integración](docs/ai-integrations.md).
-
 ## Primer uso
-
 ### 1. Autorizar un destino que tengas permiso para probar
-
 PathTrial MCP bloquea todas las pruebas de red de forma predeterminada; analizar informes JSON existentes no requiere acceso a la red. **Si inicias el cliente desde una terminal, configura temporalmente los destinos permitidos antes de abrirlo**, sin editar la caché de una versión del plugin:
-
 ~~~bash
 # Sustituye example.com:443 por un destino autorizado
 export PATHTRIAL_MCP_ALLOW_TARGETS="example.com:443"
 codex
 # Para Claude Code, ejecuta claude en su lugar desde esta terminal
 ~~~
-
 `PATHTRIAL_MCP_ALLOW_TARGETS` admite varios destinos `host:port` separados por comas o espacios. El servidor MCP debe heredar esta variable. **Una aplicación iniciada desde la interfaz gráfica puede no heredar el entorno de la terminal**; usa la configuración de entorno MCP del cliente o el argumento `--allow-target`. Consulta la [guía de integración](docs/ai-integrations.md).
-
 No uses comodines ni analices sistemas sin autorización. Reinicia el cliente al cambiar los permisos.
-
 ### 2. Pregunta en lenguaje natural
-
 **La web no responde**
-
 > Usa PathTrial para diagnosticar example.com. Separa los fallos de DNS, TCP, TLS y HTTP y explica el resultado en español.
-
 **Comparar IPv4 e IPv6**
-
 > Compara la tasa de éxito y la latencia de IPv4 e IPv6 de mi VPS. Mantén el mismo puerto, número de rondas y tiempo de espera, y cita las mediciones reales.
-
 **Explicar un informe existente**
-
 > Analiza este informe JSON de PathTrial. Señala anomalías, identificadores de evidencia reales y causas que el informe no puede demostrar.
-
 ### 3. Leer el resultado
-
 Revisa `PASS`, `WARN`, `FAIL`, `SKIP` e `INCONCLUSIVE`. `SKIP` no significa que la prueba haya pasado. `INCONCLUSIVE` indica que faltan pruebas. PathTrial registra cada capa y no deduce un bloqueo del operador ni un equipo concreto de pérdida a partir de un solo Ping.
-
 ## Cobertura de diagnóstico
-
 DNS, IPv4/IPv6, TCP, TLS, HTTP, ICMP, trazado de rutas, UDP Echo, QUIC, HTTP/3, SOCKS5, HTTP CONNECT, comparación directa y mediante proxy, y correlación de capturas en ambos extremos.
-
 ## Usar PathTrial sin un cliente de IA
-
-La [versión candidata pública v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) también funciona como CLI independiente sin Rust, Codex ni Claude Code. Descarga el paquete de tu sistema:
-
-- [macOS Apple Silicon](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz)
-- [macOS Intel](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz)
-- [Linux x86_64](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz)
-
+La [versión candidata pública v1.5.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) también funciona como CLI independiente sin Rust, Codex ni Claude Code. Descarga el paquete de tu sistema:
+- [macOS Apple Silicon](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz)
+- [macOS Intel](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz)
+- [Linux x86_64](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz)
 Cada paquete incluye un archivo de comprobación SHA-256. Puedes usar el instalador anterior o descargar y verificar el archivo manualmente.
-
 ~~~bash
 pathtrial --version
 pathtrial scan example.com --profile web --rounds 5 --redact-ips
 ~~~
-
 Consulta la [guía del CLI](docs/cli.md) para HTTP, QUIC, UDP, proxies, recopilación en ambos extremos y códigos de salida.
-
 ## Estado de la beta y límites conocidos
-
-- Núcleo: `v1.4.0-rc.1`, publicado como **versión candidata**, no estable.
-- AI Plugins: el núcleo publicado v1.4 usa `0.2.0` (9 herramientas); el plugin `0.3.0` de `main` no se ha publicado (10 herramientas) y requiere el núcleo v1.5 compilado desde el código para el nuevo diagnóstico.
+- Núcleo: `v1.5.0-rc.1`, publicado como **versión candidata**, no estable.
+- AI Plugins: `0.3.0` (10 herramientas); el plugin anterior v1.4 era `0.2.0` (9 herramientas).
 - Paquetes: macOS ARM64, macOS Intel y Linux x86_64, compilados correctamente con SHA-256.
-- Pruebas: base histórica v1.4 de 173 tests; el código v1.5 en `main` superó 225 tests y [CI en tres plataformas](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39235804316). La nueva herramienta aún no se ha probado en sesiones reales de Codex/Claude.
+- Verificación: la [publicación v1.5 en tres plataformas](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39255364100) superó las compilaciones y pruebas MCP. Se verificaron las sesiones reales de Codex; el proyecto informó que completó la sesión de Claude Code.
 - Las pruebas de red requieren permisos explícitos; Windows, interfaz gráfica y reparación automática no son compatibles.
-
 Consulta la [matriz de aceptación](docs/ai-plugin-completeness.md) y el [flujo de publicación](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39149532255). Puedes [informar de errores reproducibles](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md).
-
 ## Preguntas frecuentes sobre diagnóstico de red
-
 ### Si no abre una web, ¿cómo diferenciar un fallo de DNS, TCP, TLS o HTTP?
-
 Para un destino autorizado, ejecuta `pathtrial scan example.com --profile web --rounds 5 --redact-ips` y después `pathtrial http https://example.com/`. Cada capa se mide por separado; recibir respuesta a un Ping no demuestra que el sitio funcione.
-
 ### ¿Sirve para VPS, IPv4/IPv6, proxies SOCKS5 y HTTP/3?
-
 Sí. El CLI permite analizar IPv4/IPv6, TCP/TLS, proxies SOCKS5 y HTTP CONNECT, handshakes QUIC y peticiones HTTP/3 reales cuando el destino admite el protocolo. Consulta la [guía del CLI](docs/cli.md). Un timeout UDP por sí solo no identifica la causa.
-
 ### ¿Cómo utilizar PathTrial con Codex o Claude Code mediante MCP?
-
-Instala el [núcleo precompilado v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1), sigue la [guía del plugin](#instalar-los-plugins-de-ia) y utiliza el Marketplace de `main`. MCP emplea el ejecutable local `pathtrial` y solo prueba destinos autorizados.
-
+Instala el [núcleo precompilado v1.5.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1), sigue la [guía del plugin](#instalar-los-plugins-de-ia) y utiliza el Marketplace de `main`. MCP emplea el ejecutable local `pathtrial` y solo prueba destinos autorizados.
 ### ¿Necesito Rust? ¿Funciona en Windows?
-
-No. v1.4.0-rc.1 ofrece binarios precompilados para macOS Apple Silicon, macOS Intel y Linux x86_64. Windows aún no está disponible. Solo necesitas Rust para compilar desde el código fuente.
-
+No. v1.5.0-rc.1 ofrece binarios precompilados para macOS Apple Silicon, macOS Intel y Linux x86_64. Windows aún no está disponible. Solo necesitas Rust para compilar desde el código fuente.
 ### ¿En qué se diferencia PathTrial de ping y curl?
-
 `ping` comprueba principalmente la conectividad ICMP y `curl` se usa habitualmente para HTTP. PathTrial separa las pruebas de DNS, TCP, TLS, HTTP, UDP y QUIC, cita las mediciones reales en informes JSON y no deduce una causa definitiva de un único fallo.
-
 ## Informar de errores y contribuir
-
 Usa [GitHub Issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) para fallos de instalación, resultados incorrectos, cierres inesperados, documentación confusa y problemas de compatibilidad. Elimina direcciones IP reales, dominios, tokens, claves, cookies, suscripciones de proxy y capturas sensibles antes de publicar.
-
 Se aceptan errores reproducibles, pruebas y mejoras. Lee [AGENTS.md](AGENTS.md) antes de enviar código y ejecuta las comprobaciones de formato, Clippy y pruebas.
-
 ## Documentación para desarrolladores y licencia
-
 - [Integración con IA y autorización](docs/ai-integrations.md)
 - [Guía avanzada del CLI](docs/cli.md)
 - [Completitud de AI Plugins](docs/ai-plugin-completeness.md)
 - [Índice del proyecto y los esquemas](llms.txt)
 - [PR #1](https://github.com/gaochenyang666-droid/PathTrial/pull/1) · [PR #2](https://github.com/gaochenyang666-droid/PathTrial/pull/2)
-
 PathTrial se distribuye bajo la [licencia MIT](LICENSE). El proyecto nació de un [caso real de diagnóstico IPv4/IPv6 en un VPS RackNerd](https://github.com/gaochenyang666-droid/racknerd-ipv6-troubleshooting). Los datos históricos no fueron generados por PathTrial; conviene separar el registro histórico de las mediciones de la herramienta.
