@@ -148,8 +148,9 @@ fn initialize_list_tools_and_capabilities() {
         .iter()
         .filter_map(|tool| tool["name"].as_str())
         .collect();
-    assert_eq!(names.len(), 9);
+    assert_eq!(names.len(), 10);
     assert!(names.contains(&"pathtrial_capabilities"));
+    assert!(names.contains(&"pathtrial_diagnose"));
     assert!(names.contains(&"pathtrial_explain_report"));
     let caps = client.call(3, "pathtrial_capabilities", json!({}));
     assert_eq!(caps["result"]["isError"], false);
@@ -190,6 +191,68 @@ fn probe_requires_exact_allowlist() {
         denied["result"]["structuredContent"]["error"]["code"],
         "target_not_allowed"
     );
+    client.close();
+}
+
+#[test]
+fn diagnose_local_runs_without_allowlist_and_network_is_denied() {
+    let mut client = McpClient::start(&[]);
+    let local = client.call(2, "pathtrial_diagnose", json!({"scenario": "local"}));
+    assert_eq!(local["result"]["isError"], false);
+    assert_eq!(
+        local["result"]["structuredContent"]["report"]["scenario"],
+        "local"
+    );
+    assert!(local["result"]["structuredContent"]["report"]["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|check| check["name"] == "Interfaces"));
+
+    let denied = client.call(
+        3,
+        "pathtrial_diagnose",
+        json!({
+            "scenario": "tcp",
+            "target": "127.0.0.1",
+            "port": 9,
+            "rounds": 1,
+            "max_seconds": 5
+        }),
+    );
+    assert_eq!(
+        denied["result"]["structuredContent"]["error"]["code"],
+        "target_not_allowed"
+    );
+    client.close();
+}
+
+#[test]
+fn diagnose_network_scenario_uses_authorized_literal_ip() {
+    let port = http_stub();
+    let target = format!("127.0.0.1:{port}");
+    let mut client = McpClient::start(&[&target]);
+    let result = client.call(
+        2,
+        "pathtrial_diagnose",
+        json!({
+            "scenario": "tcp",
+            "target": "127.0.0.1",
+            "port": port,
+            "rounds": 1,
+            "max_seconds": 5
+        }),
+    );
+    assert_eq!(result["result"]["isError"], false);
+    assert_eq!(
+        result["result"]["structuredContent"]["report"]["scenario"],
+        "tcp"
+    );
+    assert!(result["result"]["structuredContent"]["report"]["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|check| check["name"] == "TCP" && check["status"] == "PASS"));
     client.close();
 }
 

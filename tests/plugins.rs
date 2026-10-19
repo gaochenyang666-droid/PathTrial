@@ -45,7 +45,7 @@ fn codex_manifest_matches_package_and_mcp() {
     let plugin = root().join("plugins/codex/pathtrial");
     let manifest = read_json(&plugin.join("plugin.json"));
     assert_eq!(manifest["name"], "pathtrial");
-    assert_eq!(manifest["version"], "0.2.0");
+    assert_eq!(manifest["version"], "0.3.0");
     assert_eq!(
         manifest["extensions"]["com.openai"]["interface"]["displayName"],
         "PathTrial Network Diagnostics"
@@ -77,7 +77,7 @@ fn claude_manifest_matches_package_and_mcp() {
     let plugin = root().join("plugins/claude-code/pathtrial");
     let manifest = read_json(&plugin.join(".claude-plugin/plugin.json"));
     assert_eq!(manifest["name"], "pathtrial");
-    assert_eq!(manifest["version"], "0.2.0");
+    assert_eq!(manifest["version"], "0.3.0");
     let mcp = read_json(&plugin.join(".mcp.json"));
     assert_eq!(mcp["mcpServers"]["pathtrial"]["command"], "pathtrial");
     assert_eq!(mcp["mcpServers"]["pathtrial"]["args"][0], "mcp");

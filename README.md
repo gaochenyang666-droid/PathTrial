@@ -20,6 +20,20 @@
 
 PathTrial 在本机运行，不上传报告，也不修改 DNS、路由、防火墙或代理设置。Codex 与 Claude Code 通过本地 MCP Server 调用同一套诊断能力。网络探测默认全部拒绝，必须显式授权目标。
 
+## 综合诊断入口（v1.5 开发分支）
+
+开发分支新增 `pathtrial diagnose`，把 DNS、TCP、TLS、HTTP、延迟、丢包、双栈、UDP/QUIC、代理和本地网络检查组织成十类常见问题场景：
+
+~~~bash
+pathtrial diagnose --scenario web example.com
+pathtrial diagnose --scenario vps YOUR_VPS_IP --port 22
+pathtrial diagnose --scenario latency example.com --rounds 10
+pathtrial diagnose --scenario proxy --url https://example.com/ --proxy socks5://127.0.0.1:1080
+pathtrial diagnose --scenario local
+~~~
+
+支持的场景还包括 `dns`、`tcp`、`tls`、`http`、`dual-stack` 和 `udp-quic`。报告分别列出 `observed`、`possible`、`not_established` 和 `next_checks`，不会把推测写成确定根因。
+
 ## 快速安装 AI 插件
 
 > **公开测试版（Release Candidate）：** 请先安装 PathTrial 核心，再安装 Codex 或 Claude Code 插件。插件不会自动安装诊断程序。网络探测默认拒绝，只有显式授权的目标才可测试。
@@ -51,7 +65,7 @@ codex plugin list
 codex mcp list
 ~~~
 
-已完成 Codex v0.2 实际模型调用、授权本地 TCP 扫描及报告证据解释测试。第一次使用可以询问：*“请调用 `pathtrial_capabilities`，检查 PathTrial 的 9 个 MCP 工具。”*
+已完成 Codex v0.2 实际模型调用、授权本地 TCP 扫描及报告证据解释测试。公开 v1.4 插件包含 9 个 MCP 工具；开发分支 v0.3 新增 `pathtrial_diagnose`，共 10 个工具。第一次使用可以询问：*“请调用 `pathtrial_capabilities`，检查可用的 MCP 工具。”*
 
 ### 第 2 步：Claude Code 插件
 

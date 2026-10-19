@@ -15,7 +15,7 @@ use serde_json::{json, Value};
 
 use crate::cli::McpArgs;
 use crate::util::IpMasker;
-pub const PLUGIN_VERSION: &str = "0.2.0";
+pub const PLUGIN_VERSION: &str = "0.3.0";
 const MCP_PROTOCOL_VERSION: &str = "2025-06-18";
 const MAX_ROUNDS: u32 = 50;
 const MAX_TIMEOUT_MS: u64 = 15_000;
@@ -384,6 +384,30 @@ fn tool_definitions() -> Vec<Value> {
             }),
         ),
         tool(
+            "pathtrial_diagnose",
+            "Run a guided diagnosis scenario using authorized targets. Local scenarios inspect interfaces, routes, DHCP and Wi-Fi facts without network probes.",
+            json!({
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["scenario"],
+                "properties": {
+                    "scenario": {
+                        "type": "string",
+                        "enum": ["web", "vps", "latency", "proxy", "local", "dns", "tcp", "tls", "http", "dual-stack", "udp-quic"]
+                    },
+                    "target": {"type": "string", "minLength": 1, "maxLength": 2048},
+                    "url": {"type": "string", "minLength": 1, "maxLength": 2048},
+                    "proxy": {"type": "string", "minLength": 1, "maxLength": 512},
+                    "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+                    "rounds": {"type": "integer", "minimum": 1, "maximum": 50, "default": 5},
+                    "timeout_ms": {"type": "integer", "minimum": 200, "maximum": MAX_TIMEOUT_MS, "default": 3000},
+                    "max_seconds": {"type": "integer", "minimum": 5, "maximum": MAX_SECONDS, "default": 30},
+                    "family": {"type": "string", "enum": ["auto", "ipv4", "ipv6"], "default": "auto"},
+                    "redact_ips": {"type": "boolean", "default": false}
+                }
+            }),
+        ),
+        tool(
             "pathtrial_compare_reports",
             "Compare two PathTrial report objects with target, port, family, interface, timeout and sample-count comparability checks.",
             json!({
@@ -451,6 +475,7 @@ fn call_tool(params: Value, allowlist: &[AllowRule], cancelled: &Arc<AtomicBool>
         "pathtrial_http3" => tool_http3(&arguments, allowlist, cancelled),
         "pathtrial_proxy_test" => tool_proxy(&arguments, allowlist, cancelled),
         "pathtrial_udp_echo" => tool_udp(&arguments, allowlist, cancelled),
+        "pathtrial_diagnose" => tool_diagnose(&arguments, allowlist, cancelled),
         "pathtrial_compare_reports" => tool_compare(&arguments),
         "pathtrial_explain_report" => tool_explain(&arguments),
         _ => Err(ToolError::invalid(format!("unknown tool {name}"))),
@@ -517,6 +542,7 @@ fn capabilities(allowlist: &[AllowRule]) -> Value {
         ("trace", true),
         ("udp_echo", true),
         ("proxy", true),
+        ("diagnose", true),
         ("quic", true),
         ("http3", true),
         ("dual_end_cli", true),
@@ -866,6 +892,145 @@ fn tool_udp(
         "summary": format!("UDP Echo probe completed for {target}"),
         "measured_target": measured_target,
         "measured_ip": authorized.ip,
+        "report": report
+    }))
+}
+
+fn tool_diagnose(
+    arguments: &Value,
+    allowlist: &[AllowRule],
+    cancelled: &Arc<AtomicBool>,
+) -> Result<Value, ToolError> {
+    let scenario = enum_arg(
+        arguments,
+        "scenario",
+        &[
+            "web",
+            "vps",
+            "latency",
+            "proxy",
+            "local",
+            "dns",
+            "tcp",
+            "tls",
+            "http",
+            "dual-stack",
+            "udp-quic",
+        ],
+        "web",
+    )?;
+    let rounds = bounded_u32(arguments, "rounds", 1, 50, 5)?;
+    let timeout_ms = bounded_u64(arguments, "timeout_ms", 200, MAX_TIMEOUT_MS, 3000)?;
+    let max_seconds = bounded_u64(arguments, "max_seconds", 5, MAX_SECONDS, 30)?;
+    let family = enum_arg(arguments, "family", &["auto", "ipv4", "ipv6"], "auto")?;
+    let explicit_port = optional_u16(arguments, "port")?;
+    let requested_url = arguments.get("url").and_then(Value::as_str);
+
+    let mut command = vec!["diagnose".to_string()];
+    let (requested_host, measured_url, measured_display_url, port) = if scenario == "local" {
+        if arguments.get("target").is_some() || requested_url.is_some() {
+            return Err(ToolError::invalid(
+                "local scenario does not accept a network target or URL",
+            ));
+        }
+        command.push("--scenario".to_string());
+        command.push(scenario.clone());
+        (None, None, None, None)
+    } else {
+        let target = arguments
+            .get("target")
+            .and_then(Value::as_str)
+            .map(str::to_string);
+        let parsed_url = requested_url
+            .map(|url| {
+                crate::probes::http::parse_url(url)
+                    .map_err(|error| ToolError::invalid(format!("invalid URL: {error}")))
+            })
+            .transpose()?;
+        let host = target
+            .as_deref()
+            .or_else(|| parsed_url.as_ref().map(|url| url.host.as_str()))
+            .ok_or_else(|| ToolError::invalid("target or url is required for this scenario"))?;
+        if target.is_none() && parsed_url.is_some() && scenario != "http" && scenario != "proxy" {
+            return Err(ToolError::invalid(
+                "url without target is supported only for http and proxy scenarios",
+            ));
+        }
+        let port = explicit_port.unwrap_or_else(|| {
+            parsed_url.as_ref().map(|url| url.port).unwrap_or(
+                if scenario == "vps" || scenario == "tcp" {
+                    22
+                } else {
+                    443
+                },
+            )
+        });
+        if target
+            .as_deref()
+            .is_some_and(|value| value.contains(char::is_whitespace) || value.len() > 2048)
+        {
+            return Err(ToolError::invalid("target contains invalid characters"));
+        }
+        let authorized = authorize_and_resolve(host, port, Some(&family), allowlist)?;
+        let measured_url = parsed_url.as_ref().map(|url| literal_url(url, &authorized));
+        let measured_display_url = parsed_url
+            .as_ref()
+            .map(|url| literal_display_url(url, &authorized));
+        command.push(authorized.ip.to_string());
+        command.push("--scenario".to_string());
+        command.push(scenario.clone());
+        command.push("--port".to_string());
+        command.push(port.to_string());
+        if host.parse::<IpAddr>().is_err() {
+            command.push("--sni".to_string());
+            command.push(authorized.requested_host.clone());
+        }
+        (
+            Some(host.to_string()),
+            measured_url,
+            measured_display_url,
+            Some(port),
+        )
+    };
+
+    command.extend([
+        "--rounds".to_string(),
+        rounds.to_string(),
+        "--timeout-ms".to_string(),
+        timeout_ms.to_string(),
+        "--max-seconds".to_string(),
+        max_seconds.to_string(),
+        "--family".to_string(),
+        family,
+        "--format".to_string(),
+        "json".to_string(),
+    ]);
+    if let Some(url) = &measured_url {
+        command.push("--url".to_string());
+        command.push(url.clone());
+    }
+    if scenario == "proxy" {
+        let proxy = string_arg(arguments, "proxy", 512)?;
+        let spec = crate::probes::proxy::parse_proxy(&proxy)
+            .map_err(|error| ToolError::invalid(format!("invalid proxy: {error}")))?;
+        let proxy_ip = authorize_and_resolve(&spec.host, spec.port, None, allowlist)?;
+        command.push("--proxy".to_string());
+        command.push(proxy_literal(&spec, proxy_ip.ip));
+    }
+    if bool_arg(arguments, "redact_ips", false)? {
+        command.push("--redact-ips".to_string());
+    }
+    let report = run_cli_json(&command, cancelled)?;
+    let status = report
+        .get("status")
+        .and_then(Value::as_str)
+        .unwrap_or("INCONCLUSIVE");
+    Ok(json!({
+        "summary": format!("diagnose scenario {scenario} completed with status {status}"),
+        "scenario": scenario,
+        "requested_target": requested_host,
+        "measured_url": measured_display_url,
+        "port": port,
         "report": report
     }))
 }

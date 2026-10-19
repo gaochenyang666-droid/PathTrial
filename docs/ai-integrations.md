@@ -18,7 +18,9 @@ Claude plugin ┘
   only an address-free summary of that allowlist.
 - **AI Plugins** contain client-specific manifests and the same shared Skills.
 
-The plugin version is `0.2.0`. It is independent of the PathTrial CLI version.
+The public plugin version is `0.2.0`. The v1.5 development branch uses plugin
+`0.3.0` because it adds the tenth MCP tool. The plugin version is independent of
+the PathTrial CLI version.
 
 ## Requirements
 
@@ -158,6 +160,7 @@ same way as the Codex plugin.
 | `pathtrial_http3` | Authorized target only | Real HTTP/3 GET after QUIC |
 | `pathtrial_proxy_test` | Authorized target and proxy | SOCKS5, HTTP CONNECT and optional direct comparison |
 | `pathtrial_udp_echo` | Authorized target only | Application-level Echo request and response check |
+| `pathtrial_diagnose` | Authorized target, or local-only scenario | Guided web, VPS, latency, proxy, DNS, TCP, TLS, HTTP, dual-stack, UDP/QUIC and local scenarios |
 | `pathtrial_compare_reports` | No | Structured report comparison with comparability checks |
 | `pathtrial_explain_report` | No | Deterministic evidence extraction from a report object |
 
@@ -173,6 +176,11 @@ structured object. `insecure=true` is available only for explicit local
 diagnostic tests; use normal certificate verification for real targets.
 `compare_direct` requires a literal IP target in MCP so both paths remain bound
 to the same authorized address.
+
+`pathtrial_diagnose` reuses the same startup allowlist. The `local` scenario
+does not accept a target and performs no network probe. Other scenarios resolve
+the hostname once, authorize every candidate and bind the child diagnosis to the
+selected literal IP.
 
 ## Examples
 

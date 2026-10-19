@@ -5,8 +5,10 @@ This guide covers the standalone command-line interface. For Codex and Claude Co
 ## Versions
 
 - Public prebuilt CLI: `v1.4.0-rc.1`
+- Development CLI: `1.5.0-rc.1` with `diagnose` scenarios, not yet publicly released.
 - MCP core included in the public release: `1.4.0-rc.1`
 - AI Plugins: `0.2.0`
+- AI Plugins development branch: `0.3.0` with the tenth MCP tool.
 - `v1.4.0-rc.1` includes `pathtrial mcp`; the older `v1.3.0-rc.1` does not.
 
 Run `pathtrial --help` or `pathtrial <command> --help` for the options supported by your installed binary.
@@ -68,6 +70,44 @@ The fixed scan order is system environment, DNS, TCP/TLS, IPv4/IPv6 comparison a
 - `--redact-ips`: replace IP literals in output.
 
 Use a target you own or have permission to test.
+
+## Guided diagnosis
+
+The development branch adds `diagnose` for common user-facing scenarios. It composes the existing scanners and keeps source probe IDs prefixed as `<source>:<probe_id>`.
+
+~~~bash
+pathtrial diagnose --scenario web example.com
+pathtrial diagnose --scenario vps VPS_IP --port 22
+pathtrial diagnose --scenario latency example.com --rounds 10
+pathtrial diagnose --scenario proxy --url https://example.com/ \
+  --proxy socks5://127.0.0.1:1080
+pathtrial diagnose --scenario local
+~~~
+
+Focused scenarios:
+
+- `dns`
+- `tcp`
+- `tls`
+- `http`
+- `dual-stack`
+- `udp-quic`
+
+Useful options:
+
+- `--format summary|json|markdown`
+- `--rounds 1..50`
+- `--timeout-ms`
+- `--max-seconds`
+- `--redact-ips`
+- `--bind-interface`
+- `--sni`
+- `--server` for DNS comparison
+- `--latency-warn-ms` and `--latency-fail-ms` for environment-specific latency thresholds
+
+The diagnosis separates `observed`, `possible`, `not_established` and `next_checks`. A possible cause is a hypothesis. It is not reported as a confirmed root cause.
+
+The local scenario performs read-only inspection of interfaces, default routes, DHCP lease facts and available Wi-Fi metrics. Missing OS tools or permissions produce `SKIP` or `INCONCLUSIVE`, never a configuration change.
 
 ## HTTP
 
