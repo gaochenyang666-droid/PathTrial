@@ -257,6 +257,154 @@ fn diagnose_network_scenario_uses_authorized_literal_ip() {
 }
 
 #[test]
+fn diagnose_dns_keeps_the_requested_hostname() {
+    let mut client = McpClient::start(&["localhost:53"]);
+    let result = client.call(
+        2,
+        "pathtrial_diagnose",
+        json!({
+            "scenario": "dns",
+            "target": "localhost",
+            "port": 53,
+            "timeout_ms": 300,
+            "max_seconds": 5
+        }),
+    );
+    assert_eq!(result["result"]["isError"], false, "{result}");
+    let content = &result["result"]["structuredContent"];
+    assert_eq!(content["requested_target"], "localhost");
+    assert_eq!(content["report"]["target"], "localhost");
+    assert_eq!(
+        content["report"]["sources"][0]["report"]["target"],
+        "localhost"
+    );
+    client.close();
+}
+
+#[test]
+fn diagnose_dual_stack_marks_the_unauthorized_family_skip() {
+    let port = http_stub();
+    let target = format!("127.0.0.1:{port}");
+    let mut client = McpClient::start(&[&target]);
+    let result = client.call(
+        2,
+        "pathtrial_diagnose",
+        json!({
+            "scenario": "dual-stack",
+            "target": "127.0.0.1",
+            "port": port,
+            "rounds": 1,
+            "max_seconds": 5
+        }),
+    );
+    assert_eq!(result["result"]["isError"], false, "{result}");
+    let content = &result["result"]["structuredContent"];
+    assert_eq!(content["connect_ipv4"], "127.0.0.1");
+    assert!(content.get("connect_ipv6").is_none());
+    let dual = content["report"]["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|check| check["id"] == "dual-stack")
+        .expect("dual-stack check");
+    assert_eq!(dual["status"], "SKIP");
+    assert!(dual["observed"].to_string().contains("ipv6: SKIP"));
+    client.close();
+}
+
+#[test]
+fn diagnose_dual_stack_rejects_an_unauthorized_family() {
+    let port = http_stub();
+    let target = format!("127.0.0.1:{port}");
+    let mut client = McpClient::start(&[&target]);
+    let denied = client.call(
+        2,
+        "pathtrial_diagnose",
+        json!({
+            "scenario": "dual-stack",
+            "target": "127.0.0.1",
+            "port": port,
+            "family": "ipv6",
+            "rounds": 1,
+            "max_seconds": 5
+        }),
+    );
+    assert_eq!(denied["result"]["isError"], true);
+    assert_eq!(
+        denied["result"]["structuredContent"]["error"]["code"],
+        "target_not_allowed"
+    );
+    client.close();
+}
+
+#[test]
+fn diagnose_rejects_target_and_url_mismatch() {
+    let port = http_stub();
+    let target = format!("127.0.0.1:{port}");
+    let mut client = McpClient::start(&[&target]);
+    let mismatch = client.call(
+        2,
+        "pathtrial_diagnose",
+        json!({
+            "scenario": "http",
+            "target": "127.0.0.1",
+            "url": format!("http://127.0.0.2:{port}/"),
+            "max_seconds": 5
+        }),
+    );
+    assert_eq!(mismatch["result"]["isError"], true);
+    assert_eq!(
+        mismatch["result"]["structuredContent"]["error"]["code"],
+        "invalid_params"
+    );
+    client.close();
+}
+
+#[test]
+fn diagnose_proxy_requires_authorization_for_both_endpoints() {
+    let target_port = http_stub();
+    let proxy_port = start_connect_stub(200);
+    let target_rule = format!("127.0.0.1:{target_port}");
+    let proxy_rule = format!("127.0.0.1:{proxy_port}");
+    let mut client = McpClient::start(&[&target_rule]);
+    let denied = client.call(
+        2,
+        "pathtrial_diagnose",
+        json!({
+            "scenario": "proxy",
+            "url": format!("http://127.0.0.1:{target_port}/"),
+            "proxy": format!("http://127.0.0.1:{proxy_port}"),
+            "rounds": 1,
+            "max_seconds": 5
+        }),
+    );
+    assert_eq!(denied["result"]["isError"], true);
+    assert_eq!(
+        denied["result"]["structuredContent"]["error"]["code"],
+        "target_not_allowed"
+    );
+    client.close();
+
+    let mut client = McpClient::start(&[&target_rule, &proxy_rule]);
+    let result = client.call(
+        2,
+        "pathtrial_diagnose",
+        json!({
+            "scenario": "proxy",
+            "url": format!("http://127.0.0.1:{target_port}/"),
+            "proxy": format!("http://127.0.0.1:{proxy_port}"),
+            "rounds": 1,
+            "max_seconds": 10
+        }),
+    );
+    assert_eq!(result["result"]["isError"], false, "{result}");
+    let content = &result["result"]["structuredContent"];
+    assert_eq!(content["connect_ip"], "127.0.0.1");
+    assert_eq!(content["report"]["checks"][0]["status"], "PASS");
+    client.close();
+}
+
+#[test]
 fn hostname_rule_cannot_authorize_a_private_resolution() {
     let port = free_port();
     let rule = format!("localhost:{port}");

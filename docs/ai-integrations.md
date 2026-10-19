@@ -178,9 +178,11 @@ diagnostic tests; use normal certificate verification for real targets.
 to the same authorized address.
 
 `pathtrial_diagnose` reuses the same startup allowlist. The `local` scenario
-does not accept a target and performs no network probe. Other scenarios resolve
-the hostname once, authorize every candidate and bind the child diagnosis to the
-selected literal IP.
+does not accept a target and performs no network probe. Network scenarios keep
+the requested hostname separate from the authorized connection address: the DNS
+scenario queries the original name, HTTP keeps the original URL, Host header and
+TLS SNI, and dual-stack authorization and execution are performed separately for
+IPv4 and IPv6. `target` and `url` must agree on hostname and port.
 
 ## Examples
 

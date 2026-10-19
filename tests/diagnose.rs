@@ -3,7 +3,8 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::process::Command;
-use std::time::Duration;
+use std::sync::mpsc;
+use std::time::{Duration, Instant};
 
 use serde_json::Value;
 
@@ -87,6 +88,53 @@ fn connect_stub() -> u16 {
     port
 }
 
+fn capture_request_stub() -> (u16, mpsc::Receiver<String>) {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+    let port = listener.local_addr().unwrap().port();
+    let (tx, rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        if let Ok((mut stream, _)) = listener.accept() {
+            let mut buffer = [0u8; 4096];
+            let read = stream.read(&mut buffer).unwrap_or(0);
+            let _ = tx.send(String::from_utf8_lossy(&buffer[..read]).to_string());
+            let _ = stream
+                .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok");
+        }
+    });
+    (port, rx)
+}
+
+fn silent_stub() -> u16 {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+    let port = listener.local_addr().unwrap().port();
+    std::thread::spawn(move || {
+        for stream in listener.incoming().take(4) {
+            let Ok(mut stream) = stream else { continue };
+            let mut buffer = [0u8; 1024];
+            while stream
+                .read(&mut buffer)
+                .map(|read| read > 0)
+                .unwrap_or(false)
+            {}
+        }
+    });
+    port
+}
+
+fn capture_client_hello_stub() -> (u16, mpsc::Receiver<Vec<u8>>) {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+    let port = listener.local_addr().unwrap().port();
+    let (tx, rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        if let Ok((mut stream, _)) = listener.accept() {
+            let mut buffer = [0u8; 8192];
+            let read = stream.read(&mut buffer).unwrap_or(0);
+            let _ = tx.send(buffer[..read].to_vec());
+        }
+    });
+    (port, rx)
+}
+
 fn checks(report: &Value) -> &Vec<Value> {
     report["checks"].as_array().expect("checks")
 }
@@ -98,6 +146,40 @@ fn check<'a>(report: &'a Value, name: &str) -> &'a Value {
         .unwrap_or_else(|| panic!("missing check {name}: {report}"))
 }
 
+fn probe_ids(report: &Value) -> Vec<String> {
+    report
+        .get("probes")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|probe| probe["id"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn assert_evidence_refs_exist(report: &Value) {
+    let sources = report["sources"].as_array().expect("sources array");
+    for item in checks(report) {
+        for evidence in item["evidence"].as_array().expect("evidence array") {
+            let evidence = evidence.as_str().expect("evidence string");
+            let (source, id) = evidence
+                .split_once(':')
+                .unwrap_or_else(|| panic!("evidence {evidence} has no source prefix"));
+            let entry = sources
+                .iter()
+                .find(|entry| entry["name"].as_str() == Some(source))
+                .unwrap_or_else(|| panic!("evidence {evidence} cites a missing source"));
+            let known = probe_ids(&entry["report"]);
+            assert!(
+                known.iter().any(|known| known == id),
+                "evidence {evidence} does not resolve to a probe; known={known:?}"
+            );
+        }
+    }
+}
+
 #[test]
 fn local_scenario_reports_interfaces_routes_and_optional_facts() {
     let (status, value) = run(&["diagnose", "--scenario", "local", "--format", "json"]);
@@ -106,6 +188,123 @@ fn local_scenario_reports_interfaces_routes_and_optional_facts() {
     assert_eq!(check(&value, "Interfaces")["status"], "PASS");
     assert_eq!(check(&value, "Default route")["status"], "PASS");
     assert!(value["sources"][0]["report"]["links"].is_array());
+    assert!(checks(&value)
+        .iter()
+        .flat_map(|item| item["evidence"].as_array().unwrap())
+        .all(|evidence| evidence.as_str().unwrap().starts_with("local:")));
+}
+
+#[test]
+fn every_diagnose_evidence_reference_resolves_to_a_recorded_probe() {
+    let local = run(&["diagnose", "--scenario", "local", "--format", "json"]).1;
+    assert_evidence_refs_exist(&local);
+
+    let port = tcp_stub();
+    let port_text = port.to_string();
+    let tcp = run(&[
+        "diagnose",
+        "127.0.0.1",
+        "--scenario",
+        "tcp",
+        "--port",
+        &port_text,
+        "--rounds",
+        "2",
+        "--max-seconds",
+        "5",
+        "--format",
+        "json",
+    ])
+    .1;
+    assert_evidence_refs_exist(&tcp);
+
+    let latency = run(&[
+        "diagnose",
+        "127.0.0.1",
+        "--scenario",
+        "latency",
+        "--port",
+        &port_text,
+        "--rounds",
+        "2",
+        "--timeout-ms",
+        "1000",
+        "--max-seconds",
+        "10",
+        "--format",
+        "json",
+    ])
+    .1;
+    assert_evidence_refs_exist(&latency);
+
+    let dns = run(&[
+        "diagnose",
+        "localhost",
+        "--scenario",
+        "dns",
+        "--timeout-ms",
+        "800",
+        "--max-seconds",
+        "10",
+        "--format",
+        "json",
+    ])
+    .1;
+    assert_evidence_refs_exist(&dns);
+
+    let http_port = http_stub(200);
+    let url = format!("http://127.0.0.1:{http_port}/");
+    let http = run(&[
+        "diagnose",
+        "--scenario",
+        "http",
+        "--url",
+        &url,
+        "--max-seconds",
+        "5",
+        "--format",
+        "json",
+    ])
+    .1;
+    assert_evidence_refs_exist(&http);
+
+    let dual = run(&[
+        "diagnose",
+        "127.0.0.1",
+        "--scenario",
+        "dual-stack",
+        "--port",
+        &port_text,
+        "--connect-ipv4",
+        "127.0.0.1",
+        "--rounds",
+        "2",
+        "--max-seconds",
+        "10",
+        "--format",
+        "json",
+    ])
+    .1;
+    assert_evidence_refs_exist(&dual);
+
+    let web = run(&[
+        "diagnose",
+        "127.0.0.1",
+        "--scenario",
+        "web",
+        "--port",
+        &port_text,
+        "--rounds",
+        "1",
+        "--timeout-ms",
+        "500",
+        "--max-seconds",
+        "10",
+        "--format",
+        "json",
+    ])
+    .1;
+    assert_evidence_refs_exist(&web);
 }
 
 #[test]
@@ -198,6 +397,58 @@ fn http_502_is_classified_without_inventing_upstream_cause() {
     assert!(http["not_established"]
         .to_string()
         .contains("failing server component"));
+}
+
+#[test]
+fn http_target_ip_keeps_the_url_host_header() {
+    let (port, captured) = capture_request_stub();
+    let url = format!("http://origin.invalid:{port}/probe");
+    let (status, value) = run(&[
+        "http",
+        &url,
+        "--target-ip",
+        "127.0.0.1",
+        "--timeout-ms",
+        "2000",
+        "--format",
+        "json",
+    ]);
+    assert!(status.success(), "probe failed: {value}");
+    let request = captured
+        .recv_timeout(Duration::from_secs(2))
+        .expect("request");
+    assert!(
+        request.contains(&format!("Host: origin.invalid:{port}")),
+        "{request}"
+    );
+    assert!(request.starts_with("GET /probe "), "{request}");
+}
+
+#[test]
+fn http_target_ip_keeps_the_original_sni() {
+    let (port, captured) = capture_client_hello_stub();
+    let url = format!("https://origin.invalid:{port}/");
+    let (_status, _value) = run(&[
+        "http",
+        &url,
+        "--target-ip",
+        "127.0.0.1",
+        "--sni",
+        "origin.invalid",
+        "--timeout-ms",
+        "1500",
+        "--format",
+        "json",
+    ]);
+    let hello = captured
+        .recv_timeout(Duration::from_secs(2))
+        .expect("hello");
+    assert!(
+        hello
+            .windows(b"origin.invalid".len())
+            .any(|window| window == b"origin.invalid"),
+        "ClientHello did not carry the requested SNI"
+    );
 }
 
 #[test]
@@ -380,6 +631,72 @@ fn diagnose_schema_is_available_and_validates_report() {
         .map(|error| error.to_string())
         .collect();
     assert!(errors.is_empty(), "schema errors: {errors:#?}");
+
+    let local = run(&["diagnose", "--scenario", "local", "--format", "json"]).1;
+    let errors: Vec<String> = validator
+        .iter_errors(&local)
+        .map(|error| error.to_string())
+        .collect();
+    assert!(errors.is_empty(), "local schema errors: {errors:#?}");
+
+    let dual = run(&[
+        "diagnose",
+        "127.0.0.1",
+        "--scenario",
+        "dual-stack",
+        "--port",
+        &port.to_string(),
+        "--connect-ipv4",
+        "127.0.0.1",
+        "--rounds",
+        "1",
+        "--max-seconds",
+        "5",
+        "--format",
+        "json",
+    ])
+    .1;
+    let errors: Vec<String> = validator
+        .iter_errors(&dual)
+        .map(|error| error.to_string())
+        .collect();
+    assert!(errors.is_empty(), "dual-stack schema errors: {errors:#?}");
+}
+
+#[test]
+fn diagnose_stops_at_the_wall_clock_budget_without_claiming_success() {
+    let port = silent_stub();
+    let started = Instant::now();
+    let (status, value) = run(&[
+        "diagnose",
+        "127.0.0.1",
+        "--scenario",
+        "tls",
+        "--port",
+        &port.to_string(),
+        "--rounds",
+        "1",
+        "--timeout-ms",
+        "30000",
+        "--max-seconds",
+        "5",
+        "--format",
+        "json",
+    ]);
+    assert!(
+        started.elapsed() < Duration::from_secs(12),
+        "diagnosis exceeded its wall-clock budget"
+    );
+    assert_eq!(status.code(), Some(3), "{value}");
+    assert_eq!(value["status"], "INCONCLUSIVE");
+    let budget = check(&value, "Scenario budget");
+    assert_eq!(budget["status"], "INCONCLUSIVE");
+    assert!(budget["observed"]
+        .to_string()
+        .contains("timeout:child process"));
+    assert!(value["limitations"]
+        .to_string()
+        .contains("not successful results"));
 }
 
 #[test]

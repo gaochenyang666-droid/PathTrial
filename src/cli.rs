@@ -396,6 +396,26 @@ pub struct DiagnoseArgs {
     #[arg(long)]
     pub sni: Option<String>,
 
+    /// Original hostname retained for report identity.
+    #[arg(long)]
+    pub requested_host: Option<String>,
+
+    /// HTTP Host header when the connection target is a literal IP.
+    #[arg(long)]
+    pub http_host: Option<String>,
+
+    /// Authorized address for HTTP or proxy while the URL keeps its hostname.
+    #[arg(long)]
+    pub target_ip: Option<String>,
+
+    /// Authorized IPv4 address for a deterministic dual-stack comparison.
+    #[arg(long)]
+    pub connect_ipv4: Option<String>,
+
+    /// Authorized IPv6 address for a deterministic dual-stack comparison.
+    #[arg(long)]
+    pub connect_ipv6: Option<String>,
+
     /// Optional latency warning threshold in milliseconds.
     #[arg(long)]
     pub latency_warn_ms: Option<f64>,
@@ -456,6 +476,26 @@ impl DiagnoseArgs {
         {
             if !value.is_finite() || value < 0.0 {
                 return Err("latency thresholds must be finite and non-negative".to_string());
+            }
+        }
+        for (label, value) in [
+            ("--connect-ipv4", self.connect_ipv4.as_deref()),
+            ("--connect-ipv6", self.connect_ipv6.as_deref()),
+            ("--target-ip", self.target_ip.as_deref()),
+        ] {
+            if let Some(value) = value {
+                value
+                    .parse::<std::net::IpAddr>()
+                    .map_err(|_| format!("{label} must be a literal IP address"))?;
+            }
+        }
+        for (label, value) in [
+            ("--requested-host", self.requested_host.as_deref()),
+            ("--http-host", self.http_host.as_deref()),
+            ("--sni", self.sni.as_deref()),
+        ] {
+            if let Some(value) = value {
+                crate::util::validate_host_token(label, value)?;
             }
         }
         if let (Some(warn), Some(fail)) = (self.latency_warn_ms, self.latency_fail_ms) {
@@ -729,6 +769,10 @@ pub struct HttpArgs {
     /// HTTP Host header override when the URL uses a literal IP.
     #[arg(long)]
     pub host: Option<String>,
+
+    /// Pre-authorized address to connect to while the URL keeps its hostname.
+    #[arg(long)]
+    pub target_ip: Option<std::net::IpAddr>,
 
     /// Output format on stdout.
     #[arg(long, value_enum, default_value_t = OutputFormat::Summary)]

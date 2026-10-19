@@ -6,7 +6,7 @@
 
 use std::io::{BufRead, Write};
 use std::net::IpAddr;
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc};
 use std::time::Duration;
@@ -896,11 +896,23 @@ fn tool_udp(
     }))
 }
 
-fn tool_diagnose(
+#[derive(Debug)]
+struct DiagnosePlan {
+    command: Vec<String>,
+    scenario: String,
+    requested_host: Option<String>,
+    measured_url: Option<String>,
+    port: Option<u16>,
+    connect_ip: Option<IpAddr>,
+    connect_ipv4: Option<IpAddr>,
+    connect_ipv6: Option<IpAddr>,
+}
+
+fn plan_diagnose(
     arguments: &Value,
     allowlist: &[AllowRule],
-    cancelled: &Arc<AtomicBool>,
-) -> Result<Value, ToolError> {
+    resolve: &dyn Fn(&str) -> Vec<IpAddr>,
+) -> Result<DiagnosePlan, ToolError> {
     let scenario = enum_arg(
         arguments,
         "scenario",
@@ -927,7 +939,14 @@ fn tool_diagnose(
     let requested_url = arguments.get("url").and_then(Value::as_str);
 
     let mut command = vec!["diagnose".to_string()];
-    let (requested_host, measured_url, measured_display_url, port) = if scenario == "local" {
+    let mut requested_host = None;
+    let mut measured_display_url = None;
+    let mut port = None;
+    let mut connect_ip = None;
+    let mut connect_ipv4 = None;
+    let mut connect_ipv6 = None;
+
+    if scenario == "local" {
         if arguments.get("target").is_some() || requested_url.is_some() {
             return Err(ToolError::invalid(
                 "local scenario does not accept a network target or URL",
@@ -935,7 +954,6 @@ fn tool_diagnose(
         }
         command.push("--scenario".to_string());
         command.push(scenario.clone());
-        (None, None, None, None)
     } else {
         let target = arguments
             .get("target")
@@ -951,12 +969,12 @@ fn tool_diagnose(
             .as_deref()
             .or_else(|| parsed_url.as_ref().map(|url| url.host.as_str()))
             .ok_or_else(|| ToolError::invalid("target or url is required for this scenario"))?;
-        if target.is_none() && parsed_url.is_some() && scenario != "http" && scenario != "proxy" {
+        if parsed_url.is_some() && scenario != "http" && scenario != "proxy" {
             return Err(ToolError::invalid(
-                "url without target is supported only for http and proxy scenarios",
+                "url is supported only for http and proxy scenarios",
             ));
         }
-        let port = explicit_port.unwrap_or_else(|| {
+        let target_port = explicit_port.unwrap_or_else(|| {
             parsed_url.as_ref().map(|url| url.port).unwrap_or(
                 if scenario == "vps" || scenario == "tcp" {
                     22
@@ -971,27 +989,174 @@ fn tool_diagnose(
         {
             return Err(ToolError::invalid("target contains invalid characters"));
         }
-        let authorized = authorize_and_resolve(host, port, Some(&family), allowlist)?;
-        let measured_url = parsed_url.as_ref().map(|url| literal_url(url, &authorized));
-        let measured_display_url = parsed_url
-            .as_ref()
-            .map(|url| literal_display_url(url, &authorized));
-        command.push(authorized.ip.to_string());
+        if let (Some(target), Some(url)) = (&target, &parsed_url) {
+            if normalize_host(target) != normalize_host(&url.host) {
+                return Err(ToolError::invalid(
+                    "target and url must refer to the same hostname",
+                ));
+            }
+            if let Some(explicit) = explicit_port {
+                if explicit != url.port {
+                    return Err(ToolError::invalid("target/url port and --port must agree"));
+                }
+            }
+        }
+        let normalized_host = normalize_host(host);
+        requested_host = Some(normalized_host.clone());
+        port = Some(target_port);
         command.push("--scenario".to_string());
         command.push(scenario.clone());
         command.push("--port".to_string());
-        command.push(port.to_string());
-        if host.parse::<IpAddr>().is_err() {
-            command.push("--sni".to_string());
-            command.push(authorized.requested_host.clone());
+        command.push(target_port.to_string());
+        command.push("--requested-host".to_string());
+        command.push(normalized_host.clone());
+        let is_domain = normalized_host.parse::<IpAddr>().is_err();
+
+        match scenario.as_str() {
+            "dns" => {
+                // A DNS scenario must query the requested name. Resolving it
+                // here and connecting to the result would turn the check into
+                // a literal-IP probe and hide resolver-specific behaviour.
+                authorize_host(&normalized_host, target_port, allowlist)?;
+                command.push(normalized_host.clone());
+            }
+            "dual-stack" => {
+                let (_, all_ips) =
+                    authorize_candidates_with(&normalized_host, target_port, allowlist, |host| {
+                        resolve(host)
+                    })?;
+                let has_v4 = all_ips.iter().any(IpAddr::is_ipv4);
+                let has_v6 = all_ips.iter().any(IpAddr::is_ipv6);
+                if (family == "ipv4" && !has_v4) || (family == "ipv6" && !has_v6) {
+                    return Err(ToolError::denied(format!(
+                        "no authorized {family} address for {normalized_host}"
+                    )));
+                }
+                let v4 = if family == "ipv6" {
+                    None
+                } else {
+                    all_ips
+                        .iter()
+                        .copied()
+                        .find(IpAddr::is_ipv4)
+                        .filter(|_| has_v4)
+                };
+                let v6 = if family == "ipv4" {
+                    None
+                } else {
+                    all_ips
+                        .iter()
+                        .copied()
+                        .find(IpAddr::is_ipv6)
+                        .filter(|_| has_v6)
+                };
+                if v4.is_none() && v6.is_none() {
+                    return Err(ToolError::denied(format!(
+                        "no authorized address family for {normalized_host}"
+                    )));
+                }
+                command.push(normalized_host.clone());
+                if let Some(ip) = v4 {
+                    command.push("--connect-ipv4".to_string());
+                    command.push(ip.to_string());
+                    connect_ipv4 = Some(ip);
+                }
+                if let Some(ip) = v6 {
+                    command.push("--connect-ipv6".to_string());
+                    command.push(ip.to_string());
+                    connect_ipv6 = Some(ip);
+                }
+                if is_domain {
+                    command.push("--sni".to_string());
+                    command.push(normalized_host.clone());
+                }
+            }
+            "http" => {
+                let authorized = authorize_and_resolve_with(
+                    &normalized_host,
+                    target_port,
+                    Some(&family),
+                    allowlist,
+                    |host| resolve(host),
+                )?;
+                let url = match parsed_url {
+                    Some(url) => url,
+                    None => crate::probes::http::parse_url(&synthesized_url(
+                        &normalized_host,
+                        target_port,
+                    ))
+                    .map_err(|error| ToolError::invalid(format!("invalid URL: {error}")))?,
+                };
+                measured_display_url = Some(url.redacted());
+                command.push("--url".to_string());
+                command.push(url_text(&url));
+                command.push("--target-ip".to_string());
+                command.push(authorized.ip.to_string());
+                if is_domain {
+                    command.push("--sni".to_string());
+                    command.push(normalized_host.clone());
+                }
+                command.push("--host".to_string());
+                command.push(url.host_header());
+                connect_ip = Some(authorized.ip);
+            }
+            "proxy" => {
+                let authorized = authorize_and_resolve_with(
+                    &normalized_host,
+                    target_port,
+                    Some(&family),
+                    allowlist,
+                    |host| resolve(host),
+                )?;
+                let url = match parsed_url {
+                    Some(url) => url,
+                    None => crate::probes::http::parse_url(&synthesized_url(
+                        &normalized_host,
+                        target_port,
+                    ))
+                    .map_err(|error| ToolError::invalid(format!("invalid URL: {error}")))?,
+                };
+                measured_display_url = Some(url.redacted());
+                let proxy = string_arg(arguments, "proxy", 512)?;
+                let spec = crate::probes::proxy::parse_proxy(&proxy)
+                    .map_err(|error| ToolError::invalid(format!("invalid proxy: {error}")))?;
+                let proxy_ip =
+                    authorize_and_resolve_with(&spec.host, spec.port, None, allowlist, |host| {
+                        resolve(host)
+                    })?;
+                command.push("--url".to_string());
+                command.push(url_text(&url));
+                command.push("--target-ip".to_string());
+                command.push(authorized.ip.to_string());
+                command.push("--proxy".to_string());
+                command.push(proxy_literal(&spec, proxy_ip.ip));
+                if is_domain {
+                    command.push("--sni".to_string());
+                    command.push(normalized_host.clone());
+                }
+                connect_ip = Some(authorized.ip);
+            }
+            _ => {
+                let authorized = authorize_and_resolve_with(
+                    &normalized_host,
+                    target_port,
+                    Some(&family),
+                    allowlist,
+                    |host| resolve(host),
+                )?;
+                command.push(authorized.ip.to_string());
+                if is_domain {
+                    command.push("--sni".to_string());
+                    command.push(normalized_host.clone());
+                }
+                if scenario == "web" {
+                    command.push("--http-host".to_string());
+                    command.push(host_header(&normalized_host, target_port));
+                }
+                connect_ip = Some(authorized.ip);
+            }
         }
-        (
-            Some(host.to_string()),
-            measured_url,
-            measured_display_url,
-            Some(port),
-        )
-    };
+    }
 
     command.extend([
         "--rounds".to_string(),
@@ -1005,34 +1170,53 @@ fn tool_diagnose(
         "--format".to_string(),
         "json".to_string(),
     ]);
-    if let Some(url) = &measured_url {
-        command.push("--url".to_string());
-        command.push(url.clone());
-    }
-    if scenario == "proxy" {
-        let proxy = string_arg(arguments, "proxy", 512)?;
-        let spec = crate::probes::proxy::parse_proxy(&proxy)
-            .map_err(|error| ToolError::invalid(format!("invalid proxy: {error}")))?;
-        let proxy_ip = authorize_and_resolve(&spec.host, spec.port, None, allowlist)?;
-        command.push("--proxy".to_string());
-        command.push(proxy_literal(&spec, proxy_ip.ip));
-    }
     if bool_arg(arguments, "redact_ips", false)? {
         command.push("--redact-ips".to_string());
     }
-    let report = run_cli_json(&command, cancelled)?;
+    Ok(DiagnosePlan {
+        command,
+        scenario,
+        requested_host,
+        measured_url: measured_display_url,
+        port,
+        connect_ip,
+        connect_ipv4,
+        connect_ipv6,
+    })
+}
+
+fn tool_diagnose(
+    arguments: &Value,
+    allowlist: &[AllowRule],
+    cancelled: &Arc<AtomicBool>,
+) -> Result<Value, ToolError> {
+    let plan = plan_diagnose(arguments, allowlist, &resolve_host)?;
+    let report = run_cli_json(&plan.command, cancelled)?;
     let status = report
         .get("status")
         .and_then(Value::as_str)
         .unwrap_or("INCONCLUSIVE");
-    Ok(json!({
-        "summary": format!("diagnose scenario {scenario} completed with status {status}"),
-        "scenario": scenario,
-        "requested_target": requested_host,
-        "measured_url": measured_display_url,
-        "port": port,
+    let mut result = json!({
+        "summary": format!(
+            "diagnose scenario {} completed with status {status}",
+            plan.scenario
+        ),
+        "scenario": plan.scenario,
+        "requested_target": plan.requested_host,
+        "measured_url": plan.measured_url,
+        "port": plan.port,
         "report": report
-    }))
+    });
+    if let Some(ip) = plan.connect_ip {
+        result["connect_ip"] = json!(ip.to_string());
+    }
+    if let Some(ip) = plan.connect_ipv4 {
+        result["connect_ipv4"] = json!(ip.to_string());
+    }
+    if let Some(ip) = plan.connect_ipv6 {
+        result["connect_ipv6"] = json!(ip.to_string());
+    }
+    Ok(result)
 }
 
 fn tool_compare(arguments: &Value) -> Result<Value, ToolError> {
@@ -1409,6 +1593,24 @@ fn authorize_ip(ip: IpAddr, port: u16, allowlist: &[AllowRule]) -> Result<(), To
     }
 }
 
+/// Authorize a hostname for checks that do not connect to its resolved
+/// address, such as a DNS query for the requested name.
+fn authorize_host(host: &str, port: u16, allowlist: &[AllowRule]) -> Result<(), ToolError> {
+    if let Ok(ip) = host.parse::<IpAddr>() {
+        return authorize_ip(ip, port, allowlist);
+    }
+    if allowlist
+        .iter()
+        .any(|rule| rule.host == host && rule.port.is_none_or(|allowed| allowed == port))
+    {
+        Ok(())
+    } else {
+        Err(ToolError::denied(format!(
+            "target {host}:{port} is not in the MCP allowlist; restart with --allow-target {host}:{port}"
+        )))
+    }
+}
+
 #[derive(Debug)]
 struct AuthorizedTarget {
     requested_host: String,
@@ -1439,16 +1641,18 @@ fn authorize_and_resolve(
     family: Option<&str>,
     allowlist: &[AllowRule],
 ) -> Result<AuthorizedTarget, ToolError> {
-    authorize_and_resolve_with(host, port, family, allowlist, |host| {
-        let mut recorder = crate::probes::Recorder::new();
-        let resolved = crate::probes::dns::resolve(host, &mut recorder, Duration::from_secs(2));
-        resolved
-            .addresses_v4
-            .iter()
-            .chain(resolved.addresses_v6.iter())
-            .filter_map(|value| value.parse().ok())
-            .collect()
-    })
+    authorize_and_resolve_with(host, port, family, allowlist, resolve_host)
+}
+
+fn resolve_host(host: &str) -> Vec<IpAddr> {
+    let mut recorder = crate::probes::Recorder::new();
+    let resolved = crate::probes::dns::resolve(host, &mut recorder, Duration::from_secs(2));
+    resolved
+        .addresses_v4
+        .iter()
+        .chain(resolved.addresses_v6.iter())
+        .filter_map(|value| value.parse().ok())
+        .collect()
 }
 
 fn authorize_and_resolve_with<F>(
@@ -1461,21 +1665,37 @@ fn authorize_and_resolve_with<F>(
 where
     F: FnOnce(&str) -> Vec<IpAddr>,
 {
+    let (requested_host, all_ips) = authorize_candidates_with(host, port, allowlist, resolve)?;
+    let candidates: Vec<IpAddr> = match family.unwrap_or("auto") {
+        "ipv4" => all_ips.iter().copied().filter(IpAddr::is_ipv4).collect(),
+        "ipv6" => all_ips.iter().copied().filter(IpAddr::is_ipv6).collect(),
+        _ => all_ips,
+    };
+    let ip = candidates.into_iter().next().ok_or_else(|| {
+        ToolError::denied(format!(
+            "no authorized {family:?} address for {requested_host}"
+        ))
+    })?;
+    Ok(AuthorizedTarget {
+        requested_host,
+        port,
+        ip,
+    })
+}
+
+fn authorize_candidates_with<F>(
+    host: &str,
+    port: u16,
+    allowlist: &[AllowRule],
+    resolve: F,
+) -> Result<(String, Vec<IpAddr>), ToolError>
+where
+    F: FnOnce(&str) -> Vec<IpAddr>,
+{
     let requested_host = normalize_host(host);
     if let Ok(ip) = requested_host.parse::<IpAddr>() {
         authorize_ip(ip, port, allowlist)?;
-        if let Some(family) = family {
-            if (family == "ipv4" && !ip.is_ipv4()) || (family == "ipv6" && !ip.is_ipv6()) {
-                return Err(ToolError::denied(format!(
-                    "{ip} does not match requested family {family}"
-                )));
-            }
-        }
-        return Ok(AuthorizedTarget {
-            requested_host: requested_host.clone(),
-            port,
-            ip,
-        });
+        return Ok((requested_host, vec![ip]));
     }
 
     let host_allowed = allowlist
@@ -1507,25 +1727,46 @@ where
             "{requested_host} resolves to a private, loopback, Fake-IP or special-use address; authorize every exact IP and port before probing"
         )));
     }
-    let candidates: Vec<IpAddr> = match family.unwrap_or("auto") {
-        "ipv4" => all_ips.iter().copied().filter(IpAddr::is_ipv4).collect(),
-        "ipv6" => all_ips.iter().copied().filter(IpAddr::is_ipv6).collect(),
-        _ => all_ips.clone(),
-    };
-    let ip = candidates.into_iter().next().ok_or_else(|| {
-        ToolError::denied(format!(
-            "no authorized {family:?} address for {requested_host}"
-        ))
-    })?;
-    Ok(AuthorizedTarget {
-        requested_host,
-        port,
-        ip,
-    })
+    Ok((requested_host, all_ips))
 }
 
 fn literal_url(url: &crate::probes::http::Url, target: &AuthorizedTarget) -> String {
     literal_url_with_path(url, target, &url.path)
+}
+
+fn synthesized_url(host: &str, port: u16) -> String {
+    let authority = if host.contains(':') {
+        format!("[{host}]:{port}")
+    } else {
+        format!("{host}:{port}")
+    };
+    format!("https://{authority}/")
+}
+
+fn host_header(host: &str, port: u16) -> String {
+    if port == 443 {
+        host.to_string()
+    } else if host.contains(':') {
+        format!("[{host}]:{port}")
+    } else {
+        format!("{host}:{port}")
+    }
+}
+
+fn url_text(url: &crate::probes::http::Url) -> String {
+    let default = if url.is_tls() { 443 } else { 80 };
+    let authority = if url.port == default {
+        if url.host.contains(':') {
+            format!("[{}]", url.host)
+        } else {
+            url.host.clone()
+        }
+    } else if url.host.contains(':') {
+        format!("[{}]:{}", url.host, url.port)
+    } else {
+        format!("{}:{}", url.host, url.port)
+    };
+    format!("{}://{}{}", url.scheme, authority, url.path)
 }
 
 fn literal_display_url(url: &crate::probes::http::Url, target: &AuthorizedTarget) -> String {
@@ -1589,103 +1830,18 @@ fn run_command_limited(
 }
 
 fn run_command_limited_with_cancel(
-    mut command: Command,
+    command: Command,
     timeout: Duration,
     max_output: usize,
     cancelled: &AtomicBool,
 ) -> Result<(std::process::ExitStatus, Vec<u8>, Vec<u8>), ToolError> {
-    let mut child = command
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|error| ToolError::failed(format!("start child process: {error}")))?;
-    let overflow = Arc::new(AtomicBool::new(false));
-    let stdout = child.stdout.take().expect("stdout pipe");
-    let stderr = child.stderr.take().expect("stderr pipe");
-    let stdout_overflow = overflow.clone();
-    let stderr_overflow = overflow.clone();
-    let stdout_reader =
-        std::thread::spawn(move || read_limited(stdout, max_output, stdout_overflow));
-    let stderr_reader =
-        std::thread::spawn(move || read_limited(stderr, max_output, stderr_overflow));
-    let deadline = std::time::Instant::now() + timeout;
-    enum ChildOutcome {
-        Exited(std::process::ExitStatus),
-        Overflow,
-        Timeout,
-        Cancelled,
-    }
-    let outcome = loop {
-        match child.try_wait() {
-            Ok(Some(status)) => break ChildOutcome::Exited(status),
-            Ok(None) if cancelled.load(Ordering::SeqCst) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                break ChildOutcome::Cancelled;
-            }
-            Ok(None) if overflow.load(Ordering::Relaxed) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                break ChildOutcome::Overflow;
-            }
-            Ok(None) if std::time::Instant::now() >= deadline => {
-                let _ = child.kill();
-                let _ = child.wait();
-                break ChildOutcome::Timeout;
-            }
-            Ok(None) => std::thread::sleep(Duration::from_millis(20)),
-            Err(error) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err(ToolError::failed(format!("wait for child: {error}")));
-            }
-        }
-    };
-    let stdout = stdout_reader
-        .join()
-        .map_err(|_| ToolError::failed("stdout reader panicked"))?;
-    let stderr = stderr_reader
-        .join()
-        .map_err(|_| ToolError::failed("stderr reader panicked"))?;
-    if overflow.load(Ordering::Relaxed) {
-        return Err(ToolError::failed(format!(
-            "child output exceeded {max_output} bytes"
-        )));
-    }
-    match outcome {
-        ChildOutcome::Exited(status) => Ok((status, stdout, stderr)),
-        ChildOutcome::Overflow => Err(ToolError::failed(format!(
-            "child output exceeded {max_output} bytes"
-        ))),
-        ChildOutcome::Timeout => Err(ToolError::failed("timeout:child process")),
-        ChildOutcome::Cancelled => Err(ToolError::failed("cancelled:client disconnected")),
-    }
-}
-
-fn read_limited<R: std::io::Read>(
-    mut reader: R,
-    limit: usize,
-    overflow: Arc<AtomicBool>,
-) -> Vec<u8> {
-    let mut collected = Vec::new();
-    let mut buffer = [0u8; 8192];
-    loop {
-        match reader.read(&mut buffer) {
-            Ok(0) | Err(_) => break,
-            Ok(read) => {
-                if collected.len() < limit {
-                    let remaining = limit - collected.len();
-                    collected.extend_from_slice(&buffer[..read.min(remaining)]);
-                }
-                if collected.len() >= limit {
-                    overflow.store(true, Ordering::Relaxed);
-                    break;
-                }
-            }
-        }
-    }
-    collected
+    crate::process::run_limited(
+        command,
+        std::time::Instant::now() + timeout,
+        max_output,
+        Some(cancelled),
+    )
+    .map_err(|error| ToolError::failed(error.message()))
 }
 
 fn string_arg(arguments: &Value, key: &str, max: usize) -> Result<String, ToolError> {
@@ -1927,6 +2083,208 @@ mod tests {
         .unwrap();
         assert_eq!(calls.get(), 1);
         assert_eq!(target.ip.to_string(), "93.184.216.34");
+    }
+
+    fn public_v4() -> IpAddr {
+        "93.184.216.34".parse().unwrap()
+    }
+
+    fn public_v6() -> IpAddr {
+        "2606:4700:4700::1111".parse().unwrap()
+    }
+
+    #[test]
+    fn diagnose_http_plan_keeps_hostname_for_url_sni_and_host() {
+        let arguments = json!({
+            "scenario": "http",
+            "url": "https://origin.example:8443/path?q=1",
+            "max_seconds": 5
+        });
+        let plan = plan_diagnose(&arguments, &[rule("origin.example", Some(8443))], &|_| {
+            vec![public_v4()]
+        })
+        .unwrap();
+        assert_eq!(plan.requested_host.as_deref(), Some("origin.example"));
+        assert_eq!(
+            plan.measured_url.as_deref(),
+            Some("https://origin.example:8443/path")
+        );
+        assert_eq!(plan.connect_ip, Some(public_v4()));
+        assert_eq!(plan.command[1], "--scenario");
+        let joined = plan.command.join(" ");
+        assert!(joined.contains("--url https://origin.example:8443/path?q=1"));
+        assert!(joined.contains("--target-ip 93.184.216.34"));
+        assert!(joined.contains("--sni origin.example"));
+        assert!(joined.contains("--host origin.example:8443"));
+        assert!(!joined.contains("https://93.184.216.34"));
+    }
+
+    #[test]
+    fn diagnose_dns_plan_queries_the_requested_name_without_resolving_early() {
+        let calls = std::cell::Cell::new(0);
+        let arguments = json!({"scenario": "dns", "target": "origin.example"});
+        let plan = plan_diagnose(&arguments, &[rule("origin.example", None)], &|_| {
+            calls.set(calls.get() + 1);
+            vec![public_v4()]
+        })
+        .unwrap();
+        assert_eq!(calls.get(), 0, "DNS scenario must resolve in the probe");
+        assert_eq!(plan.requested_host.as_deref(), Some("origin.example"));
+        assert_eq!(plan.command[7], "origin.example");
+        let joined = plan.command.join(" ");
+        assert!(!joined.contains("--target-ip"));
+        assert!(!joined.contains("--sni 93.184.216.34"));
+    }
+
+    #[test]
+    fn diagnose_dual_stack_plan_binds_each_family_separately() {
+        let arguments = json!({"scenario": "dual-stack", "target": "origin.example"});
+        let plan = plan_diagnose(&arguments, &[rule("origin.example", Some(443))], &|_| {
+            vec![public_v4(), public_v6()]
+        })
+        .unwrap();
+        assert_eq!(plan.connect_ipv4, Some(public_v4()));
+        assert_eq!(plan.connect_ipv6, Some(public_v6()));
+        let joined = plan.command.join(" ");
+        assert!(joined.contains("--connect-ipv4 93.184.216.34"));
+        assert!(joined.contains("--connect-ipv6 2606:4700:4700::1111"));
+        assert!(joined.contains("--sni origin.example"));
+        assert_eq!(plan.command[7], "origin.example");
+
+        let v4_only = plan_diagnose(
+            &json!({"scenario": "dual-stack", "target": "v4.example"}),
+            &[rule("v4.example", Some(443))],
+            &|_| vec![public_v4()],
+        )
+        .unwrap();
+        assert_eq!(v4_only.connect_ipv4, Some(public_v4()));
+        assert_eq!(v4_only.connect_ipv6, None);
+        assert!(!v4_only.command.join(" ").contains("--connect-ipv6"));
+    }
+
+    #[test]
+    fn diagnose_dual_stack_rejects_an_unauthorized_explicit_family() {
+        let error = plan_diagnose(
+            &json!({"scenario": "dual-stack", "target": "v4.example", "family": "ipv6"}),
+            &[rule("v4.example", Some(443))],
+            &|_| vec![public_v4()],
+        )
+        .unwrap_err();
+        assert_eq!(error.code, "target_not_allowed");
+    }
+
+    #[test]
+    fn diagnose_rejects_target_and_url_disagreement() {
+        let host_mismatch = plan_diagnose(
+            &json!({
+                "scenario": "http",
+                "target": "other.example",
+                "url": "https://origin.example:8443/"
+            }),
+            &[
+                rule("other.example", Some(8443)),
+                rule("origin.example", Some(8443)),
+            ],
+            &|_| vec![public_v4()],
+        )
+        .unwrap_err();
+        assert_eq!(host_mismatch.code, "invalid_params");
+
+        let port_mismatch = plan_diagnose(
+            &json!({
+                "scenario": "http",
+                "target": "origin.example",
+                "url": "https://origin.example:8443/",
+                "port": 443
+            }),
+            &[
+                rule("origin.example", Some(443)),
+                rule("origin.example", Some(8443)),
+            ],
+            &|_| vec![public_v4()],
+        )
+        .unwrap_err();
+        assert_eq!(port_mismatch.code, "invalid_params");
+    }
+
+    #[test]
+    fn diagnose_proxy_authorizes_target_and_proxy_endpoint_separately() {
+        let endpoint: IpAddr = "198.51.100.9".parse().unwrap();
+        let arguments = json!({
+            "scenario": "proxy",
+            "url": "https://origin.example/path",
+            "proxy": "socks5://proxy.example:1080",
+            "max_seconds": 5
+        });
+        let plan = plan_diagnose(
+            &arguments,
+            &[
+                rule("origin.example", Some(443)),
+                rule("proxy.example", Some(1080)),
+                rule("198.51.100.9", Some(1080)),
+            ],
+            &|host| match host {
+                "origin.example" => vec![public_v4()],
+                "proxy.example" => vec![endpoint],
+                other => panic!("unexpected resolution for {other}"),
+            },
+        )
+        .unwrap();
+        let joined = plan.command.join(" ");
+        assert!(joined.contains("--url https://origin.example/path"));
+        assert!(joined.contains("--target-ip 93.184.216.34"));
+        assert!(joined.contains("--proxy socks5://198.51.100.9:1080"));
+
+        let denied = plan_diagnose(
+            &arguments,
+            &[
+                rule("origin.example", Some(443)),
+                rule("proxy.example", Some(1080)),
+            ],
+            &|host| match host {
+                "origin.example" => vec![public_v4()],
+                "proxy.example" => vec![endpoint],
+                other => panic!("unexpected resolution for {other}"),
+            },
+        )
+        .unwrap_err();
+        assert_eq!(denied.code, "target_not_allowed");
+    }
+
+    #[test]
+    fn diagnose_web_plan_sets_the_original_http_host() {
+        let plan = plan_diagnose(
+            &json!({"scenario": "web", "target": "origin.example"}),
+            &[rule("origin.example", Some(443))],
+            &|_| vec![public_v4()],
+        )
+        .unwrap();
+        assert_eq!(plan.command[7], "93.184.216.34");
+        let joined = plan.command.join(" ");
+        assert!(joined.contains("--sni origin.example"));
+        assert!(joined.contains("--http-host origin.example"));
+    }
+
+    #[test]
+    fn diagnose_hostname_resolving_to_loopback_needs_exact_ip_rules() {
+        let error = plan_diagnose(
+            &json!({"scenario": "tcp", "target": "lan.example", "port": 8080}),
+            &[rule("lan.example", Some(8080))],
+            &|_| vec!["127.0.0.1".parse().unwrap()],
+        )
+        .unwrap_err();
+        assert_eq!(error.code, "target_not_allowed");
+
+        let plan = plan_diagnose(
+            &json!({"scenario": "tcp", "target": "lan.example", "port": 8080}),
+            &[
+                rule("lan.example", Some(8080)),
+                rule("127.0.0.1", Some(8080)),
+            ],
+            &|_| vec!["127.0.0.1".parse().unwrap()],
+        )
+        .unwrap();
+        assert_eq!(plan.connect_ip, Some("127.0.0.1".parse().unwrap()));
     }
 
     #[test]

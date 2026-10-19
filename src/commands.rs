@@ -415,6 +415,12 @@ pub fn split_target(target: &str) -> Result<(String, u16), String> {
 /// `pathtrial http URL`
 pub fn http(args: &HttpArgs) -> Result<u8, String> {
     let started_at = crate::util::now_rfc3339();
+    if let Some(host) = args.host.as_deref() {
+        crate::util::validate_host_token("--host", host)?;
+    }
+    if let Some(sni) = args.sni.as_deref() {
+        crate::util::validate_host_token("--sni", sni)?;
+    }
     let display_url = crate::probes::http::parse_url(&args.url)?.redacted();
     let mut recorder = Recorder::new();
     let request = HttpRequest {
@@ -427,6 +433,7 @@ pub fn http(args: &HttpArgs) -> Result<u8, String> {
         max_body: 64 * 1024,
         server_name: args.sni.as_deref(),
         host_header: args.host.as_deref(),
+        connect_ip: args.target_ip,
     };
     let outcome = http::run(&mut recorder, &request)?;
     let probes = recorder.into_probes();
@@ -512,6 +519,7 @@ pub fn proxy(args: &crate::cli::ProxyArgs) -> Result<u8, String> {
             recorder,
             &connect_host,
             args.sni.as_deref(),
+            target_ip,
         );
     }
 
@@ -867,6 +875,7 @@ fn compare_direct(
     mut recorder: Recorder,
     connect_host: &str,
     sni: Option<&str>,
+    target_ip: Option<std::net::IpAddr>,
 ) -> Result<u8, String> {
     if args.rounds == 0 || args.rounds > 50 {
         return Err("--rounds must be between 1 and 50".to_string());
@@ -900,6 +909,7 @@ fn compare_direct(
             max_body: 16 * 1024,
             server_name: args.sni.as_deref(),
             host_header: None,
+            connect_ip: target_ip,
         };
         let direct = crate::probes::http::run(&mut recorder, &request)?;
         direct_total += 1;
