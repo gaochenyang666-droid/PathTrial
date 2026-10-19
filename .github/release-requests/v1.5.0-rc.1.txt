@@ -1,0 +1,7 @@
+PathTrial release request
+Version: v1.5.0-rc.1
+Date: 2026-10-19
+Source: main at 213a2e57260369f9449be4889f725acc49eb0435
+PR: https://github.com/gaochenyang666-droid/PathTrial/pull/6
+Release notes: docs/releases/v1.5.0-rc.1.md
+Trigger the release workflow to build three architectures, verify SHA-256 and create the immutable prerelease plus its matching git tag.
