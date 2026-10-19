@@ -17,7 +17,7 @@
   <meta name="twitter:card" content="summary">
   <title>PathTrial — 开源网络诊断、VPS 排障与 MCP 插件</title>
   <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"SoftwareApplication","name":"PathTrial","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux","softwareVersion":"1.4.0-rc.1","description":"Open-source evidence-first Rust network diagnostics CLI and MCP plugins for Codex and Claude Code.","downloadUrl":"https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1","codeRepository":"https://github.com/gaochenyang666-droid/PathTrial","license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+  {"@context":"https://schema.org","@type":"SoftwareApplication","name":"PathTrial","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux","softwareVersion":"1.4.0-rc.1","description":"Open-source evidence-first Rust network diagnostics CLI and MCP plugins for Codex and Claude Code.","downloadUrl":"https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1","codeRepository":"https://github.com/gaochenyang666-droid/PathTrial","license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
   </script>
 </head>
 <body>
@@ -39,7 +39,7 @@
     <p class="lead">PathTrial 将 DNS、TCP、TLS、HTTP、UDP、QUIC 和 HTTP/3 检查分层执行，用真实测量证据解释网站打不开、VPS 端口异常、代理连接失败及 IPv4/IPv6 差异。</p>
     <p class="eyeline">Open-source network diagnostics CLI with local MCP integrations for Codex and Claude Code.</p>
     <div class="actions">
-      <a class="btn primary" href="./download.html">下载 v1.4.0-rc.1 测试版 ↗</a>
+      <a class="btn primary" href="./download.html">下载 v1.5.0-rc.1 测试版 ↗</a>
       <a class="btn secondary" href="https://github.com/gaochenyang666-droid/PathTrial">查看源码与 README ↗</a>
     </div>
     <div class="metrics" aria-label="产品特性">
@@ -58,13 +58,13 @@
     </div>
   </div></section>
   <section id="guided-diagnosis" class="section"><div class="container">
-    <div class="section-head"><h2>v1.5 综合诊断已合并 main 源码（尚未发布）</h2><p>新增 <code class="inline-code">pathtrial diagnose</code>，提供 11 种引导式场景，覆盖 DNS、TCP、TLS、HTTP、延迟、丢包、IPv4/IPv6、UDP/QUIC、代理及本地网络状态。结果区分实际观察、可能原因、未证实项和下一步排障建议。</p></div>
-    <div class="codebox" aria-label="v1.5 源码命令示例"><pre><span class="comment"># 以下命令需要从 main 编译 v1.5 源码；v1.4 下载包不支持 diagnose</span>
+    <div class="section-head"><h2>v1.5 综合诊断已正式发布为 Release Candidate</h2><p>新增 <code class="inline-code">pathtrial diagnose</code>，提供 11 种引导式场景，覆盖 DNS、TCP、TLS、HTTP、延迟、丢包、IPv4/IPv6、UDP/QUIC、代理及本地网络状态。结果区分实际观察、可能原因、未证实项和下一步排障建议。</p></div>
+    <div class="codebox" aria-label="v1.5 源码命令示例"><pre><span class="comment"># v1.5.0-rc.1 预编译包直接支持 diagnose</span>
 pathtrial diagnose --scenario web example.com
 pathtrial diagnose --scenario latency example.com --rounds 10
 pathtrial diagnose --scenario local</pre></div>
-    <div class="notice" style="margin-top:18px"><strong>版本区别：</strong>公开下载的 v1.4.0-rc.1 预编译包提供 9 个 MCP 工具，没有 <code class="inline-code">diagnose</code>。<a href="https://github.com/gaochenyang666-droid/PathTrial/tree/main">main 源码</a>包含 v1.5 功能与第 10 个 MCP 工具，使用前需编译。三平台 CI 已通过；新诊断工具的真实 Codex / Claude 模型会话尚未完成验收。</div>
-    <p><a href="https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/cli.md">查看 v1.5 命令与源码编译说明 →</a></p>
+    <div class="notice" style="margin-top:18px"><strong>公开预发布版：</strong>v1.5.0-rc.1 已提供 macOS ARM64、macOS Intel 和 Linux x86_64 预编译安装包，包含 <code class="inline-code">diagnose</code> 及 10 个 MCP 工具。安装无需 Rust；三平台 Release 构建与 MCP smoke 已通过。历史 <a href="https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1">v1.4.0-rc.1</a> 仍可下载（9 个 MCP 工具）。</div>
+    <p><a href="https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/cli.md">查看 v1.5 命令与安装说明 →</a></p>
   </div></section>
   <section class="section"><div class="container pair">
     <div>
@@ -85,7 +85,7 @@ pathtrial diagnose --scenario local</pre></div>
 # 具体结果取决于真实网络环境</span></pre></div>
   </div></section>
   <section id="integrations" class="section"><div class="container">
-    <div class="section-head"><h2>连接 Codex 和 Claude Code</h2><p>公开 v1.4 预编译核心通过本地 MCP 提供 9 个工具；尚未发布的 v1.5 main 源码包含 10 个工具和引导式诊断。需使用与插件匹配的核心二进制。</p></div>
+    <div class="section-head"><h2>连接 Codex 和 Claude Code</h2><p>v1.5.0-rc.1 预编译核心通过本地 MCP 提供 10 个工具，包含引导式诊断与报告解释。插件版本 0.3.0，请使用与之匹配的核心二进制。</p></div>
     <div class="grid two">
       <div class="card"><h3>OpenAI Codex 插件</h3><p>从 GitHub 默认分支添加 Marketplace，安装 PathTrial 插件并检查本地 MCP 连接。</p><div class="codebox"><pre>codex plugin marketplace add \
   gaochenyang666-droid/PathTrial
@@ -108,12 +108,12 @@ codex plugin add pathtrial@pathtrial</pre></div></div>
   <section class="section"><div class="container">
     <div class="section-head"><h2>常见问题</h2></div>
     <details><summary>PathTrial 和 ping、curl 有什么不同？</summary><p>PathTrial 不只检查单一协议；它按 DNS、TCP、TLS、HTTP、UDP、QUIC 等阶段记录证据，并明确区分无法确认的原因。单次网络失败不等于准确的根因定位。</p></details>
-    <details><summary>安装 PathTrial 是否需要 Rust？</summary><p>macOS ARM64、macOS Intel、Linux x86_64 用户可以直接下载 v1.4.0-rc.1 预编译版本，不需要 Rust。体验尚未发布的 v1.5 综合诊断需要从 main 源码编译，并安装 Rust 工具链。</p></details>
+    <details><summary>安装 PathTrial 是否需要 Rust？</summary><p>macOS ARM64、macOS Intel、Linux x86_64 用户可以直接下载 v1.5.0-rc.1 预编译版本，不需要 Rust。v1.5 的引导式诊断已经包含在预编译包中，无需从源码构建。</p></details>
     <details><summary>是否会主动探测未授权设备？</summary><p>本地 MCP 网络探测默认拒绝，必须显式授权目标。请仅测量你有权限访问的系统，分享诊断报告前移除 IP、令牌、代理凭据等敏感内容。</p></details>
   </div></section>
 </main>
 <footer><div class="container">
- <span>© PathTrial Contributors · MIT License · v1.4.0-rc.1 (Prerelease)</span>
+ <span>© PathTrial Contributors · MIT License · v1.5.0-rc.1 (Prerelease)</span>
  <span><a href="https://github.com/gaochenyang666-droid/PathTrial">GitHub</a> · <a href="https://github.com/gaochenyang666-droid/PathTrial/issues">Issues</a> · <a href="https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.en.md">English README</a> · <a href="./download.html">下载</a></span>
 </div></footer>
 </body></html>

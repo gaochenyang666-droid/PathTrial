@@ -2,7 +2,7 @@
 
 PathTrial AI Plugins connect Codex and Claude Code to the diagnostic engine
 through a local MCP stdio server. The published v1.4 binary exposes nine tools;
-the unreleased source on `main` exposes ten tools.
+the published v1.5 core exposes ten tools.
 
 ## Architecture
 
@@ -19,11 +19,12 @@ Claude plugin ┘
   only an address-free summary of that allowlist.
 - **AI Plugins** contain client-specific manifests and the same shared Skills.
 
-The published v1.4 core uses plugin `0.2.0` (nine tools). The merged, unreleased
-`main` source uses core `1.5.0-rc.1` and plugin `0.3.0` (ten tools), including
-`pathtrial_diagnose`. **Installing the main-branch marketplace plugin does not
-upgrade a prebuilt v1.4 executable.** Build the matching v1.5 core from `main`
-for the tenth tool. Plugin and CLI versions are independently numbered.
+The current published core `1.5.0-rc.1` uses plugin `0.3.0` (ten tools), including
+`pathtrial_diagnose` and diagnose-aware `pathtrial_explain_report`. Install the
+matching v1.5 executable before enabling the plugin. The historical
+[v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1)
+release used plugin `0.2.0` (nine tools). Plugin and CLI versions are
+independently numbered.
 
 ## Requirements
 
@@ -32,15 +33,15 @@ for the tenth tool. Plugin and CLI versions are independently numbered.
 - No OpenAI or Anthropic API key for local diagnostics.
 - Network access only to targets the user explicitly authorizes.
 
-The public `v1.4.0-rc.1` release includes the MCP subcommand. Install the
+The public `v1.5.0-rc.1` release includes MCP and guided diagnosis. Install the
 verified prebuilt binary without Rust:
 
-> This installer provides **v1.4 with nine MCP tools**, not the merged but
-> unreleased v1.5 `diagnose` tool. Build v1.5 from `main` to use the new feature.
+> This installer provides **v1.5.0-rc.1 with ten MCP tools** and guided diagnosis.
+> You do not need Rust for the prebuilt packages. This remains a release candidate.
 
 ```bash
 curl -fsSLo pathtrial-install.sh \
-  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/install.sh
+  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/install.sh
 sh pathtrial-install.sh
 export PATH="$HOME/.local/bin:$PATH"
 pathtrial --version
@@ -308,7 +309,7 @@ The PathTrial CLI can remain installed after plugin removal.
 | Codex MCP registration visible in `codex mcp list` | Verified |
 | Codex model-driven tool calls in a live session | VERIFIED for v0.2.0: capabilities, authorized TCP scan 1/1, real `tcp_ipv4_001` explanation and unauthorized `target_not_allowed` denial |
 | Claude Code manifest validation and live tool call | PARTIAL: default-main install, four Skills and MCP Connected verified; a live model tool call has not yet been recorded |
-| Precompiled release containing `pathtrial mcp` | VERIFIED for `v1.4.0-rc.1`; macOS ARM, macOS Intel and Linux x86_64 release smoke passed |
+| Precompiled release containing `pathtrial mcp` | VERIFIED for `v1.5.0-rc.1`; macOS ARM, macOS Intel and Linux x86_64 release smoke passed |
 | Windows plugin support | UNVERIFIED, Windows core support is not implemented |
 
 ## Reporting bugs
