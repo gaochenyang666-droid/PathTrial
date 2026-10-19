@@ -444,6 +444,23 @@ pub struct RouteInfo {
     pub note: Option<String>,
 }
 
+/// Read-only local link facts available without elevated privileges.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LocalLinkInfo {
+    pub interface: String,
+    pub up: bool,
+    pub is_wifi: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ssid: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signal_dbm: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tx_rate_mbps: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dhcp: Option<String>,
+    pub notes: Vec<String>,
+}
+
 /// Snapshot of the machine environment.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Environment {

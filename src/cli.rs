@@ -138,6 +138,8 @@ pub struct ScanArgs {
 pub enum Command {
     /// Run the fixed five-stage diagnostic scan.
     Scan(ScanArgs),
+    /// Run a guided diagnosis for a common network problem scenario.
+    Diagnose(DiagnoseArgs),
     /// Send one real HTTP/HTTPS request and report the timings per phase.
     Http(HttpArgs),
     /// ICMP echo with loss, RTT and jitter.
@@ -174,12 +176,16 @@ pub struct SchemaArgs {
     #[arg(long)]
     pub command: bool,
 
-    /// Print the collect report schema.
+    /// Print the guided diagnosis schema.
     #[arg(long, conflicts_with_all = ["command"])]
+    pub diagnose: bool,
+
+    /// Print the collect report schema.
+    #[arg(long, conflicts_with_all = ["command", "diagnose"])]
     pub collect: bool,
 
     /// Print the correlation report schema.
-    #[arg(long, conflicts_with_all = ["command", "collect"])]
+    #[arg(long, conflicts_with_all = ["command", "diagnose", "collect"])]
     pub correlate: bool,
 }
 
@@ -295,6 +301,174 @@ pub enum AddressFamily {
     Auto,
     Ipv4,
     Ipv6,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum DiagnoseScenario {
+    Web,
+    Vps,
+    Latency,
+    Proxy,
+    Local,
+    Dns,
+    Tcp,
+    Tls,
+    Http,
+    DualStack,
+    UdpQuic,
+}
+
+impl DiagnoseScenario {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            DiagnoseScenario::Web => "web",
+            DiagnoseScenario::Vps => "vps",
+            DiagnoseScenario::Latency => "latency",
+            DiagnoseScenario::Proxy => "proxy",
+            DiagnoseScenario::Local => "local",
+            DiagnoseScenario::Dns => "dns",
+            DiagnoseScenario::Tcp => "tcp",
+            DiagnoseScenario::Tls => "tls",
+            DiagnoseScenario::Http => "http",
+            DiagnoseScenario::DualStack => "dual-stack",
+            DiagnoseScenario::UdpQuic => "udp-quic",
+        }
+    }
+
+    pub fn default_port(self) -> u16 {
+        match self {
+            DiagnoseScenario::Vps | DiagnoseScenario::Tcp => 22,
+            _ => 443,
+        }
+    }
+}
+
+#[derive(Debug, Args)]
+pub struct DiagnoseArgs {
+    /// Guided scenario to run.
+    #[arg(long, value_enum, default_value_t = DiagnoseScenario::Web)]
+    pub scenario: DiagnoseScenario,
+
+    /// Hostname or literal IP. Not required for --scenario local.
+    pub target: Option<String>,
+
+    /// Target port. Defaults to 443, or 22 for vps/tcp scenarios.
+    #[arg(long)]
+    pub port: Option<u16>,
+
+    /// Absolute URL for http/proxy scenarios. Built from target when omitted.
+    #[arg(long)]
+    pub url: Option<String>,
+
+    /// Proxy URL for --scenario proxy.
+    #[arg(long)]
+    pub proxy: Option<String>,
+
+    /// Extra DNS resolver to compare against.
+    #[arg(long = "server")]
+    pub servers: Vec<String>,
+
+    /// Sampling rounds for TCP, ICMP or proxy checks.
+    #[arg(long, default_value_t = 5)]
+    pub rounds: u32,
+
+    /// Per-stage timeout in milliseconds.
+    #[arg(long, default_value_t = 3000)]
+    pub timeout_ms: u64,
+
+    /// Hard wall-clock budget for the whole diagnosis in seconds.
+    #[arg(long, default_value_t = 60)]
+    pub max_seconds: u64,
+
+    /// Address family selection.
+    #[arg(long, value_enum, default_value_t = AddressFamily::Auto)]
+    pub family: AddressFamily,
+
+    /// Mask IP literals in all rendered output.
+    #[arg(long)]
+    pub redact_ips: bool,
+
+    /// Pin probe egress to a physical interface.
+    #[arg(long)]
+    pub bind_interface: Option<String>,
+
+    /// TLS server name when target is a literal IP.
+    #[arg(long)]
+    pub sni: Option<String>,
+
+    /// Optional latency warning threshold in milliseconds.
+    #[arg(long)]
+    pub latency_warn_ms: Option<f64>,
+
+    /// Optional latency failure threshold in milliseconds.
+    #[arg(long)]
+    pub latency_fail_ms: Option<f64>,
+
+    /// Output format on stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Summary)]
+    pub format: OutputFormat,
+}
+
+impl DiagnoseArgs {
+    pub fn validate(&self) -> Result<(), String> {
+        if self.scenario != DiagnoseScenario::Local {
+            if let Some(target) = self
+                .target
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+            {
+                if target.len() > 2048 {
+                    return Err("target is too long".to_string());
+                }
+                if target.contains(char::is_whitespace) {
+                    return Err("target must not contain whitespace".to_string());
+                }
+            } else if self.url.as_deref().is_none_or(str::is_empty)
+                || !matches!(
+                    self.scenario,
+                    DiagnoseScenario::Http | DiagnoseScenario::Proxy
+                )
+            {
+                return Err("target is required, or --url for http/proxy scenarios".to_string());
+            }
+        }
+        if self.scenario == DiagnoseScenario::Proxy
+            && self.proxy.as_deref().is_none_or(str::is_empty)
+        {
+            return Err("--proxy is required for --scenario proxy".to_string());
+        }
+        if !(1..=50).contains(&self.rounds) {
+            return Err("--rounds must be between 1 and 50".to_string());
+        }
+        if !(100..=30_000).contains(&self.timeout_ms) {
+            return Err("--timeout-ms must be between 100 and 30000".to_string());
+        }
+        if !(5..=3600).contains(&self.max_seconds) {
+            return Err("--max-seconds must be between 5 and 3600".to_string());
+        }
+        if self.port == Some(0) {
+            return Err("--port must be between 1 and 65535".to_string());
+        }
+        for value in [self.latency_warn_ms, self.latency_fail_ms]
+            .into_iter()
+            .flatten()
+        {
+            if !value.is_finite() || value < 0.0 {
+                return Err("latency thresholds must be finite and non-negative".to_string());
+            }
+        }
+        if let (Some(warn), Some(fail)) = (self.latency_warn_ms, self.latency_fail_ms) {
+            if warn > fail {
+                return Err("--latency-warn-ms must not exceed --latency-fail-ms".to_string());
+            }
+        }
+        Ok(())
+    }
+
+    pub fn effective_port(&self) -> u16 {
+        self.port.unwrap_or_else(|| self.scenario.default_port())
+    }
 }
 
 #[derive(Debug, Args)]

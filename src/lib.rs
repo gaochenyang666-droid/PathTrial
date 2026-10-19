@@ -8,6 +8,7 @@ pub mod cli;
 pub mod collect;
 pub mod commands;
 pub mod compare;
+pub mod diagnose;
 pub mod endpoint;
 pub mod mcp;
 pub mod models;
