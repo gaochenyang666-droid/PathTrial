@@ -34,6 +34,9 @@ jobs:
       - name: Test collect
         timeout-minutes: 5
         run: cargo test --locked --test collect -- --test-threads=1 --nocapture
+      - name: Test diagnose
+        timeout-minutes: 5
+        run: cargo test --locked --test diagnose -- --test-threads=1 --nocapture
       - name: Test QUIC
         timeout-minutes: 5
         run: cargo test --locked --test quic -- --test-threads=1 --nocapture
