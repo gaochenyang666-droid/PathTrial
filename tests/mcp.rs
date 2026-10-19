@@ -257,6 +257,33 @@ fn diagnose_network_scenario_uses_authorized_literal_ip() {
 }
 
 #[test]
+fn diagnose_http_scenario_runs_the_real_cli() {
+    let port = http_stub();
+    let target = format!("127.0.0.1:{port}");
+    let mut client = McpClient::start(&[&target]);
+    let result = client.call(
+        2,
+        "pathtrial_diagnose",
+        json!({
+            "scenario": "http",
+            "url": format!("http://127.0.0.1:{port}/"),
+            "max_seconds": 5
+        }),
+    );
+    assert_eq!(result["result"]["isError"], false, "{result}");
+    let content = &result["result"]["structuredContent"];
+    assert_eq!(content["report"]["status"], "PASS", "{content}");
+    let http = content["report"]["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|check| check["id"] == "http")
+        .expect("HTTP check");
+    assert_eq!(http["status"], "PASS");
+    client.close();
+}
+
+#[test]
 fn diagnose_dns_keeps_the_requested_hostname() {
     let mut client = McpClient::start(&["localhost:53"]);
     let result = client.call(
