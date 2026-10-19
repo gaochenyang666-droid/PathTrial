@@ -1,6 +1,6 @@
-# PathTrial — Network Diagnostics CLI & MCP Plugins
+# PathTrial — Open-source Network Diagnostics CLI & MCP Plugins for Codex / Claude Code
 
-**Free, open-source Rust network diagnostics and troubleshooting.** Test DNS, TCP, TLS, HTTP/3, QUIC, UDP, proxy connections and IPv4/IPv6 reachability for websites and VPS servers, then export evidence-backed JSON reports. Local Codex and Claude Code MCP integrations are available as a developer preview.
+**PathTrial is an open-source Rust network diagnostics CLI and local MCP server** for DNS troubleshooting, website connectivity checks, VPS port testing, proxy failures, and IPv4/IPv6, TCP, TLS, UDP, QUIC and HTTP/3 diagnostics. It exports evidence-backed JSON reports, runs independently on macOS and Linux, and integrates with Codex and Claude Code through local MCP plugins.
 
 **Languages:** [简体中文](README.md) · **English** · [Español](README.es.md) · [Русский](README.ru.md)
 
@@ -10,7 +10,7 @@
 
 > **Community beta testers welcome:** Codex and Claude Code plugins are now available on the default `main` branch. Please [report installation, compatibility or diagnostic issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) with redacted versions, reproduction steps and expected versus observed results.
 
-## What network problems can PathTrial diagnose?
+## Diagnose DNS failures, VPS ports, proxies and IPv4/IPv6
 
 A successful Ping does not prove that DNS, TCP, TLS, HTTP and the application are all healthy. PathTrial measures each layer separately, records the evidence, and states which causes remain unproven.
 
@@ -40,7 +40,9 @@ pathtrial mcp --help
 
 Confirm version `1.4.0-rc.1` and a working `pathtrial mcp --help`. The `pathtrial` executable must also be visible in the `PATH` inherited by your AI client.
 
-### Step 2: OpenAI Codex plugin
+### Step 2: Choose an AI client
+
+#### OpenAI Codex plugin
 
 Install the plugin from the default `main` marketplace:
 
@@ -53,7 +55,7 @@ codex mcp list
 
 Codex v0.2 has completed real model-driven calls, an authorized local TCP scan and evidence-based report explanation. First prompt: *“Call `pathtrial_capabilities` and verify the nine MCP tools.”*
 
-### Step 2: Claude Code plugin
+#### Claude Code plugin
 
 Inside Claude Code, add the repository marketplace and install the plugin. Use `/mcp` to inspect the tools:
 
@@ -69,17 +71,18 @@ See the [AI integration guide](docs/ai-integrations.md) for authorization and tr
 
 ### 1. Authorize a target you are allowed to test
 
-The default `["mcp"]` configuration denies every network probe. Offline report explanation and comparison still work. To authorize one target, change the plugin’s `args` to:
+PathTrial MCP denies all network probes by default; analyzing existing JSON reports needs no network authorization. **For terminal-launched clients, set a temporary allowlist before starting your AI client**, rather than editing a version-specific marketplace plugin cache:
 
-~~~json
-["mcp", "--allow-target", "example.com:443"]
+~~~bash
+# Replace example.com:443 with your own authorized target
+export PATHTRIAL_MCP_ALLOW_TARGETS="example.com:443"
+codex
+# To use Claude Code instead, run claude from this same terminal
 ~~~
 
-- Installed Codex plugin: edit `~/.codex/plugins/cache/pathtrial/pathtrial/0.2.0/mcp.json`.
-- Local Claude Code plugin: edit `plugins/claude-code/pathtrial/.mcp.json`.
-- Repeat `--allow-target` for additional targets.
-- Restart the AI client after editing the file.
-- Do not use wildcards or test systems without permission.
+`PATHTRIAL_MCP_ALLOW_TARGETS` accepts multiple explicit `host:port` entries separated by commas or spaces. The MCP server must inherit the variable. **Desktop apps launched via a GUI may not inherit the terminal environment**; use the client's MCP environment settings or an explicit `--allow-target` argument. See the [AI integration guide](docs/ai-integrations.md).
+
+Do not use wildcards or scan systems without permission. Restart the AI client after changing authorization.
 
 ### 2. Ask in natural language
 
@@ -147,6 +150,10 @@ Install the [v1.4.0-rc.1 prebuilt core](https://github.com/gaochenyang666-droid/
 ### Do I need Rust to install PathTrial? Is Windows supported?
 
 No. The v1.4.0-rc.1 release provides prebuilt binaries for macOS Apple Silicon, macOS Intel and Linux x86_64. Windows is not yet supported. Rust is only needed for source development or compilation.
+
+### How is PathTrial different from ping or curl?
+
+`ping` primarily tests ICMP reachability and `curl` is commonly used for HTTP requests. PathTrial separates DNS, TCP, TLS, HTTP, UDP and QUIC measurements into bounded probes, cites actual observations in JSON reports and does not claim a root cause from a single failure.
 
 ## Report bugs and contribute
 
