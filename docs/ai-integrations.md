@@ -188,7 +188,7 @@ must edit.
 | `pathtrial_udp_echo` | Authorized target only | Application-level Echo request and response check |
 | `pathtrial_diagnose` | Authorized target, or local-only scenario | Guided web, VPS, latency, proxy, DNS, TCP, TLS, HTTP, dual-stack, UDP/QUIC and local scenarios |
 | `pathtrial_compare_reports` | No | Structured report comparison with comparability checks |
-| `pathtrial_explain_report` | No | Deterministic evidence extraction from a report object |
+| `pathtrial_explain_report` | No | Evidence-validated explanation of scan, probe and guided diagnose reports, including diagnose check observations and next steps |
 
 All tool results include text content for the model and a `structuredContent`
 object for deterministic downstream use.
@@ -243,7 +243,7 @@ Expected tool sequence:
 帮我分析这份 PathTrial JSON 报告，引用真实 evidence ID，并说明还缺什么证据。
 ```
 
-Expected tool call: `pathtrial_explain_report`.
+Expected tool call: `pathtrial_explain_report`. For a guided diagnose result, pass `structuredContent.report` rather than the MCP response wrapper. The explanation verifies each `<source>:<probe_id>` against `sources[].report.probes`, preserves `observed`, `possible`, `not_established` and `next_checks` separately, and rejects unknown evidence IDs.
 
 ### English example
 

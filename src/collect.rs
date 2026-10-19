@@ -333,10 +333,13 @@ fn read_task_id(stream: &TcpStream) -> (Option<String>, Option<String>) {
                     std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
                 ) =>
             {
-                if buffer.is_empty() {
-                    return (None, Some(format!("read: {error}")));
-                }
+                // TCP payload bytes may arrive after the first read timeout.
+                // Wait for the entire bounded read window even when no bytes
+                // have arrived yet; a short scheduling delay is not a failure.
                 if Instant::now() >= deadline {
+                    if buffer.is_empty() {
+                        return (None, Some(format!("read: {error}")));
+                    }
                     break;
                 }
             }
@@ -359,6 +362,24 @@ fn read_task_id(stream: &TcpStream) -> (Option<String>, Option<String>) {
 mod tests {
     use super::*;
     use std::io::Write;
+
+    #[test]
+    fn task_payload_delayed_past_initial_read_timeout_is_reassembled() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let writer = std::thread::spawn(move || {
+            let mut stream = std::net::TcpStream::connect(address).unwrap();
+            // Longer than the first 100 ms read timeout, shorter than the
+            // 300 ms total deadline.
+            std::thread::sleep(Duration::from_millis(150));
+            stream.write_all(b"PTCT task-delayed 1\n").unwrap();
+        });
+        let (stream, _) = listener.accept().unwrap();
+        let (task, error) = read_task_id(&stream);
+        assert_eq!(task.as_deref(), Some("task-delayed"));
+        assert_eq!(error, None);
+        writer.join().unwrap();
+    }
 
     #[test]
     fn task_payload_split_across_reads_is_reassembled() {
