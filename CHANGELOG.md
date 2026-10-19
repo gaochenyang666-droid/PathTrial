@@ -31,6 +31,9 @@ Guided diagnosis for ten common network problem categories.
 
 ### Fixed
 
+- The collect server reassembles task payloads that arrive across multiple
+  TCP reads, so a delivered payload is no longer recorded as an unrecognized
+  connection.
 - Diagnosis evidence now consistently uses `<source>:<probe_id>`. Three
   source/prefix mismatches (ICMP, route trace and UDP Echo) are corrected, and
   a regression test resolves every evidence reference against
