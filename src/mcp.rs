@@ -1495,9 +1495,10 @@ fn explain_diagnose_report(report: &Value) -> Result<Value, String> {
     let status = parsed.status.label();
     let check_count = parsed.checks.len();
     let source_count = parsed.sources.len();
-    let target = parsed.target.as_deref().unwrap_or("local");
+    // Do not embed raw targets in the free-text summary: the structured target
+    // field receives consistent IP redaction without punctuation ambiguity.
     let summary = format!(
-        "Diagnose scenario {} status {status} for {target}. {} check(s), {} recorded probe(s), {cited} verified evidence reference(s).",
+        "Diagnose scenario {} status {status}. {} check(s), {} recorded probe(s), {cited} verified evidence reference(s).",
         parsed.scenario,
         parsed.checks.len(),
         known_ids.len()
