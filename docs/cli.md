@@ -4,22 +4,22 @@ This guide covers the standalone command-line interface. For Codex and Claude Co
 
 ## Versions
 
-- Public prebuilt CLI: `v1.4.0-rc.1`
-- Unreleased CLI source on `main`: `1.5.0-rc.1` with `diagnose` scenarios. Build from source; the downloadable v1.4 binary has no `diagnose` subcommand.
+- Public prebuilt CLI: `v1.5.0-rc.1`
+- Published release candidate: `v1.5.0-rc.1` includes the guided `diagnose` subcommand in all three prebuilt distributions.
 - MCP core included in the public release: `1.4.0-rc.1`
-- AI Plugins: `0.2.0`
-- AI Plugins source on `main`: `0.3.0` with a tenth MCP tool; use a matching v1.5 core.
-- `v1.4.0-rc.1` includes `pathtrial mcp`; the older `v1.3.0-rc.1` does not.
+- AI Plugins: `0.3.0` (ten MCP tools)
+- Core `1.5.0-rc.1` and AI Plugin `0.3.0` are compatible. The older [v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) release remains available.
+- `v1.5.0-rc.1` includes `pathtrial mcp`; the older `v1.3.0-rc.1` does not.
 
 Run `pathtrial --help` or `pathtrial <command> --help` for the options supported by your installed binary.
 
 ## Installation
 
-Download an archive from the [v1.4.0-rc.1 release](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1), or review and run the release installer:
+Download an archive from the [v1.5.0-rc.1 release](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1), or review and run the release installer:
 
 ~~~bash
 curl -fsSLo pathtrial-install.sh \
-  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/install.sh
+  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/install.sh
 less pathtrial-install.sh
 sh pathtrial-install.sh
 
@@ -73,7 +73,7 @@ Use a target you own or have permission to test.
 
 ## Guided diagnosis
 
-The merged, unreleased `main` source provides `diagnose` for common user-facing scenarios. It composes the existing scanners and keeps source probe IDs prefixed as `<source>:<probe_id>`.
+The published v1.5 release candidate provides `diagnose` for common user-facing scenarios. It composes the existing scanners and keeps source probe IDs prefixed as `<source>:<probe_id>`.
 
 ~~~bash
 pathtrial diagnose --scenario web example.com
