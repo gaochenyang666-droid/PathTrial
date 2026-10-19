@@ -27,10 +27,12 @@ Guided diagnosis for ten common network problem categories.
 ### Changed
 
 - Development version is `1.5.0-rc.1`; AI Plugin development version is `0.3.0`.
-- Published `v1.4.0-rc.1` tags, assets and installer defaults remain unchanged.
+- Previously published `v1.4.0-rc.1` tags and release assets are untouched; the installer shipped with v1.5 will default to `v1.5.0-rc.1`.
 
 ### Fixed
 
+- `pathtrial_explain_report` now accepts guided diagnose reports, validates every source-prefixed evidence reference, and preserves observed facts, hypotheses, limitations and next checks.
+- v1.5 release packaging now writes portable SHA-256 checksum filenames, verifies downloadable assets before publishing, and does not overwrite existing Releases.
 - The MCP `pathtrial_diagnose` HTTP scenario now passes the supported
   `--http-host` flag to the CLI instead of failing before the probe starts.
 - The collect server reassembles task payloads that arrive across multiple
