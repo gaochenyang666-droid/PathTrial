@@ -1,6 +1,6 @@
-# PathTrial — 网络诊断 CLI 与 Codex / Claude Code MCP 插件
+# PathTrial — 开源网络诊断与 VPS 排障工具 | Codex / Claude Code MCP 插件
 
-**开源 Rust 网络诊断与故障排查工具（Network Diagnostics Tool）。** 检测 DNS、TCP、TLS、HTTP/3、QUIC、UDP、代理与 IPv4/IPv6 网络问题，为网站及 VPS 生成有证据依据的 JSON 报告；Codex 和 Claude Code 的本地 MCP 插件目前处于开发者预览阶段。
+**PathTrial 是开源 Rust 网络诊断 CLI 与 MCP 工具**，用于 DNS 解析检测、网站连接故障排查、VPS 端口测试、代理连接诊断，以及 IPv4/IPv6、TCP、TLS、UDP、QUIC 与 HTTP/3 测量。它生成可追溯探测证据的 JSON 报告，支持 macOS / Linux 独立运行，也可通过本地 MCP 插件接入 Codex 和 Claude Code。
 
 **语言 / Languages / Idiomas / Языки:** **简体中文** · [English](README.en.md) · [Español](README.es.md) · [Русский](README.ru.md)
 
@@ -10,7 +10,7 @@
 
 > **欢迎测试与反馈：** Codex 和 Claude Code 插件已进入默认 `main` 分支。欢迎通过 [GitHub Issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) 报告安装、兼容性或诊断问题，附上脱敏后的版本信息、复现步骤及预期和实际结果。
 
-## PathTrial 能排查哪些网站、VPS 与 IPv4/IPv6 网络问题？
+## 网络诊断场景：DNS 故障、VPS 端口、代理与 IPv4/IPv6
 
 网络问题经常被一句“能 Ping 通”掩盖。PathTrial 把连接拆成 DNS、TCP、TLS、HTTP、UDP、QUIC 等阶段，保存每次测量的证据，并明确说明哪些原因尚未确认。
 
@@ -40,7 +40,9 @@ pathtrial mcp --help
 
 预期版本为 `1.4.0-rc.1`，且 `pathtrial mcp --help` 可正常执行。确保启动 Codex / Claude Code 时也能在 `PATH` 找到 `pathtrial`。
 
-### 第 2 步：OpenAI Codex 插件
+### 第 2 步：选择 AI 客户端
+
+#### OpenAI Codex 插件
 
 在 Codex CLI 安装默认 `main` 分支的 Marketplace 插件：
 
@@ -53,7 +55,7 @@ codex mcp list
 
 已完成 Codex v0.2 实际模型调用、授权本地 TCP 扫描及报告证据解释测试。第一次使用可以询问：*“请调用 `pathtrial_capabilities`，检查 PathTrial 的 9 个 MCP 工具。”*
 
-### 第 2 步：Claude Code 插件
+#### Claude Code 插件
 
 在 Claude Code 会话内使用以下插件命令，随后用 `/mcp` 检查工具：
 
@@ -69,17 +71,18 @@ codex mcp list
 
 ### 1. 授权你有权检测的目标
 
-默认配置 `["mcp"]` 不允许任何网络探测，但离线解释和比较已有报告仍然可用。添加一个目标时，把插件配置中的 `args` 改成：
+PathTrial MCP 默认拒绝全部网络探测；分析已有 JSON 报告不需要网络授权。**推荐在终端启动 AI 客户端之前临时设置允许列表**，无需修改与插件版本绑定的 Marketplace 缓存文件：
 
-~~~json
-["mcp", "--allow-target", "example.com:443"]
+~~~bash
+# 将 example.com:443 换成你有权测试的目标
+export PATHTRIAL_MCP_ALLOW_TARGETS="example.com:443"
+codex
+# 使用 Claude Code 时，在同一个终端改为运行 claude
 ~~~
 
-- Codex 已安装插件：编辑 `~/.codex/plugins/cache/pathtrial/pathtrial/0.2.0/mcp.json`。
-- Claude Code 本地插件：编辑 `plugins/claude-code/pathtrial/.mcp.json`。
-- 多个目标可以重复添加 `--allow-target`。
-- 修改后重启 AI 客户端。
-- 不要使用通配符，不要测试未经授权的设备。
+`PATHTRIAL_MCP_ALLOW_TARGETS` 支持用逗号或空格分隔多个明确的 `host:port` 目标。MCP 进程需要继承此变量；**从桌面图标启动的 GUI 不一定继承终端环境变量**，请使用客户端支持的 MCP 环境配置方式，或设置 `--allow-target` 参数，参见 [AI 集成指南](docs/ai-integrations.md)。
+
+不要使用通配符或检测未经授权的设备。变更授权后重新启动 AI 客户端。
 
 ### 2. 直接问 AI
 
@@ -147,6 +150,10 @@ pathtrial scan example.com --profile web --rounds 5 --redact-ips
 ### 安装 PathTrial 需要 Rust 吗？支持哪些系统？
 
 无需 Rust。v1.4.0-rc.1 已提供 macOS Apple Silicon、macOS Intel、Linux x86_64 的预编译包；Windows 尚不支持。只有从源码开发或编译时才需要 Rust。
+
+### PathTrial 与 ping、curl 有什么不同？
+
+`ping` 主要检查 ICMP 连通性，`curl` 常用于 HTTP 请求。PathTrial 把 DNS、TCP、TLS、HTTP、UDP、QUIC 等检查拆分为有边界的探测，在 JSON 报告中引用实际测量证据，不会仅凭一次失败断定故障根因。
 
 ## 反馈 Bug 与参与贡献
 
