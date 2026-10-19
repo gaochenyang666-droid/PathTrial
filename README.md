@@ -4,11 +4,11 @@
 
 **语言 / Languages / Idiomas / Языки:** **简体中文** · [English](README.en.md) · [Español](README.es.md) · [Русский](README.ru.md)
 
-[**下载 CLI 测试版**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.3.0-rc.1) · [**报告 Bug**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**AI 集成指南**](docs/ai-integrations.md) · [**CLI 使用指南**](docs/cli.md)
+[**下载 v1.4.0-rc.1 测试版**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) · [**报告 Bug**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**AI 集成指南**](docs/ai-integrations.md) · [**CLI 使用指南**](docs/cli.md)
 
-> **状态：** 公开 CLI 为 `v1.3.0-rc.1`。AI Plugins 为 `v0.2.0` 开发者预览，对应核心 `1.4.0-rc.1`，尚无公开预编译包。README 已提供四种语言，终端输出和报告尚未全面翻译。
+> **当前版本：** PathTrial Core `v1.4.0-rc.1` 已公开发布为 Release Candidate，支持 CLI 和本地 MCP；AI Plugins 为 `v0.2.0`。预编译包支持 macOS Apple Silicon、macOS Intel、Linux x86_64，普通用户无需安装 Rust。README 提供四种语言，CLI 输出与报告尚未全面翻译。
 
-> **欢迎参与 AI 插件测试**：Codex 与 Claude Code 插件已在 AI Plugins v0.2.0 开发分支提供。欢迎试用，并通过 [GitHub Issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) 反馈安装、兼容性和诊断问题。提交时请附脱敏的版本信息、复现步骤与实际结果。**目前尚无公开的 1.4 MCP 预编译包，试用需要 Rust 1.84+ 源码构建。**
+> **欢迎测试与反馈：** Codex 和 Claude Code 插件已进入默认 `main` 分支。欢迎通过 [GitHub Issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) 报告安装、兼容性或诊断问题，附上脱敏后的版本信息、复现步骤及预期和实际结果。
 
 ## PathTrial 能排查哪些网站、VPS 与 IPv4/IPv6 网络问题？
 
@@ -22,52 +22,48 @@ PathTrial 在本机运行，不上传报告，也不修改 DNS、路由、防火
 
 ## 快速安装 AI 插件
 
-> **Developer Preview：** 插件不会自动安装诊断程序。当前 AI 插件需要包含 `pathtrial mcp` 的 `1.4.0-rc.1` 可执行文件。公开的 `v1.3.0-rc.1` 不能运行 MCP，`v1.4.0-rc.1` 也还没有公开预编译 Release。
->
-> 在这一发布条件完成前，插件安装需要 Rust 1.84+ 和一次源码构建。只想使用稳定 CLI 的用户可以跳到下方的“不使用 AI？直接使用 PathTrial CLI”。
+> **公开测试版（Release Candidate）：** 请先安装 PathTrial 核心，再安装 Codex 或 Claude Code 插件。插件不会自动安装诊断程序。网络探测默认拒绝，只有显式授权的目标才可测试。
 
-### 第 0 步：准备兼容的 PathTrial 核心
+### 第 1 步：安装 PathTrial（无需 Rust）
+
+下载并检查 [v1.4.0-rc.1 正式发布的预编译安装脚本](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1)：
 
 ~~~bash
-git clone --branch codex/ai-plugins-v0.1 --depth 1 https://github.com/gaochenyang666-droid/PathTrial.git
-cd PathTrial
-cargo build --release --locked
-export PATH="$PWD/target/release:$PATH"
-
+curl -fsSLo pathtrial-install.sh \
+  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/install.sh
+less pathtrial-install.sh
+sh pathtrial-install.sh
+export PATH="$HOME/.local/bin:$PATH"
 pathtrial --version
 pathtrial mcp --help
 ~~~
 
-版本应显示 `1.4.0-rc.1`。启动 Codex 或 Claude Code 前，确保这个目录已在它们的 `PATH` 中。
+预期版本为 `1.4.0-rc.1`，且 `pathtrial mcp --help` 可正常执行。确保启动 Codex / Claude Code 时也能在 `PATH` 找到 `pathtrial`。
 
-### OpenAI Codex
+### 第 2 步：OpenAI Codex 插件
 
-远程 Marketplace 安装已在临时 `CODEX_HOME` 中验证。`codex plugin list` 应显示版本 `0.2.0`，`codex mcp list` 应显示 `pathtrial` 已启用。
+在 Codex CLI 安装默认 `main` 分支的 Marketplace 插件：
 
 ~~~bash
-codex plugin marketplace add gaochenyang666-droid/PathTrial --ref codex/ai-plugins-v0.1
+codex plugin marketplace add gaochenyang666-droid/PathTrial
 codex plugin add pathtrial@pathtrial
-
 codex plugin list
 codex mcp list
 ~~~
 
-本版本的真实 Codex 模型会话已完成授权本地扫描和报告解释：TCP `1/1` 成功，证据 ID 为 `tcp_ipv4_001`，未授权目标返回 `target_not_allowed`。
+已完成 Codex v0.2 实际模型调用、授权本地 TCP 扫描及报告证据解释测试。第一次使用可以询问：*“请调用 `pathtrial_capabilities`，检查 PathTrial 的 9 个 MCP 工具。”*
 
-现在可以对 Codex 说：
+### 第 2 步：Claude Code 插件
 
-> 先调用 `pathtrial_capabilities`，确认 PathTrial 版本和 9 个 MCP 工具是否可用。
+在 Claude Code 会话内使用以下插件命令，随后用 `/mcp` 检查工具：
 
-### Claude Code
-
-Claude Code 插件提供本地加载方式。由于插件文件尚未合并到默认 `main`，请先在当前开发分支的仓库根目录执行：
-
-~~~bash
-claude plugin validate ./plugins/claude-code/pathtrial
-claude --plugin-dir ./plugins/claude-code/pathtrial
+~~~text
+/plugin marketplace add gaochenyang666-droid/PathTrial
+/plugin install pathtrial@pathtrial
+/mcp
 ~~~
 
-进入会话后，使用 `/mcp` 检查 `pathtrial` 工具是否已注册，再尝试诊断与报告分析。
+如需更多配置或故障排查，查看 [AI 集成指南](docs/ai-integrations.md)。
 
 ## 第一次使用
 
@@ -109,41 +105,30 @@ DNS、IPv4/IPv6、TCP、TLS、HTTP、ICMP、路由追踪、UDP Echo、QUIC、HTT
 
 ## 不使用 AI？直接使用 PathTrial CLI
 
-公开版 `v1.3.0-rc.1` 可以直接下载，不需要 Rust。它不包含 MCP，不能用于 AI 插件。
+同一个 [v1.4.0-rc.1 公开测试版](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) 也可以独立运行 CLI，无需 Codex、Claude Code 或 Rust。可直接选择对应系统的预编译包：
 
-- [macOS Apple Silicon](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz)
-- [macOS Intel](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz)
-- [Linux x86_64](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz)
+- [macOS Apple Silicon](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz)
+- [macOS Intel](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz)
+- [Linux x86_64](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz)
 
-每个包都有 SHA-256 文件，可在 [v1.3.0-rc.1 Release](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.3.0-rc.1) 查看。推荐先下载并检查安装脚本，再运行：
-
-~~~bash
-curl -fsSLo pathtrial-install.sh \
-  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/install.sh
-less pathtrial-install.sh
-sh pathtrial-install.sh
-
-~/.local/bin/pathtrial --version
-~~~
-
-第一次扫描：
+每个包都有相应的 SHA-256 校验文件；可使用上面的安装脚本安装，或手动下载并校验。安装后试运行：
 
 ~~~bash
+pathtrial --version
 pathtrial scan example.com --profile web --rounds 5 --redact-ips
 ~~~
 
-`--redact-ips` 适合生成可分享报告。更多 HTTP、QUIC、UDP、代理、双端采集和退出码说明见 [CLI 使用指南](docs/cli.md)。
+更多 HTTP、QUIC、UDP、代理、双端采集和退出码说明见 [CLI 使用指南](docs/cli.md)。
 
 ## 测试版状态与已知限制
 
-- PathTrial Core：`1.4.0-rc.1` 开发版。
-- AI Plugins：`0.2.0` 开发者预览。
-- 公开预编译 CLI：`v1.3.0-rc.1`，不包含 MCP。
-- 自动化验收：173 项测试通过，Ubuntu 24.04、macOS ARM、macOS Intel 三平台 CI 通过。
-- Codex：`v0.2.0` 已完成真实模型调用、授权扫描、证据解释和未授权拒绝。
-- Claude Code：支持通过本地插件目录加载，提供 MCP 配置及共享 Skills。
+- PathTrial Core：`v1.4.0-rc.1`，已公开发布为 Release Candidate，**不是稳定正式版**。
+- AI Plugins：`0.2.0`，Codex / Claude Code 插件清单已包含在 `main`。
+- 平台：macOS ARM64、macOS Intel、Linux x86_64 的 Release 构建均成功，附 SHA-256。
+- 自动化测试：173 项通过，三平台 CI 通过；Codex v0.2 已完成模型工具调用及授权扫描测试。
+- 网络目标必须由用户明确授权；Windows、图形界面和自动网络修复暂不支持。
 
-完整证据见 [AI Plugins 完成度矩阵](docs/ai-plugin-completeness.md)。当前不支持 Windows、图形界面、自动修复网络、自动抓包和具体网元级丢包定位。Fake-IP/TUN、公共 UDP 443 和 HTTP/3 的可达性仍可能受本地网络影响。
+查看 [工程验收矩阵](docs/ai-plugin-completeness.md) 和 [发行工作流](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39149532255)。后续社区兼容性和诊断问题欢迎通过 [Issue](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) 反馈。
 
 ## 常见网络诊断问题（FAQ）
 
@@ -157,11 +142,11 @@ pathtrial scan example.com --profile web --rounds 5 --redact-ips
 
 ### 如何在 Codex 或 Claude Code 中使用 PathTrial MCP 插件？
 
-查看上方的[AI 插件安装步骤](#快速安装-ai-插件)。插件调用本地 Rust 测量引擎；`v1.3.0-rc.1` 公开 CLI 不包含 MCP，开发预览需使用 `1.4.0-rc.1` 源码构建版本。网络探测需显式授权目标。
+安装 [v1.4.0-rc.1 预编译核心](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) 后，按上方的[插件安装步骤](#快速安装-ai-插件)从默认 `main` 的 Marketplace 添加插件。MCP 依赖本地 `pathtrial`，网络探测必须显式授权目标。
 
 ### 安装 PathTrial 需要 Rust 吗？支持哪些系统？
 
-使用公开预编译 CLI 不需要 Rust，支持 macOS Apple Silicon、macOS Intel 和 Linux x86_64；Windows 暂不支持。源码构建及当前 MCP 开发预览需要 Rust 工具链。
+无需 Rust。v1.4.0-rc.1 已提供 macOS Apple Silicon、macOS Intel、Linux x86_64 的预编译包；Windows 尚不支持。只有从源码开发或编译时才需要 Rust。
 
 ## 反馈 Bug 与参与贡献
 
