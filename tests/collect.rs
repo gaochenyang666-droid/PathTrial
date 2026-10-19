@@ -17,24 +17,33 @@ fn temp_path(tag: &str) -> std::path::PathBuf {
     ))
 }
 
+enum PairError {
+    Transient(String),
+    Invalid(String),
+}
+
 fn collect_pair(rounds: u32) -> (std::path::PathBuf, std::path::PathBuf) {
     let mut last_error = String::new();
     for attempt in 1..=2 {
         match collect_pair_once(rounds) {
             Ok(paths) => return paths,
-            Err(error) => {
+            Err(PairError::Transient(error)) => {
                 eprintln!("collect pair attempt {attempt} failed: {error}");
                 last_error = error;
+            }
+            Err(PairError::Invalid(error)) => {
+                panic!("baseline collection is invalid: {error}");
             }
         }
     }
     panic!("collect pair failed twice; last error: {last_error}");
 }
 
-fn collect_pair_once(rounds: u32) -> Result<(std::path::PathBuf, std::path::PathBuf), String> {
+fn collect_pair_once(rounds: u32) -> Result<(std::path::PathBuf, std::path::PathBuf), PairError> {
     let server_path = temp_path("server");
     let client_path = temp_path("client");
-    let listener = std::net::TcpListener::bind("127.0.0.1:0").map_err(|error| error.to_string())?;
+    let listener = std::net::TcpListener::bind("127.0.0.1:0")
+        .map_err(|error| PairError::Transient(error.to_string()))?;
     let port = listener.local_addr().unwrap().port();
     drop(listener);
     let mut server = Command::new(binary())
@@ -54,7 +63,7 @@ fn collect_pair_once(rounds: u32) -> Result<(std::path::PathBuf, std::path::Path
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .spawn()
-        .map_err(|error| format!("start collect server: {error}"))?;
+        .map_err(|error| PairError::Transient(format!("start collect server: {error}")))?;
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(8);
     let mut ready = false;
     while std::time::Instant::now() < deadline {
@@ -67,9 +76,9 @@ fn collect_pair_once(rounds: u32) -> Result<(std::path::PathBuf, std::path::Path
     if !ready {
         let _ = server.kill();
         let _ = server.wait();
-        return Err(format!(
+        return Err(PairError::Transient(format!(
             "collect server did not listen on 127.0.0.1:{port} within 8s"
-        ));
+        )));
     }
     let client = Command::new(binary())
         .args([
@@ -90,27 +99,29 @@ fn collect_pair_once(rounds: u32) -> Result<(std::path::PathBuf, std::path::Path
             client_path.to_str().unwrap(),
         ])
         .output()
-        .map_err(|error| format!("run collect client: {error}"))?;
+        .map_err(|error| PairError::Transient(format!("run collect client: {error}")))?;
     if !client.status.success() {
         let _ = server.kill();
         let _ = server.wait();
-        return Err(format!(
+        return Err(PairError::Transient(format!(
             "collect client failed: {}",
             String::from_utf8_lossy(&client.stderr)
-        ));
+        )));
     }
     let status = server
         .wait()
-        .map_err(|error| format!("wait for collect server: {error}"))?;
+        .map_err(|error| PairError::Transient(format!("wait for collect server: {error}")))?;
     if !status.success() {
-        return Err(format!("collect server exited with {status}"));
+        return Err(PairError::Transient(format!(
+            "collect server exited with {status}"
+        )));
     }
     let (status, value) = correlate(&client_path, &server_path);
     if !status.success() {
-        return Err(format!(
+        return Err(PairError::Invalid(format!(
             "baseline collection did not correlate: status={status}; finding={}; issues={}",
             value["finding"]["status"], value["comparability"]["issues"]
-        ));
+        )));
     }
     Ok((client_path, server_path))
 }
