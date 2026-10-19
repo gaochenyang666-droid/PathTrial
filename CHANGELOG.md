@@ -5,6 +5,8 @@ project uses semantic versioning for both the binary and the report schema.
 
 ## [Unreleased: 1.5.0-rc.1]
 
+- [PR #5](https://github.com/gaochenyang666-droid/PathTrial/pull/5) merged into `main` on 2026-10-19 after evidence-schema, MCP target/authorization, bounded subprocess and latency severity corrections. The [three-platform CI](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39235804316) passed 225 tests. This is **source availability only**; no new public Release has been published.
+
 Guided diagnosis for ten common network problem categories.
 
 ### Added
