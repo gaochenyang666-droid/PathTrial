@@ -4,11 +4,11 @@
 
 **Языки:** [简体中文](README.md) · [English](README.en.md) · [Español](README.es.md) · **Русский**
 
-[**Скачать тестовый CLI**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.3.0-rc.1) · [**Сообщить об ошибке**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**Руководство по интеграции с ИИ**](docs/ai-integrations.md) · [**Руководство по CLI**](docs/cli.md)
+[**Скачать v1.4.0-rc.1**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) · [**Сообщить об ошибке**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**Руководство по интеграции с ИИ**](docs/ai-integrations.md) · [**Руководство по CLI**](docs/cli.md)
 
-> **Статус:** публичный CLI имеет версию `v1.3.0-rc.1`. AI Plugins `v0.2.0` является предварительной версией для разработчиков и работает с ядром `1.4.0-rc.1`; публичного готового пакета пока нет. README доступен на четырёх языках, но вывод CLI и отчёты переведены не полностью.
+> **Текущая версия:** PathTrial Core `v1.4.0-rc.1` опубликована как кандидат на выпуск (RC) с поддержкой CLI и локального MCP. Версия AI Plugins — `0.2.0`. Готовые пакеты есть для macOS Apple Silicon, macOS Intel и Linux x86_64, Rust для установки не нужен. README доступны на четырёх языках; вывод CLI и отчёты локализованы не полностью.
 
-> **Попробуйте AI-плагины:** Плагины Codex и Claude Code доступны в ветке разработки AI Plugins v0.2.0. Сообщайте об ошибках установки, совместимости и диагностики через [GitHub Issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md), указав версии и шаги воспроизведения без конфиденциальных данных. **Публичных готовых пакетов v1.4 с MCP пока нет: нужны Rust 1.84+ и сборка из исходников.**
+> **Приглашаем к тестированию:** плагины Codex и Claude Code доступны в основной ветке `main`. [Сообщайте об ошибках установки, совместимости и диагностики](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md), указывая версии, шаги воспроизведения и ожидаемый/фактический результат без конфиденциальных данных.
 
 ## Какие сетевые проблемы помогает диагностировать PathTrial?
 
@@ -22,52 +22,48 @@ PathTrial работает локально. Он не загружает отч
 
 ## Установка плагинов ИИ
 
-> **Предварительная версия для разработчиков:** установка плагина не устанавливает программу диагностики. Текущему плагину нужен исполняемый файл `1.4.0-rc.1` с поддержкой `pathtrial mcp`. Публичный бинарник `v1.3.0-rc.1` не умеет запускать MCP, а публичного готового пакета `v1.4.0-rc.1` пока нет.
->
-> До появления такого пакета для предварительной версии нужны Rust 1.84 или новее и одна сборка из исходного кода. Если нужен только стабильный CLI, перейдите к разделу «Использование PathTrial без ИИ-клиента».
+> **Публичный кандидат на выпуск:** сначала установите исполняемый файл PathTrial, затем плагин Codex или Claude Code. Плагин сам по себе не устанавливает диагностическую программу. Сетевые проверки требуют явного разрешения цели.
 
-### Шаг 0. Подготовьте совместимое ядро PathTrial
+### Шаг 1. Установка PathTrial (без Rust)
+
+Скачайте и просмотрите установочный скрипт из [выпуска v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1):
 
 ~~~bash
-git clone --branch codex/ai-plugins-v0.1 --depth 1 https://github.com/gaochenyang666-droid/PathTrial.git
-cd PathTrial
-cargo build --release --locked
-export PATH="$PWD/target/release:$PATH"
-
+curl -fsSLo pathtrial-install.sh \
+  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/install.sh
+less pathtrial-install.sh
+sh pathtrial-install.sh
+export PATH="$HOME/.local/bin:$PATH"
 pathtrial --version
 pathtrial mcp --help
 ~~~
 
-Версия должна быть `1.4.0-rc.1`. Перед запуском Codex или Claude Code убедитесь, что этот каталог входит в их `PATH`.
+Проверьте версию `1.4.0-rc.1` и работу `pathtrial mcp --help`. Исполняемый файл должен быть доступен через `PATH`, который наследует ИИ-клиент.
 
-### OpenAI Codex
+### Шаг 2. Плагин OpenAI Codex
 
-Установка из удалённого Marketplace проверена с временным `CODEX_HOME`. Команда `codex plugin list` должна показать версию `0.2.0`, а `codex mcp list` должна показать включённый сервер `pathtrial`.
+Установите плагин из Marketplace основной ветки `main`:
 
 ~~~bash
-codex plugin marketplace add gaochenyang666-droid/PathTrial --ref codex/ai-plugins-v0.1
+codex plugin marketplace add gaochenyang666-droid/PathTrial
 codex plugin add pathtrial@pathtrial
-
 codex plugin list
 codex mcp list
 ~~~
 
-Реальный сеанс модели Codex `v0.2.0` выполнил разрешённую локальную проверку и объяснение отчёта: TCP завершился успешно `1/1`, получен идентификатор `tcp_ipv4_001`, а неразрешённый узел отклонён с `target_not_allowed`.
+Codex v0.2 уже успешно выполнил реальные вызовы модели, разрешённую локальную TCP-проверку и анализ отчёта. Первый запрос: *«Вызови `pathtrial_capabilities` и проверь девять MCP-инструментов».*
 
-После этого можно попросить Codex:
+### Шаг 2. Плагин Claude Code
 
-> Сначала вызови `pathtrial_capabilities` и подтверди версию PathTrial и доступность всех девяти инструментов MCP.
+Внутри Claude Code добавьте Marketplace и установите плагин. Просмотрите инструменты с помощью `/mcp`:
 
-### Claude Code
-
-Плагин Claude Code можно загрузить локально. Пока файлы плагина не объединены с веткой `main`, выполните следующие команды из корня репозитория этой ветки разработки:
-
-~~~bash
-claude plugin validate ./plugins/claude-code/pathtrial
-claude --plugin-dir ./plugins/claude-code/pathtrial
+~~~text
+/plugin marketplace add gaochenyang666-droid/PathTrial
+/plugin install pathtrial@pathtrial
+/mcp
 ~~~
 
-В сеансе откройте `/mcp`, проверьте регистрацию инструментов `pathtrial`, затем попробуйте диагностику или анализ отчёта.
+Порядок настройки разрешений и решения проблем — в [руководстве по интеграции](docs/ai-integrations.md).
 
 ## Первое использование
 
@@ -109,41 +105,30 @@ DNS, IPv4/IPv6, TCP, TLS, HTTP, ICMP, трассировка маршрута, U
 
 ## Использование PathTrial без ИИ-клиента
 
-Публичный CLI `v1.3.0-rc.1` устанавливается без Rust. В нём нет MCP, поэтому он не подходит для плагинов ИИ.
+[Публичный кандидат на выпуск v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) работает как самостоятельный CLI без Rust, Codex или Claude Code. Выберите пакет для своей платформы:
 
-- [macOS Apple Silicon](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz)
-- [macOS Intel](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz)
-- [Linux x86_64](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz)
+- [macOS Apple Silicon](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz)
+- [macOS Intel](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz)
+- [Linux x86_64](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz)
 
-Файлы SHA-256 находятся на [странице версии v1.3.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.3.0-rc.1). Перед запуском просмотрите установочный скрипт:
-
-~~~bash
-curl -fsSLo pathtrial-install.sh \
-  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.3.0-rc.1/install.sh
-less pathtrial-install.sh
-sh pathtrial-install.sh
-
-~/.local/bin/pathtrial --version
-~~~
-
-Первая проверка:
+У каждого архива есть файл контрольной суммы SHA-256. Можно использовать установочный скрипт выше или скачать архив и проверить его вручную.
 
 ~~~bash
+pathtrial --version
 pathtrial scan example.com --profile web --rounds 5 --redact-ips
 ~~~
 
-Параметр `--redact-ips` делает отчёт более безопасным для публикации. Подробности о HTTP, QUIC, UDP, прокси, сборе данных с двух сторон и кодах завершения находятся в [руководстве по CLI](docs/cli.md).
+Подробности о HTTP, QUIC, UDP, прокси, сборе данных с двух сторон и кодах завершения — в [руководстве по CLI](docs/cli.md).
 
 ## Статус тестовой версии и известные ограничения
 
-- PathTrial Core: версия разработки `1.4.0-rc.1`.
-- AI Plugins: предварительная версия `0.2.0`.
-- Публичный готовый CLI: `v1.3.0-rc.1`, без MCP.
-- Автоматические проверки: 173 теста пройдены, CI работает на Ubuntu 24.04, macOS ARM и macOS Intel.
-- Codex: версия `v0.2.0` прошла реальный сеанс модели, разрешённую проверку, объяснение доказательств и отказ для неразрешённого узла.
-- Claude Code: предусмотрены локальная загрузка плагина, конфигурация MCP и общие Skills.
+- Ядро: `v1.4.0-rc.1`, опубликованный **кандидат на выпуск**, не стабильная версия.
+- AI Plugins: `0.2.0`, манифесты Codex и Claude Code находятся в `main`.
+- Готовые пакеты: macOS ARM64, macOS Intel и Linux x86_64; сборка успешна, файлы SHA-256 доступны.
+- Проверки: пройдены 173 теста и CI на трёх платформах; Codex v0.2 выполнил реальные вызовы модели и разрешённую проверку.
+- Для сетевой диагностики требуется явное разрешение. Windows, графический интерфейс и автоматическое исправление сети не поддерживаются.
 
-Полные доказательства находятся в [матрице готовности AI Plugins](docs/ai-plugin-completeness.md). Windows, графический интерфейс, автоматическое исправление сети, автоматический захват пакетов и точное определение устройства с потерями пока недоступны. Поведение Fake-IP/TUN, публичный UDP 443 и доступность HTTP/3 могут зависеть от локальной сети.
+Подробности см. в [матрице приёмки](docs/ai-plugin-completeness.md) и [отчёте о сборке](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39149532255). [Сообщайте о воспроизводимых ошибках](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md).
 
 ## Частые вопросы по диагностике сети
 
@@ -157,11 +142,11 @@ pathtrial scan example.com --profile web --rounds 5 --redact-ips
 
 ### Как подключить PathTrial к Codex или Claude Code через MCP?
 
-См. [инструкцию по установке AI-плагинов](#установка-ai-плагинов). Плагины вызывают локальный движок на Rust. Публичная версия CLI `v1.3.0-rc.1` не содержит MCP; для предварительного выпуска нужно собрать ядро `1.4.0-rc.1` и явно разрешить целевой узел.
+Установите [готовое ядро v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1), затем используйте [инструкцию по плагинам](#установка-плагинов-ии) и Marketplace из `main`. MCP вызывает локальную программу `pathtrial`; сетевые проверки требуют разрешения цели.
 
 ### Нужен ли Rust для установки? Работает ли PathTrial в Windows?
 
-Готовые CLI-пакеты для macOS Apple Silicon, macOS Intel и Linux x86_64 не требуют Rust. Windows пока не поддерживается. Rust нужен для сборки из исходников и текущей предварительной MCP-интеграции.
+Нет. Готовые бинарные файлы v1.4.0-rc.1 существуют для macOS Apple Silicon, macOS Intel и Linux x86_64. Windows пока не поддерживается. Rust нужен только при сборке из исходного кода.
 
 ## Ошибки и участие в разработке
 
