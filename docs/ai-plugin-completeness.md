@@ -33,24 +33,23 @@
 | MCP 协议与工具 | VERIFIED | 20.0 | 9 个工具均有真实 MCP stdio 测试；21 项协议测试覆盖本地 QUIC、HTTP/3、UDP、SOCKS/HTTP CONNECT、断开和错误响应 |
 | 安全与权限 | VERIFIED | 25.0 | DNS 全部候选检查、确定性 IP 绑定、代理双端授权、子进程硬超时、客户端断开取消、输出和消息上限、授权摘要脱敏、IP 与重定向脱敏、报告证据校验 |
 | Codex 端到端 | VERIFIED | 15.0 | v0.2.0 真实模型会话完成 capabilities、授权 TCP 扫描 1/1、`tcp_ipv4_001` 解释和未授权 `target_not_allowed` 拒绝；QUIC/HTTP3/UDP 边界由 21 项 MCP 协议测试覆盖 |
-| Claude Code 端到端 | UNVERIFIED | 0.0 | 官方 CLI 2.1.292 和插件、Marketplace 清单校验通过；尚无真实模型工具调用验收证据 |
-| 预编译发行 | PARTIAL | 5.0 | Release 工作流已加入原生 MCP 冒烟、版本一致性和哈希；尚未公开发布含 MCP 的 1.4.0 包 |
+| Claude Code 端到端 | UNVERIFIED | 0.0 | 默认 main 的 Marketplace 和插件安装成功，4 个 Skills 被发现，MCP 健康检查为 Connected；尚无真实模型工具调用验收证据 |
+| 预编译发行 | VERIFIED | 15.0 | `v1.4.0-rc.1` 已公开，三平台免 Rust 安装、SHA-256、CLI、MCP 和报告解释通过三平台 release-smoke |
 | 文档与 CI | VERIFIED | 10.0 | 四语言文档、集成指南、三平台 CI、173 项测试门禁 |
 
-**当前合计：75.0%。**
+**当前合计：85.0%。**
 
-## 未达到 90% 的原因
+## 未达到 100% 的原因
 
 - Claude Code 的 CLI 与清单校验已通过；真实模型端到端验收仍待补充，按既定评分暂计 0 分。
-- 含 MCP 的 1.4.0 预编译包尚未公开发布，发行维度只完成构建与工作流准备。
-- Claude Code 的真实模型会话仍未开始。
 
 ## 可复核记录
 
 - Codex capabilities 返回：`core_version=1.4.0-rc.1`、`plugin_version=0.2.0`、9 个工具。
 - Codex v0.2 未授权调用返回：`target_not_allowed`。
 - Codex v0.2 授权本地扫描和解释返回：`tcp_ipv4_001`，TCP 1/1 PASS。
-- Claude Code 官方 CLI：2.1.292；插件清单和仓库 Marketplace 验证通过。
+- Claude Code 官方 CLI：2.1.292；插件清单和仓库 Marketplace 验证通过；默认 main 安装、4 个 Skills 和 MCP Connected 已验证。
+- 公开发行：`v1.4.0-rc.1` 标签指向 `073e814`；三平台 release-smoke run `39209255302` 全部通过。
 - MCP 测试：21 项，覆盖 9 个工具、超时、输出上限、消息上限、客户端断开、授权摘要脱敏、重定向和查询参数脱敏、证据引用和权限拒绝。
 - 核心测试：173 项通过；提交 `0c39c53` 的 Ubuntu 24.04、macOS 15 和 macOS 15 Intel CI 全部通过。
 

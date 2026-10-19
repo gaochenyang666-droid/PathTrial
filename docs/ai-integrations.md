@@ -27,12 +27,13 @@ The plugin version is `0.2.0`. It is independent of the PathTrial CLI version.
 - No OpenAI or Anthropic API key for local diagnostics.
 - Network access only to targets the user explicitly authorizes.
 
-The current `v1.3.0-rc.1` release predates the MCP subcommand. Until a later
-binary is published, build from this branch:
+The public `v1.4.0-rc.1` release includes the MCP subcommand. Install the
+verified prebuilt binary without Rust:
 
 ```bash
-cargo build --release --locked
-export PATH="$PWD/target/release:$PATH"
+curl -fsSLo pathtrial-install.sh \
+  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.4.0-rc.1/install.sh
+sh pathtrial-install.sh
 pathtrial mcp --allow-target example.com:443
 ```
 
@@ -84,12 +85,13 @@ The repo marketplace is:
 .agents/plugins/marketplace.json
 ```
 
-Add the marketplace and install the plugin from a trusted checkout:
+Add the default-main marketplace and install the plugin:
 
 ```bash
-codex plugin marketplace add /path/to/PathTrial
+codex plugin marketplace add gaochenyang666-droid/PathTrial
 codex plugin add pathtrial@pathtrial
 codex plugin list
+codex mcp list
 ```
 
 The Codex desktop app can also show the repo marketplace in the Plugins
@@ -125,11 +127,14 @@ The Claude marketplace is:
 .claude-plugin/marketplace.json
 ```
 
-Expected install experience:
+The shell commands behind the Claude plugin interface were verified with the
+official CLI:
 
-```text
-/plugin marketplace add gaochenyang666-droid/PathTrial
-/plugin install pathtrial@pathtrial
+```bash
+claude plugin marketplace add gaochenyang666-droid/PathTrial
+claude plugin install pathtrial@pathtrial
+claude plugin details pathtrial@pathtrial
+claude mcp list
 ```
 
 Validate and load the local package:
@@ -266,8 +271,8 @@ The PathTrial CLI can remain installed after plugin removal.
 | Codex marketplace add and plugin install | Verified with a temporary `CODEX_HOME` |
 | Codex MCP registration visible in `codex mcp list` | Verified |
 | Codex model-driven tool calls in a live session | VERIFIED for v0.2.0: capabilities, authorized TCP scan 1/1, real `tcp_ipv4_001` explanation and unauthorized `target_not_allowed` denial |
-| Claude Code manifest validation and live tool call | PARTIAL: official CLI 2.1.292 installed; plugin and marketplace validation pass; a live model tool call has not yet been recorded |
-| Precompiled release containing `pathtrial mcp` | UNVERIFIED for `v1.3.0-rc.1`; build from this branch |
+| Claude Code manifest validation and live tool call | PARTIAL: default-main install, four Skills and MCP Connected verified; a live model tool call has not yet been recorded |
+| Precompiled release containing `pathtrial mcp` | VERIFIED for `v1.4.0-rc.1`; macOS ARM, macOS Intel and Linux x86_64 release smoke passed |
 | Windows plugin support | UNVERIFIED, Windows core support is not implemented |
 
 ## Reporting bugs
