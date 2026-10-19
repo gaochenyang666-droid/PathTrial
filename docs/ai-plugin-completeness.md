@@ -55,10 +55,10 @@
 
 状态定义与核心矩阵一致：VERIFIED、PARTIAL、UNVERIFIED、NOT IMPLEMENTED。
 
-## v1.5 开发分支（未发布，不计入上方 v1.4 得分）
+## v1.5 main 源码（已合并、未发布；不计入上方 v1.4 得分）
 
 - MCP 工具从 9 个增加到 10 个，新增 `pathtrial_diagnose`。
 - `local` 场景不要求网络目标授权；其他场景继续使用启动允许列表、DNS 确定性绑定和代理双端授权。
 - diagnose 本地场景、授权 TCP 和未授权拒绝均有 MCP 级测试。
-- 新增 13 项 diagnose 集成测试和 3 项单元测试，原有 173 项测试保留。
+- [PR #5](https://github.com/gaochenyang666-droid/PathTrial/pull/5) 已合并；v1.5 源码有 225 项测试，包含诊断证据反查、域名及双栈授权、HTTP Host/SNI、子进程清理和延迟 FAIL 优先级回归测试。[三平台 CI 39235804316](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39235804316) 全部通过，旧版 v1.4 的 173 项是历史基线。
 - 真实 Codex/Claude 模型对新工具的选择与解释尚未重跑，因此不把开发分支提前计为 100%。

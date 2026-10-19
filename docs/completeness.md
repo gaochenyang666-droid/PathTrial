@@ -177,10 +177,9 @@ macOS Intel 三个 Job 全部通过。
 剩余缺口：Windows 尚未实现；当前 Mac 的 UDP 443 路径对公共 HTTP/3 目标超时，
 公共 HTTP/3 验证仍需在可用 UDP 出口上重复。
 
-## v1.5 综合诊断开发分支（未发布）
+## v1.5 综合诊断（已合并 main，尚未发布）
 
-`codex/v1.5-diagnose` 新增 `pathtrial diagnose` 和 `pathtrial_diagnose`，不改变已发布的
-`v1.4.0-rc.1` 标签或发行资产。
+[PR #5](https://github.com/gaochenyang666-droid/PathTrial/pull/5) 已合并进 `main`，新增 `pathtrial diagnose` 和 `pathtrial_diagnose`。`1.5.0-rc.1` 目前仅存在于源码，**未发布新安装包**；公开下载的 v1.4 版本仍不支持新命令，且旧标签和资产没有改变。
 
 | 十类问题 | 状态 | 当前证据 |
 | --- | --- | --- |
@@ -195,8 +194,7 @@ macOS Intel 三个 Job 全部通过。
 | 09 代理连接异常 | VERIFIED | direct/proxy 对照、隧道成功和拒绝分类通过本地测试 |
 | 10 本地网络异常 | PARTIAL | 只读网卡、默认路由、DHCP、Wi-Fi 和 TUN 提示已实现；无线信号和无权限场景可能 SKIP |
 
-新增测试：13 项 diagnose 集成测试、3 项 diagnose 单元测试、1 项 MCP diagnose 权限测试；
-原有 173 项测试保留。
+合并前 225 项源码测试通过，Ubuntu 24.04、macOS ARM64 和 macOS Intel 三平台均通过 [CI 39235804316](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39235804316)。回归范围包括证据反查、MCP 目标身份与域名权限、子进程超时及取消、延迟严重程度。v1.4 历史验收基线为 173 项，不能与当前 v1.5 源码混淆。新增工具的真实 Codex/Claude 模型会话仍未重新验证。
 
 ## AI Plugins v0.2（独立验收）
 
