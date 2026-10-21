@@ -6,6 +6,9 @@ This document is a navigation index for language models, readers, and search too
 
 ## Start here
 
+- [Network troubleshooting guides](https://gaochenyang666-droid.github.io/PathTrial/en/guides/): evidence-first VPS TCP port, HTTP/3 UDP 443 and IPv4/IPv6 tutorials.
+- [中文网络排障指南](https://gaochenyang666-droid.github.io/PathTrial/guides/): Chinese introduction and links to English technical tutorials.
+
 - [Simplified Chinese README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.md): plugin-first introduction, developer-preview compatibility requirements, authorization, CLI fallback and bug reporting.
 - [English README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.en.md): complete English plugin-first walkthrough.
 - [Spanish README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.es.md): guía completa en español con los plugins como entrada principal.
