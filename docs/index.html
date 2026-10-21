@@ -33,7 +33,7 @@
     <a href="#guided-diagnosis">v1.5 诊断</a>
     <a href="#integrations">AI / MCP</a>
     <a href="./download.html">下载</a>
-    <a href="https://github.com/gaochenyang666-droid/PathTrial">GitHub</a>
+    <a href="https://gaochenyang666-droid.github.io/PathTrial/guides/">排障指南</a><a href="https://github.com/gaochenyang666-droid/PathTrial">GitHub</a>
   </nav>
   <nav class="languages" aria-label="切换语言"><a href="https://gaochenyang666-droid.github.io/PathTrial/" lang="zh-CN" aria-current="page">中文</a><a href="https://gaochenyang666-droid.github.io/PathTrial/en/" lang="en">English</a><a href="https://gaochenyang666-droid.github.io/PathTrial/es/" lang="es">Español</a><a href="https://gaochenyang666-droid.github.io/PathTrial/ru/" lang="ru">Русский</a></nav>
 </div></header>
@@ -89,7 +89,8 @@ pathtrial diagnose --scenario local</pre></div>
 <span class="comment"># 报告按协议阶段记录测量证据
 # 具体结果取决于真实网络环境</span></pre></div>
   </div></section>
-  <section id="integrations" class="section"><div class="container">
+  <section id="guides" class="section"><div class="container"><div class="section-head"><h2>常见网络故障排查</h2><p>从真实测量区分 VPS 端口故障、QUIC/HTTP3 超时与 IPv4/IPv6 问题。以下技术全文目前为英文。</p></div><div class="grid"><article class="card"><h3><a href="https://gaochenyang666-droid.github.io/PathTrial/en/guides/vps-port-unreachable.html">VPS 能 Ping 通但 TCP 端口不通</a></h3></article><article class="card"><h3><a href="https://gaochenyang666-droid.github.io/PathTrial/en/guides/http3-udp443-timeout.html">QUIC / HTTP3 UDP 443 超时</a></h3></article><article class="card"><h3><a href="https://gaochenyang666-droid.github.io/PathTrial/en/guides/ipv4-works-ipv6-fails.html">IPv4 正常而 IPv6 失败</a></h3></article></div><p style="margin-top:20px"><a href="https://gaochenyang666-droid.github.io/PathTrial/guides/">排障指南 →</a></p></div></section>
+<section id="integrations" class="section"><div class="container">
     <div class="section-head"><h2>连接 Codex 和 Claude Code</h2><p>v1.5.0-rc.1 预编译核心通过本地 MCP 提供 10 个工具，包含引导式诊断与报告解释。插件版本 0.3.0，请使用与之匹配的核心二进制。</p></div>
     <div class="grid two">
       <div class="card"><h3>OpenAI Codex 插件</h3><p>从 GitHub 默认分支添加 Marketplace，安装 PathTrial 插件并检查本地 MCP 连接。</p><div class="codebox"><pre>codex plugin marketplace add \
