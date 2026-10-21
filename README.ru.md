@@ -1,4 +1,5 @@
 # PathTrial — открытый инструмент диагностики сети | CLI и MCP-плагины для Codex и Claude Code
+[**Руководства по диагностике сети (на английском)**](https://gaochenyang666-droid.github.io/PathTrial/en/guides/): порты VPS, QUIC/HTTP3 и IPv4/IPv6.
 **PathTrial — открытая CLI-утилита для диагностики сети на Rust с локальным MCP-сервером.** Она проверяет DNS, доступность сайтов, порты VPS, прокси и соединения IPv4/IPv6, TCP, TLS, UDP, QUIC и HTTP/3. Результаты сохраняются в JSON-отчётах с измеренными данными. Программа работает самостоятельно на macOS и Linux и через MCP-плагины Codex и Claude Code.
 **Языки сайта:** [简体中文](https://gaochenyang666-droid.github.io/PathTrial/) · [English](https://gaochenyang666-droid.github.io/PathTrial/en/) · [Español](https://gaochenyang666-droid.github.io/PathTrial/es/) · [Русский](https://gaochenyang666-droid.github.io/PathTrial/ru/)
 **Языки:** [简体中文](README.md) · [English](README.en.md) · [Español](README.es.md) · **Русский**
