@@ -1,4 +1,5 @@
 # PathTrial — 开源网络诊断与 VPS 排障工具 | Codex / Claude Code MCP 插件
+[**网络故障排查指南**](https://gaochenyang666-droid.github.io/PathTrial/guides/)：VPS 端口、QUIC/HTTP3 超时、IPv4/IPv6 异常（中文导读及英文教程）。
 **PathTrial 是开源 Rust 网络诊断 CLI 与 MCP 工具**，用于 DNS 解析检测、网站连接故障排查、VPS 端口测试、代理连接诊断，以及 IPv4/IPv6、TCP、TLS、UDP、QUIC 与 HTTP/3 测量。它生成可追溯探测证据的 JSON 报告，支持 macOS / Linux 独立运行，也可通过本地 MCP 插件接入 Codex 和 Claude Code。
 **网站语言：** [简体中文](https://gaochenyang666-droid.github.io/PathTrial/) · [English](https://gaochenyang666-droid.github.io/PathTrial/en/) · [Español](https://gaochenyang666-droid.github.io/PathTrial/es/) · [Русский](https://gaochenyang666-droid.github.io/PathTrial/ru/)
 **语言 / Languages / Idiomas / Языки:** **简体中文** · [English](README.en.md) · [Español](README.es.md) · [Русский](README.ru.md)
