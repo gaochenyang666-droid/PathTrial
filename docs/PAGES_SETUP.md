@@ -27,6 +27,15 @@ URLs in `docs/index.html` and `docs/download.html`, as well as the sitemap.
 - `.nojekyll` — publish static files without Jekyll transformations.
 - `robots.txt`, `sitemap.xml` — crawler instructions and canonical pages.
 
+## Troubleshooting guides and search
+
+- Chinese guide hub: `docs/guides/index.html`.
+- English guide hub and detailed articles: `docs/en/guides/`.
+- The canonical URLs are listed in the 13-page `docs/sitemap.xml`.
+- All four homepage languages link to the guides; Spanish and Russian navigation labels them as English-language content.
+- Google Search Console and Bing Webmaster Tools verification require owner-controlled accounts. Site maps aid discovery but do not guarantee indexing or ranking.
+- Diagnostic command examples must not be represented as real observed network results.
+
 ## Maintenance
 
 Whenever the public release changes, update links and version strings
