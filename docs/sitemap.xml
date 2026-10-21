@@ -8,4 +8,9 @@
   <url><loc>https://gaochenyang666-droid.github.io/PathTrial/en/download.html</loc><changefreq>monthly</changefreq></url>
   <url><loc>https://gaochenyang666-droid.github.io/PathTrial/es/download.html</loc><changefreq>monthly</changefreq></url>
   <url><loc>https://gaochenyang666-droid.github.io/PathTrial/ru/download.html</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://gaochenyang666-droid.github.io/PathTrial/guides/</loc></url>
+  <url><loc>https://gaochenyang666-droid.github.io/PathTrial/en/guides/</loc></url>
+  <url><loc>https://gaochenyang666-droid.github.io/PathTrial/en/guides/vps-port-unreachable.html</loc></url>
+  <url><loc>https://gaochenyang666-droid.github.io/PathTrial/en/guides/http3-udp443-timeout.html</loc></url>
+  <url><loc>https://gaochenyang666-droid.github.io/PathTrial/en/guides/ipv4-works-ipv6-fails.html</loc></url>
 </urlset>

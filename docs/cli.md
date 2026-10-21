@@ -6,7 +6,7 @@ This guide covers the standalone command-line interface. For Codex and Claude Co
 
 - Public prebuilt CLI: `v1.5.0-rc.1`
 - Published release candidate: `v1.5.0-rc.1` includes the guided `diagnose` subcommand in all three prebuilt distributions.
-- MCP core included in the public release: `1.4.0-rc.1`
+- MCP core included in the public release: `1.5.0-rc.1`
 - AI Plugins: `0.3.0` (ten MCP tools)
 - Core `1.5.0-rc.1` and AI Plugin `0.3.0` are compatible. The older [v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) release remains available.
 - `v1.5.0-rc.1` includes `pathtrial mcp`; the older `v1.3.0-rc.1` does not.
@@ -52,6 +52,8 @@ Exit codes:
 - `3`: the scan completed without enough evidence for a conclusion.
 
 An exit code describes this run. It does not describe the general health of the internet or the remote service.
+
+See the [troubleshooting guides](https://gaochenyang666-droid.github.io/PathTrial/en/guides/) for symptom-driven examples.
 
 ## Basic scan
 
