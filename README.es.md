@@ -4,7 +4,7 @@
 **Idiomas del sitio web:** [简体中文](https://gaochenyang666-droid.github.io/PathTrial/) · [English](https://gaochenyang666-droid.github.io/PathTrial/en/) · [Español](https://gaochenyang666-droid.github.io/PathTrial/es/) · [Русский](https://gaochenyang666-droid.github.io/PathTrial/ru/)
 **Idiomas:** [简体中文](README.md) · [English](README.en.md) · **Español** · [Русский](README.ru.md)
 [**Descargar v1.5.0-rc.1**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) · [**Informar de un error**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**Guía de integración con IA**](docs/ai-integrations.md) · [**Guía del CLI**](docs/cli.md)
-> **Versión actual:** PathTrial Core `v1.5.0-rc.1` es una versión candidata pública con diagnóstico guiado y servidor MCP local. AI Plugins `0.3.0` incluye diez herramientas. Hay binarios para macOS Apple Silicon, macOS Intel y Linux x86_64; no hace falta Rust.
+> **Versión actual:** PathTrial Core `v1.5.0-rc.1` es una versión candidata pública con diagnóstico guiado y servidor MCP local. AI Plugins `0.3.0` incluye diez herramientas. Los binarios publicados cubren macOS Apple Silicon, macOS Intel y Linux x86_64; no hace falta Rust. Windows x86_64 se empaqueta en el flujo de publicación de una versión posterior; `v1.5.0-rc.1` no incluye ese archivo.
 > **Versión anterior:** [v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) sigue disponible (nueve herramientas MCP). v1.5 añade `pathtrial_diagnose` y permite explicar informes diagnose mediante `pathtrial_explain_report`.
 > **Prueba la versión candidata:** los plugins Codex y Claude Code están en la rama predeterminada `main`. Puedes [informar de errores de instalación, compatibilidad o diagnóstico](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) indicando versiones, pasos y resultados esperados y observados, sin datos sensibles.
 ## Diagnóstico de DNS, puertos VPS, proxies e IPv4/IPv6
@@ -64,8 +64,16 @@ export PATHTRIAL_MCP_ALLOW_TARGETS="example.com:443"
 codex
 # Para Claude Code, ejecuta claude en su lugar desde esta terminal
 ~~~
-`PATHTRIAL_MCP_ALLOW_TARGETS` admite varios destinos `host:port` separados por comas o espacios. El servidor MCP debe heredar esta variable. **Una aplicación iniciada desde la interfaz gráfica puede no heredar el entorno de la terminal**; usa la configuración de entorno MCP del cliente o el argumento `--allow-target`. Consulta la [guía de integración](docs/ai-integrations.md).
-No uses comodines ni analices sistemas sin autorización. Reinicia el cliente al cambiar los permisos.
+`PATHTRIAL_MCP_ALLOW_TARGETS` admite varios destinos `host:port` separados por comas o espacios. El servidor MCP debe heredar esta variable. **Una aplicación de escritorio puede no heredar el entorno de la terminal.** No edites el `mcp.json` de la caché del Marketplace. Escribe un destino explícito por línea en un archivo del usuario. Los comodines y los prefijos CIDR se rechazan. Si el archivo no existe, todo sigue denegado por defecto:
+
+~~~bash
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/pathtrial"
+printf '%s\n' 'example.com:443' >> "${XDG_CONFIG_HOME:-$HOME/.config}/pathtrial/allow-targets"
+pathtrial mcp --print-allow-path
+~~~
+
+En Windows el archivo es `%APPDATA%\pathtrial\allow-targets`. `--print-allow-path` muestra la ruta y no muestra las reglas. Reinicia el cliente después de cambiar el archivo. Consulta la [guía de integración](docs/ai-integrations.md).
+No analices sistemas sin autorización.
 ### 2. Pregunta en lenguaje natural
 **La web no responde**
 > Usa PathTrial para diagnosticar example.com. Separa los fallos de DNS, TCP, TLS y HTTP y explica el resultado en español.
@@ -82,18 +90,40 @@ La [versión candidata pública v1.5.0-rc.1](https://github.com/gaochenyang666-d
 - [macOS Apple Silicon](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz)
 - [macOS Intel](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz)
 - [Linux x86_64](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz)
-Cada paquete incluye un archivo de comprobación SHA-256. Puedes usar el instalador anterior o descargar y verificar el archivo manualmente.
+Cada archivo publicado tiene una suma SHA-256. macOS y Linux usan `scripts/install.sh`. Windows x86_64 usa `scripts/install.ps1`. El script comprueba SHA-256 y copia `pathtrial.exe` a `%LOCALAPPDATA%\PathTrial`. No cambia PATH, el cortafuegos, DNS ni las rutas. `v1.5.0-rc.1` no contiene el archivo de Windows; ejecutarlo contra esa etiqueta falla la descarga y eso no es una instalación correcta. Los límites están en [Windows](docs/windows.md).
+
+~~~powershell
+# Solo cuando la versión elegida ya incluye pathtrial-x86_64-pc-windows-msvc.tar.gz
+$env:PATHTRIAL_VERSION = "v1.5.0-rc.1"
+powershell -File .\scripts\install.ps1
+& "$env:LOCALAPPDATA\PathTrial\pathtrial.exe" --version
+~~~
+
+Después de instalar:
+
 ~~~bash
 pathtrial --version
 pathtrial scan example.com --profile web --rounds 5 --redact-ips
 ~~~
-Consulta la [guía del CLI](docs/cli.md) para HTTP, QUIC, UDP, proxies, recopilación en ambos extremos y códigos de salida.
+
+Vista sin conexión, línea base local y un par temporal en una máquina que controles:
+
+~~~bash
+pathtrial report render report.json --format html --out report.html --redact-ips
+pathtrial report render report.json --format svg --out report.svg
+pathtrial baseline path
+pathtrial baseline save report.json --redact-ips
+pathtrial baseline compare later.json --format json
+sh scripts/peer.sh demo 0.0.0.0:39002 0.0.0.0:39001 120
+~~~
+
+`report render` lee un JSON local. No usa la red y no modifica el archivo de entrada. `--redact-ips` enmascara direcciones solo en esa vista. `baseline save` guarda ese informe en el directorio de datos local. `baseline compare` usa solo ese archivo y el informe actual. Si se pueden comparar directamente, el resultado es better, worse o same y cita los identificadores de evidencia del archivo actual. Si no, la relación es `not_established`; no se inventa historial. El código de salida 2 indica una relación worse. El código 3 indica que no son comparables. `peer.sh` ofrece UDP echo y un servidor collect con tiempo limitado en las direcciones que indiques. No cambia el cortafuegos, DNS ni las rutas, y no guarda las cargas UDP. Las direcciones que no son de loopback necesitan `--allow-public-bind`. Consulta la [guía del CLI](docs/cli.md) para HTTP, QUIC, UDP, proxies, recopilación en ambos extremos y códigos de salida.
 ## Estado de la beta y límites conocidos
 - Núcleo: `v1.5.0-rc.1`, publicado como **versión candidata**, no estable.
 - AI Plugins: `0.3.0` (10 herramientas); el plugin anterior v1.4 era `0.2.0` (9 herramientas).
 - Paquetes: macOS ARM64, macOS Intel y Linux x86_64, compilados correctamente con SHA-256.
 - Verificación: la [publicación v1.5 en tres plataformas](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39255364100) superó las compilaciones y pruebas MCP. Se verificaron las sesiones reales de Codex; el proyecto informó que completó la sesión de Claude Code.
-- Las pruebas de red requieren permisos explícitos. No hay interfaz gráfica ni reparación automática. Windows x86_64 se construye en el flujo de publicación posterior; los activos de `v1.5.0-rc.1` no incluyen ese binario. Límites: [Windows](docs/windows.md). Los comandos nuevos (`report render`, `baseline`, archivo de autorización MCP y `endpoint --peer`) están documentados en [README.en.md](README.en.md) y [docs/cli.md](docs/cli.md).
+- Las pruebas de red requieren permisos explícitos. No hay interfaz gráfica ni reparación automática. Windows x86_64 se construye en el flujo de publicación posterior; los activos de `v1.5.0-rc.1` no incluyen ese binario. Límites: [Windows](docs/windows.md). Los comandos `report render`, `baseline` y `peer.sh` están en la sección [Usar PathTrial sin un cliente de IA](#usar-pathtrial-sin-un-cliente-de-ia).
 Consulta la [matriz de aceptación](docs/ai-plugin-completeness.md) y el [flujo de publicación](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39149532255). Puedes [informar de errores reproducibles](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md).
 ## Preguntas frecuentes sobre diagnóstico de red
 ### Si no abre una web, ¿cómo diferenciar un fallo de DNS, TCP, TLS o HTTP?

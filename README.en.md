@@ -90,12 +90,34 @@ The same [public v1.5.0-rc.1 release candidate](https://github.com/gaochenyang66
 - [macOS Apple Silicon](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz)
 - [macOS Intel](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz)
 - [Linux x86_64](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz)
-Each archive has a SHA-256 checksum file. Use the installer above, or download and verify the archive yourself:
+Each published archive has a SHA-256 checksum file. macOS and Linux use `scripts/install.sh`. Windows x86_64 uses `scripts/install.ps1`. That script checks SHA-256 and copies `pathtrial.exe` to `%LOCALAPPDATA%\PathTrial`. It does not change PATH, firewall, DNS, or routes. The `v1.5.0-rc.1` release has no Windows archive, so running the script for that tag fails the download. That is not a successful install. Limits are in [Windows](docs/windows.md).
+
+~~~powershell
+# Run only after the chosen release contains pathtrial-x86_64-pc-windows-msvc.tar.gz
+$env:PATHTRIAL_VERSION = "v1.5.0-rc.1"
+powershell -File .\scripts\install.ps1
+& "$env:LOCALAPPDATA\PathTrial\pathtrial.exe" --version
+~~~
+
+After installation:
+
 ~~~bash
 pathtrial --version
 pathtrial scan example.com --profile web --rounds 5 --redact-ips
 ~~~
-See the [CLI guide](docs/cli.md) for HTTP, QUIC, UDP, proxies, two-ended collection and exit codes.
+
+Offline report view, a local baseline, and a temporary peer on a machine you control:
+
+~~~bash
+pathtrial report render report.json --format html --out report.html --redact-ips
+pathtrial report render report.json --format svg --out report.svg
+pathtrial baseline path
+pathtrial baseline save report.json --redact-ips
+pathtrial baseline compare later.json --format json
+sh scripts/peer.sh demo 0.0.0.0:39002 0.0.0.0:39001 120
+~~~
+
+`report render` reads one local JSON file. It does not use the network and does not modify the input. `--redact-ips` masks addresses in that view only. `baseline save` stores that report in the local data directory. `baseline compare` uses only that file and the current report. Directly comparable runs are labeled better, worse, or same and cite evidence IDs from the current file. Otherwise the relation is `not_established`; no history is invented. Exit code 2 means a worse relation. Exit code 3 means the files are not comparable. `peer.sh` serves UDP echo and a bounded collect server on the addresses you name. It does not change firewall, DNS, or routes, and it does not store UDP payloads. Non-loopback addresses need `--allow-public-bind`. See the [CLI guide](docs/cli.md) for HTTP, QUIC, UDP, proxies, two-ended collection and exit codes.
 ## Beta status and known limits
 - Core: `v1.5.0-rc.1` publicly released as a **release candidate, not a stable release**.
 - AI Plugins: `0.3.0` (ten tools); the previous v1.4 plugin used `0.2.0` (nine tools).
@@ -105,18 +127,7 @@ See the [CLI guide](docs/cli.md) for HTTP, QUIC, UDP, proxies, two-ended collect
 See the [engineering acceptance matrix](docs/ai-plugin-completeness.md) and [release workflow](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39149532255). Please [report reproducible beta issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md).
 ## Network diagnostics FAQ
 ### Website not loading: how do I tell DNS, TCP, TLS and HTTP failures apart?
-For an authorized target, run `pathtrial scan example.com --profile web --rounds 5 --redact-ips`, followed by `pathtrial http https://example.com/` to inspect its HTTP response. Results are recorded by protocol layer; a successful Ping does not prove that the website works.
-
-Offline view, local baseline, and a temporary peer on a host you control:
-
-~~~bash
-pathtrial report render report.json --format html --out report.html --redact-ips
-pathtrial baseline save report.json --redact-ips
-pathtrial baseline compare later.json --format json
-sh scripts/peer.sh demo 0.0.0.0:39002 0.0.0.0:39001 120
-~~~
-
-These commands read local files or listen on the address you named. They do not upload reports or change firewall, DNS, or routes. Baseline relations cite evidence IDs from the saved files only. Spanish and Russian READMEs point here for these commands; their install pages no longer say Windows is absent, and the full command walkthrough is in this file and [docs/cli.md](docs/cli.md).
+For an authorized target, run `pathtrial scan example.com --profile web --rounds 5 --redact-ips`, followed by `pathtrial http https://example.com/` to inspect its HTTP response. Results are recorded by protocol layer; a successful Ping does not prove that the website works. The offline view, baseline, and peer commands are in [Use PathTrial without an AI client](#use-pathtrial-without-an-ai-client).
 ### Can PathTrial troubleshoot a VPS, IPv4/IPv6, SOCKS5 proxies and HTTP/3?
 Yes. The CLI offers IPv4/IPv6, TCP/TLS, SOCKS5 and HTTP CONNECT proxy checks, QUIC handshakes, and real HTTP/3 requests when the server supports them. See the [CLI guide](docs/cli.md). A UDP timeout alone cannot establish the root cause.
 ### How do I use PathTrial with Codex or Claude Code via MCP?

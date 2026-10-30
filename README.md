@@ -92,21 +92,34 @@ DNS、IPv4/IPv6、TCP、TLS、HTTP、ICMP、路由追踪、UDP Echo、QUIC、HTT
 - [macOS Apple Silicon](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz)
 - [macOS Intel](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz)
 - [Linux x86_64](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz)
-每个已发布包都有相应的 SHA-256 校验文件。Windows x86_64 的安装脚本是 `scripts/install.ps1`，它会在**包含该架构归档的后续版本**里校验 SHA-256 后复制 `pathtrial.exe`。`v1.5.0-rc.1` 还没有这个归档。限制见 [Windows 说明](docs/windows.md)。安装后试运行：
+每个已发布包都有相应的 SHA-256 校验文件。macOS 与 Linux 用仓库里的 `scripts/install.sh`。Windows x86_64 用 `scripts/install.ps1`：它在**后续包含该归档的版本**里校验 SHA-256，再把 `pathtrial.exe` 复制到 `%LOCALAPPDATA%\PathTrial`。它不修改 PATH、防火墙、DNS 或路由。`v1.5.0-rc.1` 还没有 Windows 归档，对这个标签运行安装脚本会下载失败，这不是安装成功。限制见 [Windows 说明](docs/windows.md)。
+
+~~~powershell
+# 仅在目标版本已发布 pathtrial-x86_64-pc-windows-msvc.tar.gz 之后执行
+$env:PATHTRIAL_VERSION = "v1.5.0-rc.1"
+powershell -File .\scripts\install.ps1
+& "$env:LOCALAPPDATA\PathTrial\pathtrial.exe" --version
+~~~
+
+安装后试运行：
+
 ~~~bash
 pathtrial --version
 pathtrial scan example.com --profile web --rounds 5 --redact-ips
 ~~~
-离线查看已保存的报告、和本机基线对比，或在自己的 VPS 上临时跑采集端：
+
+离线查看已保存的报告、和本机基线对比，或在自己的机器上临时跑采集端：
 
 ~~~bash
 pathtrial report render report.json --format html --out report.html --redact-ips
+pathtrial report render report.json --format svg --out report.svg
+pathtrial baseline path
 pathtrial baseline save report.json --redact-ips
 pathtrial baseline compare later.json --format json
 sh scripts/peer.sh demo 0.0.0.0:39002 0.0.0.0:39001 120
 ~~~
 
-这些命令只读本地文件或在你指定的地址上监听，不上传报告，也不修改防火墙、DNS 或路由。基线对比只使用你保存过的那一份和当前文件，并带上证据 ID。更多 HTTP、QUIC、UDP、代理、双端采集和退出码说明见 [CLI 使用指南](docs/cli.md)。
+`report render` 只读本地 JSON，不联网，也不改原文件。`--redact-ips` 只遮盖这次输出里的 IP。`baseline save` 把这一份报告存到本机数据目录；`baseline compare` 只拿它和当前文件比较。可以直接比较时给出 better、worse 或 same，并引用当前文件里的证据 ID；否则是 `not_established`，不会编造历史。更差时退出码为 2，不可比时为 3。`peer.sh` 在你写出的地址上同时提供 UDP echo 和有限时间的 collect 服务，不修改防火墙、DNS 或路由，也不保存 UDP 载荷。非回环地址才需要 `--allow-public-bind`。更多 HTTP、QUIC、UDP、代理、双端采集和退出码说明见 [CLI 使用指南](docs/cli.md)。
 ## 测试版状态与已知限制
 - PathTrial Core：`v1.5.0-rc.1`，已公开发布为 Release Candidate，**不是稳定正式版**。
 - AI Plugins：`0.3.0`（10 工具）；历史 v1.4 插件为 `0.2.0`（9 工具）。

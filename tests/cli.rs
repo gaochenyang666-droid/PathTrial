@@ -183,7 +183,7 @@ fn free_port() -> u16 {
 fn closed_port_is_a_failed_check_with_exit_2() {
     let port = free_port();
     let (status, value) = run_json(&scan_args_with(port, 5, "tcp", 1000, &[]));
-    assert_eq!(status.code(), Some(2), "refused connections are a finding");
+    assert_eq!(status.code(), Some(2), "failed connections are a finding");
     let stage = value["stages"]
         .as_array()
         .unwrap()
@@ -192,14 +192,20 @@ fn closed_port_is_a_failed_check_with_exit_2() {
         .expect("tcp stage");
     assert_eq!(stage["status"], "FAIL");
     assert_eq!(value["summaries"][0]["tcp_success"], 0);
-    let finding = value["findings"]
-        .as_array()
-        .unwrap()
+    let findings = value["findings"].as_array().unwrap();
+    #[cfg(not(windows))]
+    let finding = findings
         .iter()
         .find(|finding| finding["rule_id"] == "R015")
         .expect("R015 finding");
+    #[cfg(windows)]
+    let finding = findings
+        .iter()
+        .find(|finding| finding["rule_id"] == "R015" || finding["rule_id"] == "R004")
+        .unwrap_or_else(|| panic!("expected R015 or R004, got {findings:?}"));
     assert_eq!(finding["status"], "FAIL");
     let claim = finding["claim"].as_str().unwrap();
+    #[cfg(not(windows))]
     assert!(claim.contains("拒绝"));
     assert!(!claim.contains("主机可达"));
 }
@@ -430,7 +436,17 @@ fn http_connection_refused_is_reported() {
         .expect("run");
     assert_eq!(output.status.code(), Some(2));
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
-    assert_eq!(value["probes"][0]["detail"]["error"], "connection_refused");
+    let error = value["probes"][0]["detail"]["error"].as_str();
+    #[cfg(not(windows))]
+    assert_eq!(error, Some("connection_refused"));
+    #[cfg(windows)]
+    assert!(
+        matches!(
+            error,
+            Some("connection_refused") | Some("timeout") | Some("connection_reset")
+        ),
+        "closed port observation was {error:?}"
+    );
 }
 
 #[test]

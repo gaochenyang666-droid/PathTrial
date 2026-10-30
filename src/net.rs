@@ -456,8 +456,10 @@ mod tests {
 
     #[test]
     fn interface_lookup_reports_missing_names() {
-        assert!(interface_index("lo0").is_some() || interface_index("lo").is_some());
         assert!(interface_index("definitely-not-an-interface").is_none());
+        // Windows has no `lo`/`lo0`. A missing name is the portable check.
+        #[cfg(unix)]
+        assert!(interface_index("lo0").is_some() || interface_index("lo").is_some());
     }
 
     #[test]
