@@ -101,6 +101,7 @@ fn shared_skills_match_both_generated_copies() {
     for generated in [
         "plugins/codex/pathtrial/skills",
         "plugins/claude-code/pathtrial/skills",
+        "plugins/cursor/pathtrial/skills",
     ] {
         assert_eq!(
             shared,
@@ -133,6 +134,97 @@ fn marketplaces_point_to_existing_plugin_directories() {
         .join("plugins/claude-code/pathtrial")
         .join(".claude-plugin/plugin.json")
         .exists());
+
+    let cursor = read_json(&root().join(".cursor-plugin/marketplace.json"));
+    assert_eq!(cursor["name"], "pathtrial");
+    assert_eq!(cursor["metadata"]["pluginRoot"], "plugins/cursor");
+    assert_eq!(cursor["plugins"][0]["source"], "pathtrial");
+    assert!(root()
+        .join("plugins/cursor/pathtrial")
+        .join(".cursor-plugin/plugin.json")
+        .exists());
+}
+
+#[test]
+fn cursor_package_keeps_default_deny_mcp_and_rule() {
+    let plugin = root().join("plugins/cursor/pathtrial");
+    let manifest = read_json(&plugin.join(".cursor-plugin/plugin.json"));
+    assert_eq!(manifest["name"], "pathtrial");
+    assert_eq!(manifest["version"], "0.3.0");
+    assert!(manifest.get("mcpServers").is_none());
+
+    let mcp = read_json(&plugin.join("mcp.json"));
+    let server = &mcp["mcpServers"]["pathtrial"];
+    assert_eq!(server["type"], "stdio");
+    assert_eq!(server["command"], "pathtrial");
+    assert_eq!(server["args"].as_array().map(Vec::len), Some(1));
+    assert_eq!(server["args"][0], "mcp");
+    let serialized = serde_json::to_string(&mcp).unwrap();
+    assert!(!serialized.contains("allow-target"));
+    assert!(!serialized.contains('*'));
+
+    let rule = std::fs::read_to_string(plugin.join("rules/pathtrial-evidence.mdc")).unwrap();
+    let rule = rule.replace("\r\n", "\n");
+    assert!(rule.starts_with("---\n"), "Cursor rule lacks frontmatter");
+    assert!(rule.contains("alwaysApply: false"));
+    assert!(rule.contains("allow-targets"));
+    for skill in [
+        "network-diagnostics",
+        "ipv4-ipv6-comparison",
+        "explain-report",
+        "setup",
+    ] {
+        assert!(plugin.join("skills").join(skill).join("SKILL.md").exists());
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn cursor_install_script_merges_stdio_server_without_allowlist() {
+    let python = ["python3", "python"]
+        .into_iter()
+        .find(|name| {
+            std::process::Command::new(name)
+                .arg("--version")
+                .output()
+                .is_ok()
+        })
+        .expect("python3 or python");
+    let dir = std::env::temp_dir().join(format!(
+        "pathtrial-cursor-mcp-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&dir).unwrap();
+    let script = root().join("scripts/install-cursor-mcp.sh");
+    let first = std::process::Command::new("sh")
+        .arg(&script)
+        .arg(&dir)
+        .output()
+        .expect("run installer");
+    assert!(
+        first.status.success(),
+        "installer failed: {}",
+        String::from_utf8_lossy(&first.stderr)
+    );
+    let path = dir.join(".cursor/mcp.json");
+    let value = read_json(&path);
+    assert_eq!(value["mcpServers"]["pathtrial"]["args"][0], "mcp");
+    let text = std::fs::read_to_string(&path).unwrap();
+    assert!(!text.contains("allow-target"));
+    assert!(!text.contains('*'));
+
+    let again = std::process::Command::new("sh")
+        .arg(&script)
+        .arg(&dir)
+        .output()
+        .expect("rerun installer");
+    assert!(again.status.success());
+    let _ = python;
+    let _ = std::fs::remove_dir_all(dir);
 }
 
 #[test]

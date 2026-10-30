@@ -1,15 +1,15 @@
 # PathTrial AI Plugins
 
-PathTrial AI Plugins connect Codex and Claude Code to the diagnostic engine
-through a local MCP stdio server. The published v1.4 binary exposes nine tools;
-the published v1.5 core exposes ten tools.
+PathTrial AI Plugins connect Codex, Claude Code, and Cursor to the diagnostic
+engine through a local MCP stdio server. The published v1.4 binary exposes nine
+tools; the published v1.5 core exposes ten tools.
 
 ## Architecture
 
 ```text
-Codex plugin ─┐
-              ├─ shared Skills → pathtrial mcp → PathTrial probes → evidence report
-Claude plugin ┘
+Codex plugin ──┐
+Claude plugin ─┼─ shared Skills → pathtrial mcp → PathTrial probes → evidence report
+Cursor plugin ─┘
 ```
 
 - **PathTrial Core** performs DNS, TCP, TLS, HTTP, UDP Echo, QUIC, HTTP/3 and
@@ -18,6 +18,8 @@ Claude plugin ┘
   blocked unless the target matches a startup allowlist. Capabilities reports
   only an address-free summary of that allowlist.
 - **AI Plugins** contain client-specific manifests and the same shared Skills.
+  The Cursor package also includes one evidence rule. It does not change the
+  probe tools.
 
 The current published core `1.5.0-rc.1` uses plugin `0.3.0` (ten tools), including
 `pathtrial_diagnose` and diagnose-aware `pathtrial_explain_report`. Install the
@@ -189,6 +191,83 @@ The source-checkout file `plugins/claude-code/pathtrial/.mcp.json` is for local
 plugin development with `--plugin-dir`; it is not the path a marketplace user
 must edit.
 
+## Cursor plugin
+
+Plugin path:
+
+```text
+plugins/cursor/pathtrial/
+```
+
+This is a Cursor Plugin, not only a hand-written MCP snippet. The manifest is
+`.cursor-plugin/plugin.json`. Cursor discovers `skills/`, `rules/*.mdc`, and
+`mcp.json` from that directory. The repository marketplace is:
+
+```text
+.cursor-plugin/marketplace.json
+```
+
+It sets `metadata.pluginRoot` to `plugins/cursor` and the plugin `source` to
+`pathtrial`, which resolves to `plugins/cursor/pathtrial/.cursor-plugin/plugin.json`.
+That shape matches the Cursor plugin reference checked for this change
+(<https://cursor.com/docs/reference/plugins>, <https://cursor.com/docs/plugins>,
+<https://cursor.com/docs/mcp>).
+
+The public Cursor Marketplace does not list PathTrial. Listing requires a
+manual review at <https://cursor.com/marketplace/publish>. This repository has
+not been submitted. A team can import the Git repository from Dashboard →
+Plugins & MCPs; that import was not executed here.
+
+### Local plugin load
+
+Cursor documents this layout for a plugin that is not in a marketplace yet.
+Enterprise admins can disable it.
+
+```bash
+mkdir -p "${HOME}/.cursor/plugins/local"
+rm -rf "${HOME}/.cursor/plugins/local/pathtrial"
+cp -R plugins/cursor/pathtrial "${HOME}/.cursor/plugins/local/pathtrial"
+```
+
+Restart Cursor or run Developer: Reload Window. Open Customize and confirm the
+PathTrial skills, the evidence rule, and the `pathtrial` MCP server. The
+installed server name may appear as `plugin-pathtrial-pathtrial`. Enable it
+there. `pathtrial` must be on the PATH Cursor uses. This copy does not download
+the CLI.
+
+### Project or user `mcp.json`
+
+Use this when you want the MCP server without loading the plugin directory.
+Project config is `.cursor/mcp.json`. User config is `~/.cursor/mcp.json` on
+macOS and Linux, and `%USERPROFILE%\.cursor\mcp.json` on Windows. If both
+exist, Cursor gives the project server priority for the same name.
+
+From a PathTrial checkout:
+
+```bash
+sh scripts/install-cursor-mcp.sh /path/to/your/project
+```
+
+The script merges this server and refuses to replace a different `pathtrial`
+entry:
+
+```json
+{
+  "mcpServers": {
+    "pathtrial": {
+      "type": "stdio",
+      "command": "pathtrial",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Do not add `--allow-target` or a wildcard to that file. Cursor Desktop may not
+inherit `PATHTRIAL_MCP_ALLOW_TARGETS`. Create the allow file from Probe
+authorization, then restart Cursor. In Customize, enable the server and ask it
+to call `pathtrial_capabilities`.
+
 ## MCP tools
 
 | Tool | Network access | Purpose |
@@ -270,8 +349,8 @@ separate TCP, TLS and HTTP evidence, and do not claim a packet-loss location.
 
 1. Verify `pathtrial --version`.
 2. Confirm `pathtrial mcp --help` lists `--allow-target`.
-3. Add one exact target to the plugin MCP arguments.
-4. Restart the AI client.
+3. Add one exact target through the user allow file, or through `--allow-target` when you start the server yourself. Do not put a wildcard in `mcp.json`.
+4. Restart the AI client. Cursor Desktop is included: reload the window after changing the allow file.
 5. Call `pathtrial_capabilities` and review the authorization summary.
 6. Try one target outside the allowlist and confirm `target_not_allowed`.
 7. Run one low-round scan against the authorized target.
@@ -304,7 +383,7 @@ The PathTrial CLI can remain installed after plugin removal.
 | `pathtrial` not found | Install the CLI or add its directory to `PATH` |
 | `target_not_allowed` | Add the exact host or IP and port to the allow file or `--allow-target`, then restart the client |
 | Private IP denied | Authorize the exact IP and port; a public hostname rule doesn't cover loopback |
-| No tools listed | Restart the client and check `codex mcp list` or the Claude `/mcp` panel |
+| No tools listed | Restart the client. Check `codex mcp list`, the Claude `/mcp` panel, or Cursor Customize |
 | `SKIP` result | A required precondition was absent; it is not a pass |
 | `HTTP 403/500` | The server answered; inspect the application status separately from network reachability |
 | QUIC handshake succeeds but HTTP/3 fails | Keep the failure at the HTTP/3 stage |
@@ -317,13 +396,14 @@ The PathTrial CLI can remain installed after plugin removal.
 | MCP initialize, tools/list, tools/call | Verified by 21 local protocol tests |
 | Target allowlist rejection | Verified |
 | Local scan, HTTP and report analysis through MCP | Verified |
-| Shared skills identical in both plugins | Verified |
+| Shared skills identical in Codex, Claude Code, and Cursor packages | Verified by `tests/plugins.rs` |
 | Codex marketplace add and plugin install | Verified with a temporary `CODEX_HOME` |
 | Codex MCP registration visible in `codex mcp list` | Verified |
 | Codex model-driven tool calls in a live session | VERIFIED for v0.2.0: capabilities, authorized TCP scan 1/1, real `tcp_ipv4_001` explanation and unauthorized `target_not_allowed` denial |
 | Claude Code manifest validation and live tool call | PARTIAL: default-main install, four Skills and MCP Connected verified; a live model tool call has not yet been recorded |
 | Precompiled release containing `pathtrial mcp` | VERIFIED for `v1.5.0-rc.1`; macOS ARM, macOS Intel and Linux x86_64 release smoke passed |
 | Windows plugin support | UNVERIFIED. The core has a Windows x86_64 build path and an allow file, but this document does not record a Windows host run or a published Windows release asset |
+| Cursor plugin package shape | PARTIAL. `.cursor-plugin/plugin.json`, `mcp.json` (`type: stdio`, `command: pathtrial`, `args: ["mcp"]`), shared skills, and `rules/pathtrial-evidence.mdc` match the Cursor docs fetched for this change. A live Cursor Desktop Customize install, a team-marketplace import, and a model-driven tool call were not executed. The package is not listed on the public Cursor Marketplace |
 
 ## Reporting bugs
 
@@ -346,3 +426,6 @@ network reports.
 - Claude Code plugins: <https://code.claude.com/docs/en/plugins/overview>
 - Claude Code manifest: <https://code.claude.com/docs/en/plugins/manifest-reference>
 - Claude Code marketplace: <https://code.claude.com/docs/en/plugins/create-marketplace>
+- Cursor plugins: <https://cursor.com/docs/plugins>
+- Cursor plugin reference: <https://cursor.com/docs/reference/plugins>
+- Cursor MCP: <https://cursor.com/docs/mcp>
