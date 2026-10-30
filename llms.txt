@@ -6,7 +6,7 @@ This document is a navigation index for language models, readers, and search too
 
 ## Agent entry
 
-The machine-first section is `## For AI assistants` in [README.en.md](README.en.md), `## 给 AI 助手` in [README.md](README.md), `## Para asistentes de IA` in [README.es.md](README.es.md), and `## Для ИИ-ассистентов` in [README.ru.md](README.ru.md). Current prerelease: `v1.5.0-rc.2`. Success check: `pathtrial --version` prints `pathtrial 1.5.0-rc.2`.
+The machine-first section is `### Agent quickstart` in [README.en.md](README.en.md), `### Agent 速览` in [README.md](README.md), `### Inicio rápido` in [README.es.md](README.es.md), and `### Быстрый старт` in [README.ru.md](README.ru.md). Current prerelease: `v1.5.0-rc.2`. Success check: `pathtrial --version` prints `pathtrial 1.5.0-rc.2`.
 
 MCP tool IDs: `pathtrial_capabilities`, `pathtrial_scan`, `pathtrial_http`, `pathtrial_quic`, `pathtrial_http3`, `pathtrial_proxy_test`, `pathtrial_udp_echo`, `pathtrial_diagnose`, `pathtrial_compare_reports`, `pathtrial_explain_report`.
 
@@ -17,10 +17,10 @@ Probes are default-deny. Ask before installing. Do not probe a target the user h
 - [Network troubleshooting guides](https://gaochenyang666-droid.github.io/PathTrial/en/guides/): evidence-first VPS TCP port, HTTP/3 UDP 443 and IPv4/IPv6 tutorials.
 - [中文网络排障指南](https://gaochenyang666-droid.github.io/PathTrial/guides/): Chinese introduction and links to English technical tutorials.
 
-- [Simplified Chinese README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.md): `## 给 AI 助手` is the machine-first block; the human guide follows.
-- [English README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.en.md): `## For AI assistants` is the machine-first block; the human guide follows.
-- [Spanish README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.es.md): `## Para asistentes de IA` es el bloque inicial para modelos; después va la guía humana.
-- [Russian README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.ru.md): `## Для ИИ-ассистентов` — блок для моделей; дальше идёт обычное руководство.
+- [Simplified Chinese README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.md): `### Agent 速览` is the machine-first block; the human guide follows.
+- [English README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.en.md): `### Agent quickstart` is the machine-first block; the human guide follows.
+- [Spanish README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.es.md): `### Inicio rápido` es el bloque inicial; después va la guía humana.
+- [Russian README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.ru.md): `### Быстрый старт` — краткий блок; дальше идёт обычное руководство.
 - [GitHub Releases](https://github.com/gaochenyang666-droid/PathTrial/releases): prebuilt packages and SHA-256 checksum files. Version v1.5.0-rc.2 is the current prerelease; its workflow publishes Windows x86_64 with macOS and Linux. v1.5.0-rc.1 remains available without a Windows archive. v1.4.0-rc.1 remains an archived historical release.
 - [CLI guide](https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/cli.md): standalone HTTP, QUIC, UDP, proxy, collection, report and redaction commands.
 - Guided diagnosis: `pathtrial diagnose --scenario web|vps|latency|proxy|local|dns|tcp|tls|http|dual-stack|udp-quic`.
