@@ -56,6 +56,11 @@ The package already follows the checklist in the
   `${VAR}` placeholder, so the manifest does not declare plugin variables.
 - The repository is open source. Do not add an allowlist to the marketplace
   MCP config.
+- Logotype for the publish form, after `docs/logo.png` and `docs/logo.svg` are
+  on `main` and GitHub Pages has deployed `docs/`:
+  `https://gaochenyang666-droid.github.io/PathTrial/logo.png` and
+  `https://gaochenyang666-droid.github.io/PathTrial/logo.svg`.
+  Both are 512×512 with a background plate.
 
 ## Adding or changing a rule
 
