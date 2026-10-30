@@ -20,4 +20,4 @@ pathtrial mcp --allow-target example.com:443
    - Linux and macOS: `$XDG_CONFIG_HOME/pathtrial/allow-targets` or `~/.config/pathtrial/allow-targets`
    - Windows: `%APPDATA%\pathtrial\allow-targets`
    - `pathtrial mcp --print-allow-path` prints that path and does not print the rules. A missing file stays default-deny.
-7. Windows x86_64 is a build target with limits. The published `v1.5.0-rc.1` assets do not include a Windows binary. On Windows, `--bind-interface` is unsupported and must not fall back to another interface. ICMP jitter, per-target routes, and Wi-Fi dBm are not established. Do not describe `SKIP` as a pass.
+7. `v1.5.0-rc.2` is the prerelease that packages Windows x86_64. `v1.5.0-rc.1` does not include that archive. On Windows, `--bind-interface` is unsupported and must not fall back to another interface. ICMP jitter, per-target routes, and Wi-Fi dBm are not established. Do not describe `SKIP` as a pass.

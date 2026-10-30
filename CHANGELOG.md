@@ -3,27 +3,27 @@
 All notable changes to PathTrial. The format follows Keep a Changelog, and the
 project uses semantic versioning for both the binary and the report schema.
 
-## [Unreleased]
+## [1.5.0-rc.2] - 2026-10-30
 
-Not a stable release. Existing `v1.5.0-rc.1` and `v1.4.0-rc.1` tags are unchanged.
+Prerelease. `v1.5.0-rc.1` and `v1.4.0-rc.1` tags and assets stay as published.
 
 ### Added
 
-- Windows x86_64 is a release-workflow target (`x86_64-pc-windows-msvc`) with the same archive and SHA-256 layout as the other platforms. `scripts/install.ps1` installs that archive without Rust once a release contains it. Published `v1.5.0-rc.1` assets do not include Windows.
-- `pathtrial mcp` reads an explicit allow file (`--allow-file`, `PATHTRIAL_MCP_ALLOW_FILE`, or the user config path when that file already exists). Marketplace `mcp.json` stays `["mcp"]`. Missing files remain default-deny. Wildcards and CIDR rules are rejected.
+- Release workflow target `x86_64-pc-windows-msvc`, archive `pathtrial-<version>-x86_64-pc-windows-msvc.tar.gz` with a SHA-256 file, and `install.ps1` on the release. `v1.5.0-rc.1` still has no Windows archive.
+- `pathtrial mcp` reads an explicit allow file (`--allow-file`, `PATHTRIAL_MCP_ALLOW_FILE`, or the user config path when that file already exists). Marketplace and Cursor `mcp.json` stay `["mcp"]`. Missing files remain default-deny. Wildcards and CIDR rules are rejected.
 - `pathtrial report render` writes an offline HTML, SVG, or text view of a saved JSON report. It does not upload the file or add measurements.
 - `pathtrial baseline save` and `pathtrial baseline compare` store one local baseline per target identity and report better, worse, same, or not_established with evidence IDs from the current file.
 - `pathtrial endpoint --peer` and `scripts/peer.sh` run a bounded UDP echo plus collect server. They do not change firewall, DNS, or routes.
-- Cursor plugin package at `plugins/cursor/pathtrial/` with `.cursor-plugin/plugin.json`, default-deny `mcp.json`, shared skills, and one evidence rule. `scripts/install-cursor-mcp.sh` merges that server into a project `.cursor/mcp.json` without an allowlist. The public Cursor Marketplace listing was not submitted.
+- Cursor plugin package at `plugins/cursor/pathtrial/` with `.cursor-plugin/plugin.json`, default-deny `mcp.json`, shared skills, and one evidence rule. `scripts/install-cursor-mcp.sh` merges that server into a project `.cursor/mcp.json`. The public Cursor Marketplace listing was not submitted.
 
 ### Path to 1.5.0 stable
 
-Do not retag `v1.5.0-rc.1`. A stable `1.5.0` still needs all of the following:
+Do not retag `v1.5.0-rc.1` or `v1.5.0-rc.2`. A stable `1.5.0` still needs all of the following:
 
-- A Windows `windows-2022` CI run and a published Windows archive whose SHA-256 smoke downloads the asset. Until that run is green, Windows is not VERIFIED. `--bind-interface`, per-target routes, ICMP jitter, and Wi-Fi dBm stay unsupported or not established on Windows.
+- The `v1.5.0-rc.2` release workflow must list the Windows archive and its SHA-256 file. Until that asset is observed, Windows download is not VERIFIED. `--bind-interface`, per-target routes, ICMP jitter, and Wi-Fi dBm stay not established on Windows.
 - Linux ARM64 is still not a release target.
 - Issue #3 remains the field-report tracker. No community results are claimed.
-- The allow-file, report view, baseline, and peer commands need to ship in a new tag after review. They are not in the `v1.5.0-rc.1` binary.
+- Cursor Desktop Customize and a live `pathtrial_capabilities` call are still unverified. The public Marketplace listing is not submitted.
 - Claude Code live model coverage that was only partially recorded for earlier plugin builds is not re-certified by this changelog.
 - Stable publication is a new version bump, changelog freeze, and tag. It is not a moving of an existing tag.
 

@@ -6,7 +6,7 @@
 $ErrorActionPreference = "Stop"
 
 $Repo = "gaochenyang666-droid/PathTrial"
-$Version = if ($env:PATHTRIAL_VERSION) { $env:PATHTRIAL_VERSION } else { "v1.5.0-rc.1" }
+$Version = if ($env:PATHTRIAL_VERSION) { $env:PATHTRIAL_VERSION } else { "v1.5.0-rc.2" }
 $BaseUrl = "https://github.com/$Repo/releases/download/$Version"
 $Asset = "pathtrial-x86_64-pc-windows-msvc.tar.gz"
 $AssetUrl = "$BaseUrl/$Asset"

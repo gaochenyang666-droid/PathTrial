@@ -34,6 +34,29 @@ live in `tests/plugins.rs`. The shared Skills under
 `plugins/shared/skills/` are authoritative. Run `scripts/sync-plugin-skills.sh`
 after editing them and commit both generated copies.
 
+## Cursor Marketplace submission
+
+PathTrial is not listed on the public Cursor Marketplace. The repository owner
+submits the public Git URL at
+<https://cursor.com/marketplace/publish>. Cursor reviews the plugin before it
+appears. Do not write that it is listed until that page shows it.
+
+The package already follows the checklist in the
+[Cursor plugins reference](https://cursor.com/docs/reference/plugins):
+
+- `.cursor-plugin/marketplace.json` is at the repository root, with `name`,
+  `owner.name`, and a plugin `source`.
+- `metadata.pluginRoot` is `plugins/cursor`, so `source: pathtrial` resolves to
+  `plugins/cursor/pathtrial/.cursor-plugin/plugin.json`.
+- `name` is `pathtrial`. The description, license (`MIT`), and README are in
+  the plugin directory.
+- Skills have `name` and `description` frontmatter. The evidence rule is an
+  `.mdc` file with frontmatter.
+- `mcp.json` starts `pathtrial` with `args: ["mcp"]` only. It has no
+  `${VAR}` placeholder, so the manifest does not declare plugin variables.
+- The repository is open source. Do not add an allowlist to the marketplace
+  MCP config.
+
 ## Adding or changing a rule
 
 1. Pick the next `R0NN` identifier and document the threshold as a named
