@@ -13,20 +13,20 @@ This document is a navigation index for language models, readers, and search too
 - [English README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.en.md): complete English plugin-first walkthrough.
 - [Spanish README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.es.md): guía completa en español con los plugins como entrada principal.
 - [Russian README](https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.ru.md): полное руководство с установкой плагинов в качестве основного сценария.
-- [GitHub Releases](https://github.com/gaochenyang666-droid/PathTrial/releases): prebuilt packages and SHA-256 checksum files. Version v1.5.0-rc.1 is the current published release candidate with guided diagnose and ten MCP tools; v1.4.0-rc.1 remains an archived historical release.
+- [GitHub Releases](https://github.com/gaochenyang666-droid/PathTrial/releases): prebuilt packages and SHA-256 checksum files. Version v1.5.0-rc.2 is the current prerelease; its workflow publishes Windows x86_64 with macOS and Linux. v1.5.0-rc.1 remains available without a Windows archive. v1.4.0-rc.1 remains an archived historical release.
 - [CLI guide](https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/cli.md): standalone HTTP, QUIC, UDP, proxy, collection, report and redaction commands.
 - Guided diagnosis: `pathtrial diagnose --scenario web|vps|latency|proxy|local|dns|tcp|tls|http|dual-stack|udp-quic`.
-- Guided diagnosis schema: [`schemas/diagnose.schema.json`](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.5.0-rc.1/schemas/diagnose.schema.json) for the published v1.5 RC.
+- Guided diagnosis schema: [`schemas/diagnose.schema.json`](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.5.0-rc.2/schemas/diagnose.schema.json) for the published v1.5 RC.
 - [Bug reports](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md): installation and diagnostic feedback.
 
 ## Machine-readable data and contracts
 
-For the current release-matching schemas, consult the published v1.5.0-rc.1 tag:
+For the current release-matching schemas, consult the published v1.5.0-rc.2 tag:
 
-- [Scan report JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.5.0-rc.1/schemas/report.schema.json): diagnostic report and evidence references.
-- [Single-command JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.5.0-rc.1/schemas/command.schema.json): CLI command output.
-- [Dual-end collection JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.5.0-rc.1/schemas/collect.schema.json): client/server event collections.
-- [Dual-end correlation JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.5.0-rc.1/schemas/correlate.schema.json): offline correlation.
+- [Scan report JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.5.0-rc.2/schemas/report.schema.json): diagnostic report and evidence references.
+- [Single-command JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.5.0-rc.2/schemas/command.schema.json): CLI command output.
+- [Dual-end collection JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.5.0-rc.2/schemas/collect.schema.json): client/server event collections.
+- [Dual-end correlation JSON Schema](https://github.com/gaochenyang666-droid/PathTrial/blob/v1.5.0-rc.2/schemas/correlate.schema.json): offline correlation.
 - [Codebase/agent conventions](https://github.com/gaochenyang666-droid/PathTrial/blob/main/AGENTS.md): development and evidence-handling guidelines.
 
 For ordinary scans: `pathtrial scan example.com --format json --no-files`.
@@ -40,7 +40,7 @@ For specific options: `pathtrial --help` or `pathtrial <command> --help`.
 - Claude Code package: `plugins/claude-code/pathtrial/` with `.claude-plugin/plugin.json`, `.mcp.json` and `skills/`.
 - Cursor package: `plugins/cursor/pathtrial/` with `.cursor-plugin/plugin.json`, `mcp.json`, `rules/`, and `skills/`. It is not a public Cursor Marketplace listing.
 - MCP launch: `pathtrial mcp --allow-target example.com:443`.
-- Published v1.5.0-rc.1 includes ten MCP tools, with `pathtrial_diagnose`, and `pathtrial_explain_report` can explain diagnose reports. Previous v1.4 binaries have nine tools.
+- Published v1.5.0-rc.2 includes ten MCP tools, with `pathtrial_diagnose`, and `pathtrial_explain_report` can explain diagnose reports. Previous v1.4 binaries have nine tools.
 - Probe tools are denied by default. Report explanation and comparison do not perform network requests.
 
 ## What the output means
@@ -58,11 +58,11 @@ Do not infer deliberate blocking, an ISP's responsibility, a specific packet-los
 
 - [Historical RackNerd IPv4/IPv6 troubleshooting case](https://github.com/gaochenyang666-droid/racknerd-ipv6-troubleshooting): source of the evidence-first approach.
 - [Case reproduction guide (Chinese)](https://github.com/gaochenyang666-droid/racknerd-ipv6-troubleshooting/blob/main/docs/使用-PathTrial-复现排障.md): mapping manual diagnostic steps to PathTrial.
-- [Version-specific source tree](https://github.com/gaochenyang666-droid/PathTrial/tree/v1.5.0-rc.1): matches the current prerelease; [v1.4 archive](https://github.com/gaochenyang666-droid/PathTrial/tree/v1.4.0-rc.1) remains available.
+- [Version-specific source tree](https://github.com/gaochenyang666-droid/PathTrial/tree/v1.5.0-rc.2): matches the current prerelease; [v1.4 archive](https://github.com/gaochenyang666-droid/PathTrial/tree/v1.4.0-rc.1) remains available.
 - [Milestone C pull request](https://github.com/gaochenyang666-droid/PathTrial/pull/1): merged development history.
 
 The RackNerd measurements were taken before PathTrial existed. They must not be presented as historical PathTrial-generated results.
 
 ## Boundaries and privacy
 
-Published v1.5.0-rc.1 supports macOS Apple Silicon, macOS Intel, and Linux x86_64. Windows x86_64 is a later release-workflow target; that tag has no Windows archive. See docs/windows.md. The program has no GUI or autonomous repairs. `pathtrial report render` and `pathtrial baseline` read local files only. `scripts/peer.sh` does not change firewall, DNS, or routes. Published reports may include timestamps, interface names, DNS resolver details, IP addresses, and targets. Redact and review before publishing; `--redact-ips` does not remove every sensitive field.
+v1.5.0-rc.2 publishes macOS Apple Silicon, macOS Intel, Linux x86_64, and Windows x86_64. v1.5.0-rc.1 has no Windows archive. See docs/windows.md. The program has no GUI or autonomous repairs. `pathtrial report render` and `pathtrial baseline` read local files only. `scripts/peer.sh` does not change firewall, DNS, or routes. Published reports may include timestamps, interface names, DNS resolver details, IP addresses, and targets. Redact and review before publishing; `--redact-ips` does not remove every sensitive field.

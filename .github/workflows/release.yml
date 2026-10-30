@@ -138,8 +138,10 @@ jobs:
           mkdir -p assets
           find release -type f -exec cp {} assets/ \;
           cp scripts/install.sh assets/install.sh
+          cp scripts/install.ps1 assets/install.ps1
           chmod +x assets/install.sh
           (cd assets && sha256sum install.sh > install.sh.sha256)
+          (cd assets && sha256sum install.ps1 > install.ps1.sha256)
       - name: Verify archived checksums
         shell: bash
         run: |
@@ -173,6 +175,9 @@ jobs:
           if [ "$tag" = "v1.5.0-rc.1" ]; then
             gh release create "$tag" assets/* --title "$tag" \
               --target "$GITHUB_SHA" --notes-file docs/releases/v1.5.0-rc.1.md $prerelease
+          elif [ "$tag" = "v1.5.0-rc.2" ]; then
+            gh release create "$tag" assets/* --title "$tag" \
+              --target "$GITHUB_SHA" --notes-file docs/releases/v1.5.0-rc.2.md $prerelease
           else
             gh release create "$tag" assets/* --title "$tag" \
               --target "$GITHUB_SHA" --generate-notes $prerelease

@@ -21,7 +21,7 @@ Cursor plugin ─┘
   The Cursor package also includes one evidence rule. It does not change the
   probe tools.
 
-The current published core `1.5.0-rc.1` uses plugin `0.3.0` (ten tools), including
+The current prerelease core `1.5.0-rc.2` uses plugin `0.3.0` (ten tools), including
 `pathtrial_diagnose` and diagnose-aware `pathtrial_explain_report`. Install the
 matching v1.5 executable before enabling the plugin. The historical
 [v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1)
@@ -35,15 +35,16 @@ independently numbered.
 - No OpenAI or Anthropic API key for local diagnostics.
 - Network access only to targets the user explicitly authorizes.
 
-The public `v1.5.0-rc.1` release includes MCP and guided diagnosis. Install the
-verified prebuilt binary without Rust:
+The `v1.5.0-rc.2` prerelease includes MCP and guided diagnosis. Install the
+prebuilt binary without Rust. Windows uses `install.ps1` from the same tag.
+`v1.5.0-rc.1` remains available and has no Windows archive.
 
-> This installer provides **v1.5.0-rc.1 with ten MCP tools** and guided diagnosis.
+> This installer targets **v1.5.0-rc.2 with ten MCP tools** and guided diagnosis.
 > You do not need Rust for the prebuilt packages. This remains a release candidate.
 
 ```bash
 curl -fsSLo pathtrial-install.sh \
-  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/install.sh
+  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.2/install.sh
 sh pathtrial-install.sh
 export PATH="$HOME/.local/bin:$PATH"
 pathtrial --version
@@ -235,6 +236,24 @@ installed server name may appear as `plugin-pathtrial-pathtrial`. Enable it
 there. `pathtrial` must be on the PATH Cursor uses. This copy does not download
 the CLI.
 
+### Desktop checklist
+
+Cursor Desktop was not launched for this change. Do not mark Desktop install
+VERIFIED until each step below is observed:
+
+1. `pathtrial --version` prints `1.5.0-rc.2` on the PATH Cursor will inherit.
+2. The plugin directory is at `~/.cursor/plugins/local/pathtrial`, or
+   `.cursor/mcp.json` contains only `args: ["mcp"]`.
+3. Developer: Reload Window has been run.
+4. Customize shows the PathTrial MCP server and it is enabled.
+5. The allow file has one explicit target and no wildcard. Unix:
+   `~/.config/pathtrial/allow-targets`. Windows:
+   `%APPDATA%\pathtrial\allow-targets`.
+6. The agent calls `pathtrial_capabilities` and the result lists ten tools.
+7. A target that is not in the allow file returns `target_not_allowed`.
+
+The remaining gap is steps 3–7. They require the Cursor Desktop app.
+
 ### Project or user `mcp.json`
 
 Use this when you want the MCP server without loading the plugin directory.
@@ -402,8 +421,9 @@ The PathTrial CLI can remain installed after plugin removal.
 | Codex model-driven tool calls in a live session | VERIFIED for v0.2.0: capabilities, authorized TCP scan 1/1, real `tcp_ipv4_001` explanation and unauthorized `target_not_allowed` denial |
 | Claude Code manifest validation and live tool call | PARTIAL: default-main install, four Skills and MCP Connected verified; a live model tool call has not yet been recorded |
 | Precompiled release containing `pathtrial mcp` | VERIFIED for `v1.5.0-rc.1`; macOS ARM, macOS Intel and Linux x86_64 release smoke passed |
-| Windows plugin support | UNVERIFIED. The core has a Windows x86_64 build path and an allow file, but this document does not record a Windows host run or a published Windows release asset |
-| Cursor plugin package shape | PARTIAL. `.cursor-plugin/plugin.json`, `mcp.json` (`type: stdio`, `command: pathtrial`, `args: ["mcp"]`), shared skills, and `rules/pathtrial-evidence.mdc` match the Cursor docs fetched for this change. A live Cursor Desktop Customize install, a team-marketplace import, and a model-driven tool call were not executed. The package is not listed on the public Cursor Marketplace |
+| Windows x86_64 release asset | UNVERIFIED until the `v1.5.0-rc.2` release workflow lists `pathtrial-x86_64-pc-windows-msvc.tar.gz` and its SHA-256 file. `v1.5.0-rc.1` has no Windows archive |
+| Cursor plugin package shape | PARTIAL. The manifest, `mcp.json`, skills, and rule match the Cursor docs, and `tests/plugins.rs` checks that layout. Remaining gap: Cursor Desktop was not launched, so Customize, the MCP toggle, and a live `pathtrial_capabilities` call are unverified |
+| Public Cursor Marketplace listing | NOT LISTED. Submit the public repository at <https://cursor.com/marketplace/publish>. See [CONTRIBUTING.md](../CONTRIBUTING.md) |
 
 ## Reporting bugs
 
