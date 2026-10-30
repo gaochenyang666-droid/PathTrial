@@ -47,5 +47,5 @@ jobs:
       - name: Verify Windows release asset or record that it is absent
         shell: pwsh
         env:
-          PATHTRIAL_VERSION: v1.5.0-rc.1
+          PATHTRIAL_VERSION: v1.5.0-rc.2
         run: ./scripts/verify-release.ps1

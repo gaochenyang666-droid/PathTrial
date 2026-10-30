@@ -3,8 +3,8 @@
 **PathTrial is an open-source Rust network diagnostics CLI and local MCP server** for DNS troubleshooting, website connectivity checks, VPS port testing, proxy failures, and IPv4/IPv6, TCP, TLS, UDP, QUIC and HTTP/3 diagnostics. It exports evidence-backed JSON reports, runs independently on macOS and Linux, and integrates with Codex, Claude Code, and Cursor through local MCP.
 **Website languages:** [简体中文](https://gaochenyang666-droid.github.io/PathTrial/) · [English](https://gaochenyang666-droid.github.io/PathTrial/en/) · [Español](https://gaochenyang666-droid.github.io/PathTrial/es/) · [Русский](https://gaochenyang666-droid.github.io/PathTrial/ru/)
 **Languages:** [简体中文](README.md) · **English** · [Español](README.es.md) · [Русский](README.ru.md)
-[**Download v1.5.0-rc.1 prerelease**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) · [**Report a bug**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**AI integration guide**](docs/ai-integrations.md) · [**CLI guide**](docs/cli.md)
-> **Current release:** PathTrial Core `v1.5.0-rc.1` is a public release candidate with guided `diagnose` and local MCP support. AI Plugins `0.3.0` exposes ten tools. Published prebuilt downloads cover macOS Apple Silicon, macOS Intel and Linux x86_64 and do not require Rust. Windows x86_64 is produced by the release workflow for a later tag; the `v1.5.0-rc.1` assets do not include it.
+[**Download v1.5.0-rc.2 prerelease**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.2) · [**Report a bug**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**AI integration guide**](docs/ai-integrations.md) · [**CLI guide**](docs/cli.md)
+> **Current release:** PathTrial Core `v1.5.0-rc.2` is the current release candidate with guided `diagnose` and local MCP support. AI Plugins `0.3.0` exposes ten tools. Its release workflow publishes macOS Apple Silicon, macOS Intel, Linux x86_64, and Windows x86_64 archives with SHA-256 files. `v1.5.0-rc.1` remains available and does not include a Windows archive.
 > **Previous version:** [v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) remains available (nine MCP tools). v1.5 adds `pathtrial_diagnose`, and `pathtrial_explain_report` now accepts guided diagnosis reports.
 > **Community beta testers welcome:** Codex and Claude Code plugins are now available on the default `main` branch. Please [report installation, compatibility or diagnostic issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) with redacted versions, reproduction steps and expected versus observed results.
 ## Diagnose DNS failures, VPS ports, proxies and IPv4/IPv6
@@ -26,17 +26,17 @@ Focused scenarios also include `dns`, `tcp`, `tls`, `http`, `dual-stack` and `ud
 ## Install the AI plugins
 > **Public release candidate:** Install the PathTrial executable before installing the Codex, Claude Code, or Cursor plugin. A plugin does not install the diagnostic engine. Network probes are denied by default until a target is explicitly authorized.
 ### Step 1: Install PathTrial (no Rust required)
-Download and review the installer included in the [v1.5.0-rc.1 release](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1):
+Download and review the installer included in the [v1.5.0-rc.2 release](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.2):
 ~~~bash
 curl -fsSLo pathtrial-install.sh \
-  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/install.sh
+  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.2/install.sh
 less pathtrial-install.sh
 sh pathtrial-install.sh
 export PATH="$HOME/.local/bin:$PATH"
 pathtrial --version
 pathtrial mcp --help
 ~~~
-Confirm version `1.5.0-rc.1` and a working `pathtrial mcp --help`. The `pathtrial` executable must also be visible in the `PATH` inherited by your AI client.
+Confirm version `1.5.0-rc.2` and a working `pathtrial mcp --help`. The `pathtrial` executable must also be visible in the `PATH` inherited by your AI client.
 ### Step 2: Choose an AI client
 #### OpenAI Codex plugin
 Install the plugin from the default `main` marketplace:
@@ -106,15 +106,16 @@ Check `PASS`, `WARN`, `FAIL`, `SKIP` and `INCONCLUSIVE`. `SKIP` is not a pass. `
 ## Diagnostic coverage
 DNS, IPv4/IPv6, TCP, TLS, HTTP, ICMP, route tracing, UDP Echo, QUIC, HTTP/3, SOCKS5, HTTP CONNECT, direct-versus-proxy comparison and two-ended collection correlation.
 ## Use PathTrial without an AI client
-The same [public v1.5.0-rc.1 release candidate](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) works as a standalone CLI without Rust, Codex or Claude Code. Choose a prebuilt archive:
-- [macOS Apple Silicon](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz)
-- [macOS Intel](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz)
-- [Linux x86_64](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz)
-Each published archive has a SHA-256 checksum file. macOS and Linux use `scripts/install.sh`. Windows x86_64 uses `scripts/install.ps1`. That script checks SHA-256 and copies `pathtrial.exe` to `%LOCALAPPDATA%\PathTrial`. It does not change PATH, firewall, DNS, or routes. The `v1.5.0-rc.1` release has no Windows archive, so running the script for that tag fails the download. That is not a successful install. Limits are in [Windows](docs/windows.md).
+The same [public v1.5.0-rc.2 release candidate](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.2) works as a standalone CLI without Rust, Codex or Claude Code. Choose a prebuilt archive:
+- [macOS Apple Silicon](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.2/pathtrial-aarch64-apple-darwin.tar.gz)
+- [macOS Intel](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.2/pathtrial-x86_64-apple-darwin.tar.gz)
+- [Linux x86_64](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.2/pathtrial-x86_64-unknown-linux-gnu.tar.gz)
+- [Windows x86_64](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.2/pathtrial-x86_64-pc-windows-msvc.tar.gz)
+Each archive has a SHA-256 checksum file. macOS and Linux use the release `install.sh`. Windows uses `install.ps1`, which checks SHA-256 and copies `pathtrial.exe` to `%LOCALAPPDATA%\PathTrial`. It does not change PATH, firewall, DNS, or routes. `v1.5.0-rc.1` has no Windows archive. Limits are in [Windows](docs/windows.md).
 
 ~~~powershell
 # Run only after the chosen release contains pathtrial-x86_64-pc-windows-msvc.tar.gz
-$env:PATHTRIAL_VERSION = "v1.5.0-rc.1"
+$env:PATHTRIAL_VERSION = "v1.5.0-rc.2"
 powershell -File .\scripts\install.ps1
 & "$env:LOCALAPPDATA\PathTrial\pathtrial.exe" --version
 ~~~
@@ -139,9 +140,9 @@ sh scripts/peer.sh demo 0.0.0.0:39002 0.0.0.0:39001 120
 
 `report render` reads one local JSON file. It does not use the network and does not modify the input. `--redact-ips` masks addresses in that view only. `baseline save` stores that report in the local data directory. `baseline compare` uses only that file and the current report. Directly comparable runs are labeled better, worse, or same and cite evidence IDs from the current file. Otherwise the relation is `not_established`; no history is invented. Exit code 2 means a worse relation. Exit code 3 means the files are not comparable. `peer.sh` serves UDP echo and a bounded collect server on the addresses you name. It does not change firewall, DNS, or routes, and it does not store UDP payloads. Non-loopback addresses need `--allow-public-bind`. See the [CLI guide](docs/cli.md) for HTTP, QUIC, UDP, proxies, two-ended collection and exit codes.
 ## Beta status and known limits
-- Core: `v1.5.0-rc.1` publicly released as a **release candidate, not a stable release**.
+- Core: `v1.5.0-rc.2` publicly released as a **release candidate, not a stable release**.
 - AI Plugins: `0.3.0` (ten tools); the previous v1.4 plugin used `0.2.0` (nine tools).
-- Prebuilt `v1.5.0-rc.1` archives: macOS ARM64, macOS Intel and Linux x86_64, with SHA-256 files. Windows x86_64 is wired into the release workflow and `install.ps1`, but that tag has no Windows asset and is not VERIFIED.
+- `v1.5.0-rc.2` release assets: macOS ARM64, macOS Intel, Linux x86_64, and Windows x86_64, each with a SHA-256 file. Windows `--bind-interface`, per-target routes, ICMP jitter, and Wi-Fi dBm remain not established and are not VERIFIED.
 - Automated verification: the [v1.5 three-platform release workflow](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39255364100) passed packaging and MCP smoke tests. Codex HTTP/local model sessions were validated, and the project reported completing Claude Code model-session testing.
 - Network probing requires explicit target authorization. A GUI and automatic network repair are not provided. Windows probe limits are in [Windows](docs/windows.md).
 See the [engineering acceptance matrix](docs/ai-plugin-completeness.md) and [release workflow](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39149532255). Please [report reproducible beta issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md).
@@ -151,9 +152,9 @@ For an authorized target, run `pathtrial scan example.com --profile web --rounds
 ### Can PathTrial troubleshoot a VPS, IPv4/IPv6, SOCKS5 proxies and HTTP/3?
 Yes. The CLI offers IPv4/IPv6, TCP/TLS, SOCKS5 and HTTP CONNECT proxy checks, QUIC handshakes, and real HTTP/3 requests when the server supports them. See the [CLI guide](docs/cli.md). A UDP timeout alone cannot establish the root cause.
 ### How do I use PathTrial with Codex, Claude Code, or Cursor via MCP?
-Install the [v1.5.0-rc.1 prebuilt core](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1), then follow the [plugin steps](#install-the-ai-plugins). Codex and Claude Code use the `main` marketplace. Cursor uses the local plugin package or `.cursor/mcp.json`. MCP runs through the local `pathtrial` executable; network targets must be explicitly authorized.
+Install the [v1.5.0-rc.2 prebuilt core](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.2), then follow the [plugin steps](#install-the-ai-plugins). Codex and Claude Code use the `main` marketplace. Cursor uses the local plugin package or `.cursor/mcp.json`. MCP runs through the local `pathtrial` executable; network targets must be explicitly authorized.
 ### Do I need Rust to install PathTrial? Is Windows supported?
-The published v1.5.0-rc.1 binaries cover macOS Apple Silicon, macOS Intel and Linux x86_64 without Rust. Windows x86_64 uses `scripts/install.ps1` once a release contains that archive. `v1.5.0-rc.1` does not. Until then a Windows build needs Rust. `--bind-interface` on Windows is an error and does not fall back to another interface.
+The `v1.5.0-rc.2` binaries cover macOS Apple Silicon, macOS Intel, Linux x86_64, and Windows x86_64 without Rust. Windows uses `install.ps1` from that release. `--bind-interface` on Windows is an error and does not fall back to another interface.
 ### How is PathTrial different from ping or curl?
 `ping` primarily tests ICMP reachability and `curl` is commonly used for HTTP requests. PathTrial separates DNS, TCP, TLS, HTTP, UDP and QUIC measurements into bounded probes, cites actual observations in JSON reports and does not claim a root cause from a single failure.
 ## Report bugs and contribute

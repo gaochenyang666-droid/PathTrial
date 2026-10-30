@@ -4,22 +4,22 @@ This guide covers the standalone command-line interface. For Codex and Claude Co
 
 ## Versions
 
-- Public prebuilt CLI: `v1.5.0-rc.1`
-- Published release candidate: `v1.5.0-rc.1` includes the guided `diagnose` subcommand in all three prebuilt distributions.
-- MCP core included in the public release: `1.5.0-rc.1`
+- Public prebuilt CLI: `v1.5.0-rc.2`
+- This release candidate publishes macOS Apple Silicon, macOS Intel, Linux x86_64, and Windows x86_64 archives. `v1.5.0-rc.1` remains available and has no Windows archive.
+- MCP core included in this prerelease: `1.5.0-rc.2`
 - AI Plugins: `0.3.0` (ten MCP tools)
-- Core `1.5.0-rc.1` and AI Plugin `0.3.0` are compatible. The older [v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) release remains available.
-- `v1.5.0-rc.1` includes `pathtrial mcp`; the older `v1.3.0-rc.1` does not.
+- Core `1.5.0-rc.2` and AI Plugin `0.3.0` are compatible. The older [v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) release remains available.
+- `v1.5.0-rc.2` includes `pathtrial mcp`; the older `v1.3.0-rc.1` does not.
 
 Run `pathtrial --help` or `pathtrial <command> --help` for the options supported by your installed binary.
 
 ## Installation
 
-Download an archive from the [v1.5.0-rc.1 release](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1), or review and run the release installer:
+Download an archive from the [v1.5.0-rc.2 release](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.2), or review and run the release installer:
 
 ~~~bash
 curl -fsSLo pathtrial-install.sh \
-  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/install.sh
+  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.2/install.sh
 less pathtrial-install.sh
 sh pathtrial-install.sh
 
@@ -32,7 +32,7 @@ The installer uses `~/.local/bin/pathtrial` and does not require sudo. If `patht
 export PATH="$HOME/.local/bin:$PATH"
 ~~~
 
-Published `v1.5.0-rc.1` archives cover macOS Apple Silicon, macOS Intel, and Linux x86_64. Windows x86_64 is built by the release workflow for a later tag and installed with `scripts/install.ps1`. See [Windows](windows.md). That published tag does not contain `pathtrial-x86_64-pc-windows-msvc.tar.gz`.
+`v1.5.0-rc.2` archives cover macOS Apple Silicon, macOS Intel, Linux x86_64, and Windows x86_64 (`pathtrial-x86_64-pc-windows-msvc.tar.gz` plus a SHA-256 file). Windows installs with the release `install.ps1`. See [Windows](windows.md). `v1.5.0-rc.1` does not contain that archive.
 
 ## Status and exit codes
 
