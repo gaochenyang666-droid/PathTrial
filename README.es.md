@@ -1,6 +1,6 @@
-# PathTrial — Diagnóstico de redes de código abierto | CLI y plugins MCP para Codex y Claude Code
+# PathTrial — Diagnóstico de redes de código abierto | CLI y plugins MCP para Codex, Claude Code y Cursor
 [**Guías de diagnóstico (en inglés)**](https://gaochenyang666-droid.github.io/PathTrial/en/guides/): puertos VPS, QUIC/HTTP3 e IPv4/IPv6.
-**PathTrial es una herramienta CLI de diagnóstico de redes de código abierto en Rust, con servidor MCP local.** Analiza problemas de DNS, conectividad de sitios web, puertos de VPS, proxies y conexiones IPv4/IPv6, TCP, TLS, UDP, QUIC y HTTP/3. Genera informes JSON con pruebas verificables, funciona sin IA en macOS y Linux e incluye plugins MCP para Codex y Claude Code.
+**PathTrial es una herramienta CLI de diagnóstico de redes de código abierto en Rust, con servidor MCP local.** Analiza problemas de DNS, conectividad de sitios web, puertos de VPS, proxies y conexiones IPv4/IPv6, TCP, TLS, UDP, QUIC y HTTP/3. Genera informes JSON con pruebas verificables, funciona sin IA en macOS y Linux e incluye MCP para Codex, Claude Code y Cursor.
 **Idiomas del sitio web:** [简体中文](https://gaochenyang666-droid.github.io/PathTrial/) · [English](https://gaochenyang666-droid.github.io/PathTrial/en/) · [Español](https://gaochenyang666-droid.github.io/PathTrial/es/) · [Русский](https://gaochenyang666-droid.github.io/PathTrial/ru/)
 **Idiomas:** [简体中文](README.md) · [English](README.en.md) · **Español** · [Русский](README.ru.md)
 [**Descargar v1.5.0-rc.1**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) · [**Informar de un error**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**Guía de integración con IA**](docs/ai-integrations.md) · [**Guía del CLI**](docs/cli.md)
@@ -24,7 +24,7 @@ pathtrial diagnose --scenario local
 ~~~
 También incluye `dns`, `tcp`, `tls`, `http`, `dual-stack` y `udp-quic`. El informe separa `observed`, `possible`, `not_established` y `next_checks`; una hipótesis no se presenta como causa confirmada.
 ## Instalar los plugins de IA
-> **Versión candidata pública:** instala primero el ejecutable PathTrial y después el plugin de Codex o Claude Code. El plugin no instala el programa principal. Las pruebas de red requieren una autorización explícita para cada destino.
+> **Versión candidata pública:** instala primero el ejecutable PathTrial y después el plugin de Codex, Claude Code o Cursor. El plugin no instala el programa principal. Las pruebas de red requieren una autorización explícita para cada destino.
 ### Paso 1: Instalar PathTrial (sin Rust)
 Descarga y revisa el instalador oficial del [lanzamiento v1.5.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1):
 ~~~bash
@@ -55,6 +55,26 @@ Dentro de Claude Code, añade el Marketplace e instala el plugin. Consulta las h
 /mcp
 ~~~
 Para permisos y resolución de problemas, consulta la [guía de integración](docs/ai-integrations.md).
+#### Cursor
+El Marketplace público de Cursor todavía no incluye este paquete. El plugin está en `plugins/cursor/pathtrial/` y contiene `.cursor-plugin/plugin.json`, un `mcp.json` que solo ejecuta `pathtrial mcp`, las Skills compartidas y una regla de evidencia. No pongas destinos permitidos dentro de `mcp.json`.
+
+Carga local, que es la vía documentada por Cursor para un plugin que aún no está en el Marketplace. Enterprise puede desactivar las importaciones locales:
+
+~~~bash
+mkdir -p "${HOME}/.cursor/plugins/local"
+rm -rf "${HOME}/.cursor/plugins/local/pathtrial"
+cp -R plugins/cursor/pathtrial "${HOME}/.cursor/plugins/local/pathtrial"
+~~~
+
+Ejecuta Developer: Reload Window, abre Customize y comprueba las Skills, la regla y el servidor MCP. El nombre puede aparecer como `plugin-pathtrial-pathtrial`.
+
+Si solo quieres el servidor MCP, escribe la misma configuración en `.cursor/mcp.json` del proyecto o en `~/.cursor/mcp.json` (`%USERPROFILE%\.cursor\mcp.json` en Windows). Desde este repositorio:
+
+~~~bash
+sh scripts/install-cursor-mcp.sh /path/to/your/project
+~~~
+
+La aplicación de escritorio de Cursor puede no heredar `PATHTRIAL_MCP_ALLOW_TARGETS`. Usa el archivo allow-targets de arriba y vuelve a cargar la ventana. Primera petición: *«Llama a `pathtrial_capabilities` y comprueba las herramientas MCP disponibles».* Esta entrega no instaló el paquete en Cursor Desktop ni registró una llamada real del modelo, así que el estado es PARTIAL. Detalles en la [guía de integración](docs/ai-integrations.md).
 ## Primer uso
 ### 1. Autorizar un destino que tengas permiso para probar
 PathTrial MCP bloquea todas las pruebas de red de forma predeterminada; analizar informes JSON existentes no requiere acceso a la red. **Si inicias el cliente desde una terminal, configura temporalmente los destinos permitidos antes de abrirlo**, sin editar la caché de una versión del plugin:
@@ -130,8 +150,8 @@ Consulta la [matriz de aceptación](docs/ai-plugin-completeness.md) y el [flujo 
 Para un destino autorizado, ejecuta `pathtrial scan example.com --profile web --rounds 5 --redact-ips` y después `pathtrial http https://example.com/`. Cada capa se mide por separado; recibir respuesta a un Ping no demuestra que el sitio funcione.
 ### ¿Sirve para VPS, IPv4/IPv6, proxies SOCKS5 y HTTP/3?
 Sí. El CLI permite analizar IPv4/IPv6, TCP/TLS, proxies SOCKS5 y HTTP CONNECT, handshakes QUIC y peticiones HTTP/3 reales cuando el destino admite el protocolo. Consulta la [guía del CLI](docs/cli.md). Un timeout UDP por sí solo no identifica la causa.
-### ¿Cómo utilizar PathTrial con Codex o Claude Code mediante MCP?
-Instala el [núcleo precompilado v1.5.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1), sigue la [guía del plugin](#instalar-los-plugins-de-ia) y utiliza el Marketplace de `main`. MCP emplea el ejecutable local `pathtrial` y solo prueba destinos autorizados.
+### ¿Cómo utilizar PathTrial con Codex, Claude Code o Cursor mediante MCP?
+Instala el [núcleo precompilado v1.5.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) y sigue la [guía del plugin](#instalar-los-plugins-de-ia). Codex y Claude Code usan el Marketplace de `main`. Cursor usa el paquete local o `.cursor/mcp.json`. MCP emplea el ejecutable local `pathtrial` y solo prueba destinos autorizados.
 ### ¿Necesito Rust? ¿Funciona en Windows?
 Los binarios publicados de v1.5.0-rc.1 cubren macOS Apple Silicon, macOS Intel y Linux x86_64 sin Rust. Windows x86_64 usa `scripts/install.ps1` cuando una versión posterior incluya ese archivo. `v1.5.0-rc.1` no lo incluye. Hasta entonces, compilar en Windows requiere Rust. `--bind-interface` en Windows es un error y no cambia de interfaz.
 ### ¿En qué se diferencia PathTrial de ping y curl?

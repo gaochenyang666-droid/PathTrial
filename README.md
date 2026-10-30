@@ -1,6 +1,6 @@
-# PathTrial — 开源网络诊断与 VPS 排障工具 | Codex / Claude Code MCP 插件
+# PathTrial — 开源网络诊断与 VPS 排障工具 | Codex / Claude Code / Cursor MCP
 [**网络故障排查指南**](https://gaochenyang666-droid.github.io/PathTrial/guides/)：VPS 端口、QUIC/HTTP3 超时、IPv4/IPv6 异常（中文导读及英文教程）。
-**PathTrial 是开源 Rust 网络诊断 CLI 与 MCP 工具**，用于 DNS 解析检测、网站连接故障排查、VPS 端口测试、代理连接诊断，以及 IPv4/IPv6、TCP、TLS、UDP、QUIC 与 HTTP/3 测量。它生成可追溯探测证据的 JSON 报告，支持 macOS / Linux 独立运行，也可通过本地 MCP 插件接入 Codex 和 Claude Code。
+**PathTrial 是开源 Rust 网络诊断 CLI 与 MCP 工具**，用于 DNS 解析检测、网站连接故障排查、VPS 端口测试、代理连接诊断，以及 IPv4/IPv6、TCP、TLS、UDP、QUIC 与 HTTP/3 测量。它生成可追溯探测证据的 JSON 报告，支持 macOS / Linux 独立运行，也可通过本地 MCP 接入 Codex、Claude Code 和 Cursor。
 **网站语言：** [简体中文](https://gaochenyang666-droid.github.io/PathTrial/) · [English](https://gaochenyang666-droid.github.io/PathTrial/en/) · [Español](https://gaochenyang666-droid.github.io/PathTrial/es/) · [Русский](https://gaochenyang666-droid.github.io/PathTrial/ru/)
 **语言 / Languages / Idiomas / Языки:** **简体中文** · [English](README.en.md) · [Español](README.es.md) · [Русский](README.ru.md)
 [**下载 v1.5.0-rc.1 测试版**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) · [**报告 Bug**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**AI 集成指南**](docs/ai-integrations.md) · [**CLI 使用指南**](docs/cli.md)
@@ -26,7 +26,7 @@ pathtrial diagnose --scenario local
 需要把手动解析的地址与原始域名分开时，可以使用 `--requested-host` 保留报告中的目标名称，`--sni` 指定 TLS 服务器名称，`--http-host` 指定 HTTP Host 头，并用 `--target-ip`、`--connect-ipv4` 或 `--connect-ipv6` 固定实际连接地址。MCP 的 `pathtrial_diagnose` 会自动完成这套绑定，DNS 场景始终查询用户指定的原始域名，双栈场景分别校验并测试两个地址族。所有证据引用采用 `<source>:<probe_id>` 形式，可在对应来源报告的 `probes` 中反查。
 每个场景受 `--max-seconds` 的绝对墙钟预算约束。预算耗尽时，已经收集的检查会保留，未完成的阶段标记为 `INCONCLUSIVE`，不会被写成成功结果。
 ## 快速安装 AI 插件
-> **公开测试版（Release Candidate）：** 请先安装 PathTrial 核心，再安装 Codex 或 Claude Code 插件。插件不会自动安装诊断程序。网络探测默认拒绝，只有显式授权的目标才可测试。
+> **公开测试版（Release Candidate）：** 请先安装 PathTrial 核心，再安装 Codex、Claude Code 或 Cursor 插件。插件不会自动安装诊断程序。网络探测默认拒绝，只有显式授权的目标才可测试。
 ### 第 1 步：安装 PathTrial（无需 Rust）
 下载并检查 [v1.5.0-rc.1 正式发布的预编译安装脚本](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1)：
 ~~~bash
@@ -38,7 +38,7 @@ export PATH="$HOME/.local/bin:$PATH"
 pathtrial --version
 pathtrial mcp --help
 ~~~
-预期版本为 `1.5.0-rc.1`，且 `pathtrial mcp --help` 可正常执行。确保启动 Codex / Claude Code 时也能在 `PATH` 找到 `pathtrial`。
+预期版本为 `1.5.0-rc.1`，且 `pathtrial mcp --help` 可正常执行。确保启动 Codex、Claude Code 或 Cursor 时也能在 `PATH` 找到 `pathtrial`。
 ### 第 2 步：选择 AI 客户端
 #### OpenAI Codex 插件
 在 Codex CLI 安装默认 `main` 分支的 Marketplace 插件：
@@ -57,6 +57,26 @@ codex mcp list
 /mcp
 ~~~
 如需更多配置或故障排查，查看 [AI 集成指南](docs/ai-integrations.md)。
+#### Cursor
+Cursor 的公开 Marketplace 还没有列出这个包。仓库里的 Cursor 插件在 `plugins/cursor/pathtrial/`，包含 `.cursor-plugin/plugin.json`、只启动 `pathtrial mcp` 的 `mcp.json`、共享 Skills 和一条证据规则。不要把允许目标写进 `mcp.json`。
+
+本地加载（Cursor 文档中的未上架插件方式；Enterprise 可能关闭本地导入）：
+
+~~~bash
+mkdir -p "${HOME}/.cursor/plugins/local"
+rm -rf "${HOME}/.cursor/plugins/local/pathtrial"
+cp -R plugins/cursor/pathtrial "${HOME}/.cursor/plugins/local/pathtrial"
+~~~
+
+然后执行 Developer: Reload Window，打开 Customize，确认 PathTrial 的技能、规则和 MCP 服务器。服务器名称可能显示为 `plugin-pathtrial-pathtrial`。
+
+只想接入 MCP、不加载整个插件时，把同一段配置写入项目 `.cursor/mcp.json`，或用户目录 `~/.cursor/mcp.json`（Windows 是 `%USERPROFILE%\.cursor\mcp.json`）。从本仓库执行：
+
+~~~bash
+sh scripts/install-cursor-mcp.sh /path/to/your/project
+~~~
+
+桌面版 Cursor 不一定继承终端里的 `PATHTRIAL_MCP_ALLOW_TARGETS`。授权仍用上面的 allow-targets 文件，改完后重新加载窗口。第一次可以问：*“请调用 `pathtrial_capabilities`，检查可用的 MCP 工具。”* 这次没有在 Cursor Desktop 里实际安装或发起模型工具调用，所以安装状态是 PARTIAL，详见 [AI 集成指南](docs/ai-integrations.md)。
 ## 第一次使用
 ### 1. 授权你有权检测的目标
 PathTrial MCP 默认拒绝全部网络探测；分析已有 JSON 报告不需要网络授权。**推荐在终端启动 AI 客户端之前临时设置允许列表**，无需修改与插件版本绑定的 Marketplace 缓存文件：
@@ -132,8 +152,8 @@ sh scripts/peer.sh demo 0.0.0.0:39002 0.0.0.0:39001 120
 对已获授权的目标运行 `pathtrial scan example.com --profile web --rounds 5 --redact-ips`，再用 `pathtrial http https://example.com/` 查看 HTTP 响应。各阶段结果分别记录；Ping 通不代表网站可以正常访问。
 ### PathTrial 能检查 VPS、IPv4/IPv6、SOCKS5 代理和 HTTP/3 吗？
 支持分层诊断 IPv4/IPv6、TCP/TLS、SOCKS5 与 HTTP CONNECT 代理、QUIC 握手和 HTTP/3 请求。目标需要真实支持对应协议。详细操作见 [CLI 使用指南](docs/cli.md)，不能仅凭 UDP 超时认定故障根因。
-### 如何在 Codex 或 Claude Code 中使用 PathTrial MCP 插件？
-安装 [v1.5.0-rc.1 预编译核心](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) 后，按上方的[插件安装步骤](#快速安装-ai-插件)从默认 `main` 的 Marketplace 添加插件。MCP 依赖本地 `pathtrial`，网络探测必须显式授权目标。
+### 如何在 Codex、Claude Code 或 Cursor 中使用 PathTrial MCP？
+安装 [v1.5.0-rc.1 预编译核心](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) 后，按上方的[插件安装步骤](#快速安装-ai-插件)。Codex 和 Claude Code 从默认 `main` 的 Marketplace 添加插件。Cursor 使用本地插件目录或 `.cursor/mcp.json`。MCP 依赖本地 `pathtrial`，网络探测必须显式授权目标。
 ### 安装 PathTrial 需要 Rust 吗？支持哪些系统？
 已发布的 v1.5.0-rc.1 预编译包覆盖 macOS Apple Silicon、macOS Intel 和 Linux x86_64，这些系统安装不需要 Rust。Windows x86_64 要等后续带有归档的版本，再用 `install.ps1` 安装；在那之前从源码编译需要 Rust。Windows 上 `--bind-interface` 会报错而不会改走别的网卡。
 ### PathTrial 与 ping、curl 有什么不同？

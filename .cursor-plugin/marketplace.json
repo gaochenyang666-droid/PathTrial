@@ -1,0 +1,17 @@
+{
+  "name": "pathtrial",
+  "owner": {
+    "name": "gaochenyang666-droid"
+  },
+  "metadata": {
+    "description": "Evidence-first network diagnostics for Cursor.",
+    "pluginRoot": "plugins/cursor"
+  },
+  "plugins": [
+    {
+      "name": "pathtrial",
+      "source": "pathtrial",
+      "description": "PathTrial Network Diagnostics"
+    }
+  ]
+}

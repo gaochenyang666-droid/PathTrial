@@ -1,6 +1,6 @@
-# PathTrial — открытый инструмент диагностики сети | CLI и MCP-плагины для Codex и Claude Code
+# PathTrial — открытый инструмент диагностики сети | CLI и MCP для Codex, Claude Code и Cursor
 [**Руководства по диагностике сети (на английском)**](https://gaochenyang666-droid.github.io/PathTrial/en/guides/): порты VPS, QUIC/HTTP3 и IPv4/IPv6.
-**PathTrial — открытая CLI-утилита для диагностики сети на Rust с локальным MCP-сервером.** Она проверяет DNS, доступность сайтов, порты VPS, прокси и соединения IPv4/IPv6, TCP, TLS, UDP, QUIC и HTTP/3. Результаты сохраняются в JSON-отчётах с измеренными данными. Программа работает самостоятельно на macOS и Linux и через MCP-плагины Codex и Claude Code.
+**PathTrial — открытая CLI-утилита для диагностики сети на Rust с локальным MCP-сервером.** Она проверяет DNS, доступность сайтов, порты VPS, прокси и соединения IPv4/IPv6, TCP, TLS, UDP, QUIC и HTTP/3. Результаты сохраняются в JSON-отчётах с измеренными данными. Программа работает самостоятельно на macOS и Linux и через MCP в Codex, Claude Code и Cursor.
 **Языки сайта:** [简体中文](https://gaochenyang666-droid.github.io/PathTrial/) · [English](https://gaochenyang666-droid.github.io/PathTrial/en/) · [Español](https://gaochenyang666-droid.github.io/PathTrial/es/) · [Русский](https://gaochenyang666-droid.github.io/PathTrial/ru/)
 **Языки:** [简体中文](README.md) · [English](README.en.md) · [Español](README.es.md) · **Русский**
 [**Скачать v1.5.0-rc.1**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) · [**Сообщить об ошибке**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**Руководство по интеграции с ИИ**](docs/ai-integrations.md) · [**Руководство по CLI**](docs/cli.md)
@@ -24,7 +24,7 @@ pathtrial diagnose --scenario local
 ~~~
 Также доступны `dns`, `tcp`, `tls`, `http`, `dual-stack` и `udp-quic`. Отчёт отдельно содержит `observed`, `possible`, `not_established` и `next_checks`; гипотеза не выдаётся за подтверждённую причину.
 ## Установка плагинов ИИ
-> **Публичный кандидат на выпуск:** сначала установите исполняемый файл PathTrial, затем плагин Codex или Claude Code. Плагин сам по себе не устанавливает диагностическую программу. Сетевые проверки требуют явного разрешения цели.
+> **Публичный кандидат на выпуск:** сначала установите исполняемый файл PathTrial, затем плагин Codex, Claude Code или Cursor. Плагин сам по себе не устанавливает диагностическую программу. Сетевые проверки требуют явного разрешения цели.
 ### Шаг 1. Установка PathTrial (без Rust)
 Скачайте и просмотрите установочный скрипт из [выпуска v1.5.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1):
 ~~~bash
@@ -55,6 +55,26 @@ codex mcp list
 /mcp
 ~~~
 Порядок настройки разрешений и решения проблем — в [руководстве по интеграции](docs/ai-integrations.md).
+#### Cursor
+Публичный Marketplace Cursor пока не содержит этот пакет. Плагин лежит в `plugins/cursor/pathtrial/`: `.cursor-plugin/plugin.json`, `mcp.json`, который только запускает `pathtrial mcp`, общие Skills и одно правило доказательств. Не добавляйте разрешённые цели в `mcp.json`.
+
+Локальная загрузка — это описанный Cursor способ для плагина вне Marketplace. В Enterprise локальный импорт могут отключить:
+
+~~~bash
+mkdir -p "${HOME}/.cursor/plugins/local"
+rm -rf "${HOME}/.cursor/plugins/local/pathtrial"
+cp -R plugins/cursor/pathtrial "${HOME}/.cursor/plugins/local/pathtrial"
+~~~
+
+Выполните Developer: Reload Window, откройте Customize и проверьте Skills, правило и MCP-сервер. Имя может отображаться как `plugin-pathtrial-pathtrial`.
+
+Если нужен только MCP-сервер, запишите ту же конфигурацию в `.cursor/mcp.json` проекта или в `~/.cursor/mcp.json` (в Windows: `%USERPROFILE%\.cursor\mcp.json`). Из этого репозитория:
+
+~~~bash
+sh scripts/install-cursor-mcp.sh /path/to/your/project
+~~~
+
+Настольный Cursor может не унаследовать `PATHTRIAL_MCP_ALLOW_TARGETS`. Используйте файл allow-targets выше и перезагрузите окно. Первый запрос: *«Вызови `pathtrial_capabilities` и проверь доступные MCP-инструменты».* Установка в Cursor Desktop и вызов инструмента моделью здесь не выполнялись, поэтому статус — PARTIAL. Подробности в [руководстве по интеграции](docs/ai-integrations.md).
 ## Первое использование
 ### 1. Разрешите проверку узла, на которую у вас есть право
 PathTrial MCP по умолчанию запрещает все сетевые проверки; анализ существующих JSON-отчётов не требует доступа к сети. **При запуске ИИ-клиента из терминала временно задайте разрешённые цели до его запуска**, не редактируя кэш определённой версии плагина:
@@ -130,8 +150,8 @@ sh scripts/peer.sh demo 0.0.0.0:39002 0.0.0.0:39001 120
 Для разрешённой цели выполните `pathtrial scan example.com --profile web --rounds 5 --redact-ips` и затем `pathtrial http https://example.com/`. Каждый этап фиксируется отдельно; успешный Ping не гарантирует работу сайта.
 ### Можно ли диагностировать VPS, IPv4/IPv6, SOCKS5-прокси и HTTP/3?
 Да. CLI проверяет IPv4/IPv6, TCP/TLS, прокси SOCKS5 и HTTP CONNECT, QUIC-рукопожатие и HTTP/3-запросы при поддержке сервером. См. [руководство по CLI](docs/cli.md). По одному тайм-ауту UDP нельзя достоверно установить причину.
-### Как подключить PathTrial к Codex или Claude Code через MCP?
-Установите [готовое ядро v1.5.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1), затем используйте [инструкцию по плагинам](#установка-плагинов-ии) и Marketplace из `main`. MCP вызывает локальную программу `pathtrial`; сетевые проверки требуют разрешения цели.
+### Как подключить PathTrial к Codex, Claude Code или Cursor через MCP?
+Установите [готовое ядро v1.5.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1), затем следуйте [инструкции по плагинам](#установка-плагинов-ии). Codex и Claude Code используют Marketplace из `main`. Cursor использует локальный пакет или `.cursor/mcp.json`. MCP вызывает локальную программу `pathtrial`; сетевые проверки требуют разрешения цели.
 ### Нужен ли Rust для установки? Работает ли PathTrial в Windows?
 Опубликованные файлы v1.5.0-rc.1 есть для macOS Apple Silicon, macOS Intel и Linux x86_64, Rust для них не нужен. Windows x86_64 ставится через `scripts/install.ps1`, когда в выпуске появится этот архив. В `v1.5.0-rc.1` его нет. До этого сборка на Windows требует Rust. `--bind-interface` на Windows завершается ошибкой и не переключается на другой интерфейс.
 ### Чем PathTrial отличается от ping и curl?

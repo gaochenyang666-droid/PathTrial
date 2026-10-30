@@ -14,6 +14,7 @@ Not a stable release. Existing `v1.5.0-rc.1` and `v1.4.0-rc.1` tags are unchange
 - `pathtrial report render` writes an offline HTML, SVG, or text view of a saved JSON report. It does not upload the file or add measurements.
 - `pathtrial baseline save` and `pathtrial baseline compare` store one local baseline per target identity and report better, worse, same, or not_established with evidence IDs from the current file.
 - `pathtrial endpoint --peer` and `scripts/peer.sh` run a bounded UDP echo plus collect server. They do not change firewall, DNS, or routes.
+- Cursor plugin package at `plugins/cursor/pathtrial/` with `.cursor-plugin/plugin.json`, default-deny `mcp.json`, shared skills, and one evidence rule. `scripts/install-cursor-mcp.sh` merges that server into a project `.cursor/mcp.json` without an allowlist. The public Cursor Marketplace listing was not submitted.
 
 ### Path to 1.5.0 stable
 

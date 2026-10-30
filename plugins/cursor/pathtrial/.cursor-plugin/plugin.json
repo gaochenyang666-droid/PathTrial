@@ -1,0 +1,20 @@
+{
+  "name": "pathtrial",
+  "version": "0.3.0",
+  "description": "Evidence-first local network diagnostics for Cursor, backed by the PathTrial CLI and MCP server.",
+  "author": {
+    "name": "gaochenyang666-droid"
+  },
+  "homepage": "https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/ai-integrations.md",
+  "repository": "https://github.com/gaochenyang666-droid/PathTrial",
+  "license": "MIT",
+  "keywords": [
+    "network",
+    "diagnostics",
+    "mcp",
+    "dns",
+    "tcp",
+    "tls",
+    "quic"
+  ]
+}
