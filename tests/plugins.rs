@@ -142,6 +142,8 @@ fn every_skill_has_name_and_description_frontmatter() {
             continue;
         }
         let text = String::from_utf8(skill.1).expect("UTF-8 skill");
+        // Windows checkouts may use CRLF. The frontmatter marker is still `---`.
+        let text = text.replace("\r\n", "\n");
         assert!(text.starts_with("---\n"), "{} lacks frontmatter", skill.0);
         let frontmatter = text.split("---").nth(1).unwrap_or_default();
         assert!(frontmatter.contains("name:"), "{} lacks name", skill.0);
