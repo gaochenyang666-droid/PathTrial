@@ -32,7 +32,7 @@ The installer uses `~/.local/bin/pathtrial` and does not require sudo. If `patht
 export PATH="$HOME/.local/bin:$PATH"
 ~~~
 
-Supported release targets are macOS Apple Silicon, macOS Intel and Linux x86_64. Windows is not supported.
+Published `v1.5.0-rc.1` archives cover macOS Apple Silicon, macOS Intel, and Linux x86_64. Windows x86_64 is built by the release workflow for a later tag and installed with `scripts/install.ps1`. See [Windows](windows.md). That published tag does not contain `pathtrial-x86_64-pc-windows-msvc.tar.gz`.
 
 ## Status and exit codes
 
@@ -218,6 +218,54 @@ pathtrial correlate client.json server.json
 ~~~
 
 Without packet captures and synchronized clocks, the result cannot identify the exact device that dropped packets.
+
+## Offline report view
+
+`report render` reads a saved JSON file and writes HTML, SVG, or text. It does not contact the network and does not add samples.
+
+~~~bash
+pathtrial report render report.json --format html --out report.html --redact-ips
+pathtrial report render report.json --format svg --out report.svg
+~~~
+
+`--redact-ips` masks addresses in the output only. The input file stays unchanged. HTML and SVG have no remote stylesheet or script.
+
+## Local baseline
+
+Baselines are opt-in and stay in the user data directory (`~/.local/share/pathtrial/baselines`, or `%LOCALAPPDATA%\pathtrial\baselines`). `baseline path` prints that directory.
+
+~~~bash
+pathtrial baseline save report.json --redact-ips
+pathtrial baseline compare later.json --format json
+~~~
+
+The identity is the scan target, port, and profile, or the diagnose scenario and target. A different identity is not compared. `better`, `worse`, and `same` are used only when the two files are directly comparable; otherwise the relation is `not_established`. Evidence IDs come from the current file. Nothing is invented when no baseline exists. `--redact-ips` masks addresses inside the stored report copy. The identity key still contains the original target so the next compare can find the file. Exit code 2 means at least one `worse` relation. Exit code 3 means the files are not comparable.
+
+## Temporary peer
+
+On a machine you control:
+
+~~~bash
+sh scripts/peer.sh demo 0.0.0.0:39002 0.0.0.0:39001 120
+~~~
+
+The same action without the script:
+
+~~~bash
+pathtrial endpoint --peer \
+  --task-id demo \
+  --listen 0.0.0.0:39002 \
+  --bind 0.0.0.0:39001 \
+  --allow-public-bind \
+  --max-seconds 120 \
+  --output pathtrial-peer-collect.json
+~~~
+
+Loopback does not need `--allow-public-bind`. The peer does not change firewall, DNS, or routes, and the UDP echo does not store payloads. Stop it with Ctrl+C or wait for `--max-seconds`. Then copy the collect JSON and correlate it with the client file:
+
+~~~bash
+pathtrial correlate client.json pathtrial-peer-collect.json
+~~~
 
 ## Reports and redaction
 

@@ -53,8 +53,11 @@ case "${os}:${arch}" in
     Linux:x86_64 | Linux:amd64)
         target="x86_64-unknown-linux-gnu"
         ;;
+    MINGW*:x86_64 | MSYS*:x86_64 | CYGWIN*:x86_64)
+        fail "Windows x86_64 uses install.ps1 from the same release. This shell script does not install the Windows archive."
+        ;;
     *)
-        fail "unsupported platform ${os}/${arch}; supported targets are macOS arm64, macOS x86_64 and Linux x86_64"
+        fail "unsupported platform ${os}/${arch}; supported targets are macOS arm64, macOS x86_64, Linux x86_64, and Windows x86_64 via install.ps1"
         ;;
 esac
 

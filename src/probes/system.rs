@@ -141,7 +141,14 @@ pub fn collect(recorder: &mut Recorder, target_ip: Option<IpAddr>) -> SystemProb
     if let Some((family, route)) = &target_route {
         probe_ids.push(record_route(recorder, *family, "target", Some(route), None));
     } else if target_ip.is_some() {
-        notes.push("target route could not be resolved by the OS".to_string());
+        if cfg!(windows) {
+            notes.push(
+                "per-target route lookup is not performed on Windows; a missing target route is not evidence that no route exists"
+                    .to_string(),
+            );
+        } else {
+            notes.push("target route could not be resolved by the OS".to_string());
+        }
     }
 
     let proxy_env_names = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"]

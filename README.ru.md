@@ -93,7 +93,7 @@ pathtrial scan example.com --profile web --rounds 5 --redact-ips
 - AI Plugins: `0.3.0` (10 инструментов); предыдущий плагин v1.4 — `0.2.0` (9 инструментов).
 - Готовые пакеты: macOS ARM64, macOS Intel и Linux x86_64; сборка успешна, файлы SHA-256 доступны.
 - Проверки: [трёхплатформенный выпуск v1.5](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39255364100) прошёл сборку и тестирование MCP. Реальные сеансы Codex проверены, проект сообщил о завершении проверки Claude Code.
-- Для сетевой диагностики требуется явное разрешение. Windows, графический интерфейс и автоматическое исправление сети не поддерживаются.
+- Для сетевой диагностики требуется явное разрешение. Графического интерфейса и автоматического исправления сети нет. Windows x86_64 собирается последующим release workflow; в активах `v1.5.0-rc.1` этого архива нет. Ограничения: [Windows](docs/windows.md). Новые команды (`report render`, `baseline`, файл авторизации MCP и `endpoint --peer`) описаны в [README.en.md](README.en.md) и [docs/cli.md](docs/cli.md).
 Подробности см. в [матрице приёмки](docs/ai-plugin-completeness.md) и [отчёте о сборке](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39149532255). [Сообщайте о воспроизводимых ошибках](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md).
 ## Частые вопросы по диагностике сети
 ### Сайт не открывается: как отличить сбой DNS, TCP, TLS от HTTP?
@@ -103,7 +103,7 @@ pathtrial scan example.com --profile web --rounds 5 --redact-ips
 ### Как подключить PathTrial к Codex или Claude Code через MCP?
 Установите [готовое ядро v1.5.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1), затем используйте [инструкцию по плагинам](#установка-плагинов-ии) и Marketplace из `main`. MCP вызывает локальную программу `pathtrial`; сетевые проверки требуют разрешения цели.
 ### Нужен ли Rust для установки? Работает ли PathTrial в Windows?
-Нет. Готовые бинарные файлы v1.5.0-rc.1 существуют для macOS Apple Silicon, macOS Intel и Linux x86_64. Windows пока не поддерживается. Rust нужен только при сборке из исходного кода.
+Опубликованные файлы v1.5.0-rc.1 есть для macOS Apple Silicon, macOS Intel и Linux x86_64, Rust для них не нужен. Windows x86_64 ставится через `scripts/install.ps1`, когда в выпуске появится этот архив. В `v1.5.0-rc.1` его нет. До этого сборка на Windows требует Rust. `--bind-interface` на Windows завершается ошибкой и не переключается на другой интерфейс.
 ### Чем PathTrial отличается от ping и curl?
 `ping` в основном проверяет ICMP-доступность, а `curl` часто используют для HTTP-запросов. PathTrial разделяет измерения DNS, TCP, TLS, HTTP, UDP и QUIC на ограниченные проверки, указывает фактические данные в JSON-отчётах и не делает вывод о причине по одному неудачному тесту.
 ## Ошибки и участие в разработке

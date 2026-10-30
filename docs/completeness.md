@@ -212,7 +212,7 @@ AI 插件不计入上面的 94.25% 核心 CLI 评分，单独记录如下：
 | Codex 模型会话内真实工具调用 | VERIFIED | v0.2.0 完成 capabilities、未授权拒绝、授权扫描和 `tcp_ipv4_001` 解释 |
 | Claude Code 清单校验与加载 | PARTIAL | 官方 CLI 2.1.292；默认 main 安装、4 个 Skills 和 MCP Connected 已验证；真实模型工具调用尚待补充 |
 | 含 MCP 的预编译发行包 | VERIFIED | 最新 `v1.5.0-rc.1` Prerelease 三平台构建、归档 SHA-256 校验及 MCP smoke 均通过；历史 `v1.4.0-rc.1` 保留 |
-| Windows 插件 | UNVERIFIED | Windows 核心尚未实现 |
+| Windows 插件 | UNVERIFIED | 源码已有 Windows x86_64 构建路径和 allow file；尚无记录在案的 Windows 主机实测，已发布 v1.5.0-rc.1 也没有 Windows 资产。不把这项改成 VERIFIED，历史分数不因此上调 |
 
 AI Plugins 独立权重与当前 85.0% 计算见
 [ai-plugin-completeness.md](ai-plugin-completeness.md)。

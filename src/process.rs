@@ -6,9 +6,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-#[cfg(unix)]
-use std::os::unix::process::CommandExt;
-
 #[derive(Debug)]
 pub enum ProcessError {
     Spawn(String),
@@ -36,8 +33,15 @@ impl ProcessError {
 /// and any tool it spawned. Descendant enumeration remains a fallback where a
 /// process changed groups itself.
 pub fn isolate_process_group(command: &mut Command) {
+    #[cfg(not(unix))]
+    {
+        // Windows has no setpgid equivalent here. The direct child is still
+        // killed; descendant cleanup is best-effort and not a process group.
+        let _ = command;
+    }
     #[cfg(unix)]
     unsafe {
+        use std::os::unix::process::CommandExt;
         command.pre_exec(|| {
             if libc::setpgid(0, 0) == 0 {
                 Ok(())
@@ -198,7 +202,7 @@ fn descendants(root: u32) -> Vec<u32> {
     result
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
     use std::sync::atomic::AtomicBool;

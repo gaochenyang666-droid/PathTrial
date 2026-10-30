@@ -93,7 +93,7 @@ Consulta la [guía del CLI](docs/cli.md) para HTTP, QUIC, UDP, proxies, recopila
 - AI Plugins: `0.3.0` (10 herramientas); el plugin anterior v1.4 era `0.2.0` (9 herramientas).
 - Paquetes: macOS ARM64, macOS Intel y Linux x86_64, compilados correctamente con SHA-256.
 - Verificación: la [publicación v1.5 en tres plataformas](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39255364100) superó las compilaciones y pruebas MCP. Se verificaron las sesiones reales de Codex; el proyecto informó que completó la sesión de Claude Code.
-- Las pruebas de red requieren permisos explícitos; Windows, interfaz gráfica y reparación automática no son compatibles.
+- Las pruebas de red requieren permisos explícitos. No hay interfaz gráfica ni reparación automática. Windows x86_64 se construye en el flujo de publicación posterior; los activos de `v1.5.0-rc.1` no incluyen ese binario. Límites: [Windows](docs/windows.md). Los comandos nuevos (`report render`, `baseline`, archivo de autorización MCP y `endpoint --peer`) están documentados en [README.en.md](README.en.md) y [docs/cli.md](docs/cli.md).
 Consulta la [matriz de aceptación](docs/ai-plugin-completeness.md) y el [flujo de publicación](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39149532255). Puedes [informar de errores reproducibles](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md).
 ## Preguntas frecuentes sobre diagnóstico de red
 ### Si no abre una web, ¿cómo diferenciar un fallo de DNS, TCP, TLS o HTTP?
@@ -103,7 +103,7 @@ Sí. El CLI permite analizar IPv4/IPv6, TCP/TLS, proxies SOCKS5 y HTTP CONNECT, 
 ### ¿Cómo utilizar PathTrial con Codex o Claude Code mediante MCP?
 Instala el [núcleo precompilado v1.5.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1), sigue la [guía del plugin](#instalar-los-plugins-de-ia) y utiliza el Marketplace de `main`. MCP emplea el ejecutable local `pathtrial` y solo prueba destinos autorizados.
 ### ¿Necesito Rust? ¿Funciona en Windows?
-No. v1.5.0-rc.1 ofrece binarios precompilados para macOS Apple Silicon, macOS Intel y Linux x86_64. Windows aún no está disponible. Solo necesitas Rust para compilar desde el código fuente.
+Los binarios publicados de v1.5.0-rc.1 cubren macOS Apple Silicon, macOS Intel y Linux x86_64 sin Rust. Windows x86_64 usa `scripts/install.ps1` cuando una versión posterior incluya ese archivo. `v1.5.0-rc.1` no lo incluye. Hasta entonces, compilar en Windows requiere Rust. `--bind-interface` en Windows es un error y no cambia de interfaz.
 ### ¿En qué se diferencia PathTrial de ping y curl?
 `ping` comprueba principalmente la conectividad ICMP y `curl` se usa habitualmente para HTTP. PathTrial separa las pruebas de DNS, TCP, TLS, HTTP, UDP y QUIC, cita las mediciones reales en informes JSON y no deduce una causa definitiva de un único fallo.
 ## Informar de errores y contribuir

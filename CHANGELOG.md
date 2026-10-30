@@ -3,6 +3,29 @@
 All notable changes to PathTrial. The format follows Keep a Changelog, and the
 project uses semantic versioning for both the binary and the report schema.
 
+## [Unreleased]
+
+Not a stable release. Existing `v1.5.0-rc.1` and `v1.4.0-rc.1` tags are unchanged.
+
+### Added
+
+- Windows x86_64 is a release-workflow target (`x86_64-pc-windows-msvc`) with the same archive and SHA-256 layout as the other platforms. `scripts/install.ps1` installs that archive without Rust once a release contains it. Published `v1.5.0-rc.1` assets do not include Windows.
+- `pathtrial mcp` reads an explicit allow file (`--allow-file`, `PATHTRIAL_MCP_ALLOW_FILE`, or the user config path when that file already exists). Marketplace `mcp.json` stays `["mcp"]`. Missing files remain default-deny. Wildcards and CIDR rules are rejected.
+- `pathtrial report render` writes an offline HTML, SVG, or text view of a saved JSON report. It does not upload the file or add measurements.
+- `pathtrial baseline save` and `pathtrial baseline compare` store one local baseline per target identity and report better, worse, same, or not_established with evidence IDs from the current file.
+- `pathtrial endpoint --peer` and `scripts/peer.sh` run a bounded UDP echo plus collect server. They do not change firewall, DNS, or routes.
+
+### Path to 1.5.0 stable
+
+Do not retag `v1.5.0-rc.1`. A stable `1.5.0` still needs all of the following:
+
+- A Windows `windows-2022` CI run and a published Windows archive whose SHA-256 smoke downloads the asset. Until that run is green, Windows is not VERIFIED. `--bind-interface`, per-target routes, ICMP jitter, and Wi-Fi dBm stay unsupported or not established on Windows.
+- Linux ARM64 is still not a release target.
+- Issue #3 remains the field-report tracker. No community results are claimed.
+- The allow-file, report view, baseline, and peer commands need to ship in a new tag after review. They are not in the `v1.5.0-rc.1` binary.
+- Claude Code live model coverage that was only partially recorded for earlier plugin builds is not re-certified by this changelog.
+- Stable publication is a new version bump, changelog freeze, and tag. It is not a moving of an existing tag.
+
 ## [1.5.0-rc.1] - 2026-10-19
 
 - [PR #5](https://github.com/gaochenyang666-droid/PathTrial/pull/5) merged into `main` on 2026-10-19 after evidence-schema, MCP target/authorization, bounded subprocess and latency severity corrections. The [three-platform CI](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39235804316) passed 225 tests. Now published as a [three-platform prerelease](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) with verified SHA-256 assets. Release workflow [39255364100](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39255364100) succeeded.

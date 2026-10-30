@@ -175,6 +175,31 @@ impl IpMasker {
     }
 }
 
+/// Mask IP literals inside every string of a JSON value. The input file is not
+/// modified unless the caller writes `value` back out.
+pub fn mask_json(value: &mut serde_json::Value) -> usize {
+    let mut masker = IpMasker::default();
+    mask_json_with(value, &mut masker);
+    masker.masked
+}
+
+fn mask_json_with(value: &mut serde_json::Value, masker: &mut IpMasker) {
+    match value {
+        serde_json::Value::String(text) => *text = masker.mask_text(text),
+        serde_json::Value::Array(items) => {
+            for item in items {
+                mask_json_with(item, masker);
+            }
+        }
+        serde_json::Value::Object(map) => {
+            for item in map.values_mut() {
+                mask_json_with(item, masker);
+            }
+        }
+        _ => {}
+    }
+}
+
 #[cfg(test)]
 mod masker_tests {
     use super::IpMasker;

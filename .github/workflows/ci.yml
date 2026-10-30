@@ -96,3 +96,59 @@ jobs:
           ls -lh target/release/pathtrial
           size=$(stat -f%z target/release/pathtrial 2>/dev/null || stat -c%s target/release/pathtrial)
           echo "binary bytes: $size"
+
+  test-windows:
+    name: test (windows-2022)
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - name: Test
+        timeout-minutes: 30
+        run: cargo test --locked --all-targets -- --test-threads=1
+      - name: Release build
+        run: cargo build --release --locked
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: CLI smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          bin="./target/release/pathtrial.exe"
+          "$bin" --version
+          "$bin" --help > /dev/null
+          "$bin" mcp --print-allow-path > /dev/null
+          "$bin" endpoint --udp-echo --bind 127.0.0.1:39001 &
+          endpoint_pid=$!
+          trap 'kill "$endpoint_pid" 2>/dev/null || true' EXIT
+          sleep 2
+          "$bin" udp --target 127.0.0.1:39001 --rounds 3 \
+            --timeout-ms 1000 --format json > udp.json
+          kill "$endpoint_pid" 2>/dev/null || true
+          python -c "import json; d=json.load(open('udp.json')); assert d['status']=='PASS', d['status']"
+      - name: Package checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, pathlib
+          binary = pathlib.Path("target/release/pathtrial.exe")
+          digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+          pathlib.Path("pathtrial-x86_64-pc-windows-msvc.exe.sha256").write_text(
+              f"{digest}  pathtrial.exe\n", encoding="ascii")
+          print(digest)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pathtrial-x86_64-pc-windows-msvc
+          path: |
+            target/release/pathtrial.exe
+            pathtrial-x86_64-pc-windows-msvc.exe.sha256
