@@ -1,0 +1,15 @@
+---
+description: Use PathTrial for evidence-first network diagnostics. Apply when the user asks to diagnose DNS, TCP, TLS, HTTP, UDP, QUIC, proxies, or to explain a PathTrial report.
+alwaysApply: false
+---
+
+PathTrial measures only what the user authorized. Probe tools are denied until an exact host or `host:port` is allowed. Do not add wildcards, CIDR prefixes, or `--allow-target` to the Cursor plugin `mcp.json`. Desktop Cursor may not inherit a shell environment.
+
+Prefer the user allow file, one target per line:
+
+- Linux and macOS: `$XDG_CONFIG_HOME/pathtrial/allow-targets` or `~/.config/pathtrial/allow-targets`
+- Windows: `%APPDATA%\pathtrial\allow-targets`
+
+`pathtrial mcp --print-allow-path` prints the path and does not print the rules. A missing file stays default-deny. Restart Cursor after changing it.
+
+Report `observed`, `possible`, and `not_established` separately. Cite probe or evidence IDs that the tool returned. Do not invent samples, timestamps, hop addresses, or history. `SKIP` is not a pass. TCP reachability, TLS, HTTP, ICMP, UDP Echo, QUIC, and HTTP/3 are separate observations. Do not attribute a failure to an ISP, censorship, or a packet-loss hop without evidence from the report.

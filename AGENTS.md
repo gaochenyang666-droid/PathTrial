@@ -51,7 +51,8 @@ CI also runs tests on `ubuntu-24.04`, `macos-15`, and `macos-15-intel`. Merely c
 - `plugins/shared/skills/` is the authoritative skill source. After edits run
   `scripts/sync-plugin-skills.sh` and commit both generated copies.
 - Codex package: `plugins/codex/pathtrial/`. Claude Code package:
-  `plugins/claude-code/pathtrial/`.
+  `plugins/claude-code/pathtrial/`. Cursor package:
+  `plugins/cursor/pathtrial/`.
 - MCP entrypoint: `pathtrial mcp`. Probe tools require an exact
   `--allow-target` rule. Never add wildcard authorization, a silent fallback, a
   generic file-reading tool, or a generic shell-execution tool.

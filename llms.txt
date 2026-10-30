@@ -34,10 +34,11 @@ For specific options: `pathtrial --help` or `pathtrial <command> --help`.
 
 ## AI plugins and MCP
 
-- [AI integration guide](https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/ai-integrations.md): Codex and Claude Code installation, authorization, tools and limits.
+- [AI integration guide](https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/ai-integrations.md): Codex, Claude Code, and Cursor installation, authorization, tools and limits.
 - [AI Plugins completeness](https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/ai-plugin-completeness.md): independent security, client and distribution score.
 - Codex package: `plugins/codex/pathtrial/` with root `plugin.json`, `mcp.json` and `skills/`.
 - Claude Code package: `plugins/claude-code/pathtrial/` with `.claude-plugin/plugin.json`, `.mcp.json` and `skills/`.
+- Cursor package: `plugins/cursor/pathtrial/` with `.cursor-plugin/plugin.json`, `mcp.json`, `rules/`, and `skills/`. It is not a public Cursor Marketplace listing.
 - MCP launch: `pathtrial mcp --allow-target example.com:443`.
 - Published v1.5.0-rc.1 includes ten MCP tools, with `pathtrial_diagnose`, and `pathtrial_explain_report` can explain diagnose reports. Previous v1.4 binaries have nine tools.
 - Probe tools are denied by default. Report explanation and comparison do not perform network requests.
