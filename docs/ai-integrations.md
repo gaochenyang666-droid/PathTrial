@@ -71,9 +71,22 @@ codex
 
 The `PATHTRIAL_MCP_ALLOW_TARGETS` variable accepts multiple explicit targets
 separated by commas or spaces. The executable parses it at MCP startup. A
-desktop GUI launched outside that terminal may **not** inherit its environment:
-use that client's supported MCP environment settings or an explicit
-`--allow-target` argument, and restart the client after changing authorization.
+desktop GUI launched outside that terminal may **not** inherit its environment.
+For that case, create a user-owned allow file and restart the client. Do not
+edit the cached marketplace `mcp.json`; it stays `["mcp"]` and the binary
+reads the file itself.
+
+~~~bash
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/pathtrial"
+printf '%s\n' 'example.com:443' >> "${XDG_CONFIG_HOME:-$HOME/.config}/pathtrial/allow-targets"
+pathtrial mcp --print-allow-path
+~~~
+
+On Windows the file is `%APPDATA%\pathtrial\allow-targets`. One explicit host
+or `host:port` per line. `#` comments are allowed. `*` and CIDR prefixes are
+rejected. A missing file is default-deny. `--allow-file PATH` loads that path
+instead and fails if it is missing. A group-writable or world-writable file is
+refused on Unix. Restart the client after changing the file.
 
 An entry without a port authorizes any port for that exact host or IP. A
 hostname rule only authorizes public resolved addresses. A private, loopback
@@ -289,7 +302,7 @@ The PathTrial CLI can remain installed after plugin removal.
 | Symptom | Action |
 | --- | --- |
 | `pathtrial` not found | Install the CLI or add its directory to `PATH` |
-| `target_not_allowed` | Add the exact host or IP and port to the MCP arguments, then restart the client |
+| `target_not_allowed` | Add the exact host or IP and port to the allow file or `--allow-target`, then restart the client |
 | Private IP denied | Authorize the exact IP and port; a public hostname rule doesn't cover loopback |
 | No tools listed | Restart the client and check `codex mcp list` or the Claude `/mcp` panel |
 | `SKIP` result | A required precondition was absent; it is not a pass |
@@ -310,7 +323,7 @@ The PathTrial CLI can remain installed after plugin removal.
 | Codex model-driven tool calls in a live session | VERIFIED for v0.2.0: capabilities, authorized TCP scan 1/1, real `tcp_ipv4_001` explanation and unauthorized `target_not_allowed` denial |
 | Claude Code manifest validation and live tool call | PARTIAL: default-main install, four Skills and MCP Connected verified; a live model tool call has not yet been recorded |
 | Precompiled release containing `pathtrial mcp` | VERIFIED for `v1.5.0-rc.1`; macOS ARM, macOS Intel and Linux x86_64 release smoke passed |
-| Windows plugin support | UNVERIFIED, Windows core support is not implemented |
+| Windows plugin support | UNVERIFIED. The core has a Windows x86_64 build path and an allow file, but this document does not record a Windows host run or a published Windows release asset |
 
 ## Reporting bugs
 

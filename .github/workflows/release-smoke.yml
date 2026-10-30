@@ -38,3 +38,14 @@ jobs:
             echo "Runner has cargo preinstalled; verification intentionally excludes it from PATH."
           fi
           bash scripts/verify-release.sh
+
+  verify-windows:
+    name: verify (windows-2022)
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Windows release asset or record that it is absent
+        shell: pwsh
+        env:
+          PATHTRIAL_VERSION: v1.5.0-rc.1
+        run: ./scripts/verify-release.ps1

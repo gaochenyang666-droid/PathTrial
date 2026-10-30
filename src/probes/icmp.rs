@@ -26,21 +26,37 @@ impl IcmpOutcome {
     }
 }
 
-/// Run `ping -c <count>` with a hard wall-clock limit.
+/// Run the system `ping` with a hard wall-clock limit.
+///
+/// macOS and Linux use `-c`. Windows `ping.exe` uses `-n` and a per-echo
+/// timeout in milliseconds (`-w`). Windows summaries do not include jitter;
+/// `jitter` stays empty rather than being derived from a missing field.
 pub fn ping(host: &str, count: u32, timeout: Duration) -> IcmpOutcome {
-    let candidates = ["/sbin/ping", "/bin/ping", "ping"];
+    let candidates: &[&str] = if cfg!(windows) {
+        &["ping"]
+    } else {
+        &["/sbin/ping", "/bin/ping", "ping"]
+    };
     let mut last_error = None;
     for program in candidates {
         // Bound the child itself: macOS uses -t, Linux uses -w, both in
-        // seconds. Without it an unreachable target can hang for a long time.
+        // seconds. Windows -w is a per-echo timeout in milliseconds. Without a
+        // deadline an unreachable target can hang for a long time.
         let seconds = timeout.as_secs().clamp(1, 60).to_string();
-        let deadline_flag = if cfg!(target_os = "macos") {
-            "-t"
+        let millis = timeout.as_millis().clamp(1, 60_000).to_string();
+        let count_text = count.to_string();
+        let mut command = Command::new(program);
+        if cfg!(windows) {
+            command.args(["-n", &count_text, "-w", &millis, host]);
         } else {
-            "-w"
-        };
-        let mut child = match Command::new(program)
-            .args(["-c", &count.to_string(), deadline_flag, &seconds, host])
+            let deadline_flag = if cfg!(target_os = "macos") {
+                "-t"
+            } else {
+                "-w"
+            };
+            command.args(["-c", &count_text, deadline_flag, &seconds, host]);
+        }
+        let mut child = match command
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
@@ -111,6 +127,35 @@ fn first_error_line(text: &str) -> String {
         .to_string()
 }
 
+fn field_after_label(line: &str, label: &str) -> Option<u32> {
+    let lower = line.to_ascii_lowercase();
+    let index = lower.find(label)?;
+    let rest = &line[index + label.len()..];
+    let digits: String = rest
+        .chars()
+        .skip_while(|ch| !ch.is_ascii_digit())
+        .take_while(|ch| ch.is_ascii_digit())
+        .collect();
+    digits.parse().ok()
+}
+
+fn rtt_after_label(line: &str, label: &str) -> Option<f64> {
+    let lower = line.to_ascii_lowercase();
+    let index = lower.find(label)?;
+    let rest = &line[index + label.len()..];
+    let mut number = String::new();
+    let mut started = false;
+    for ch in rest.chars() {
+        if ch.is_ascii_digit() || (ch == '.' && started) {
+            number.push(ch);
+            started = true;
+        } else if started {
+            break;
+        }
+    }
+    number.parse().ok()
+}
+
 /// Parse the summary block of macOS or Linux `ping` output.
 pub fn parse_ping(text: &str) -> IcmpOutcome {
     let mut outcome = IcmpOutcome::default();
@@ -133,6 +178,13 @@ pub fn parse_ping(text: &str) -> IcmpOutcome {
                     .parse::<f64>()
                     .unwrap_or(0.0);
             }
+        } else if lower.contains("sent =") && lower.contains("received =") {
+            outcome.sent = field_after_label(line, "sent =").unwrap_or(0);
+            outcome.received = field_after_label(line, "received =").unwrap_or(0);
+        } else if lower.contains("minimum =") && lower.contains("average =") {
+            outcome.rtt_min = rtt_after_label(line, "minimum =");
+            outcome.rtt_avg = rtt_after_label(line, "average =");
+            outcome.rtt_max = rtt_after_label(line, "maximum =");
         } else if lower.contains("min/avg/max") {
             if let Some((_, values)) = line.split_once('=') {
                 let parsed: Vec<f64> = values
@@ -185,6 +237,24 @@ mod tests {
         assert_eq!(parsed.received, 5);
         assert_eq!(parsed.loss_pct, 0.0);
         assert_eq!(parsed.rtt_avg, Some(21.2));
+    }
+
+    #[test]
+    fn parses_windows_summary_without_inventing_jitter() {
+        let text = "\
+Ping statistics for 203.0.113.5:\n\
+    Packets: Sent = 4, Received = 3, Lost = 1 (25% loss),\n\
+Approximate round trip times in milli-seconds:\n\
+    Minimum = 10ms, Maximum = 14ms, Average = 12ms\n\
+";
+        let parsed = parse_ping(text);
+        assert_eq!(parsed.sent, 4);
+        assert_eq!(parsed.received, 3);
+        assert!((parsed.loss_pct - 25.0).abs() < 0.01);
+        assert_eq!(parsed.rtt_min, Some(10.0));
+        assert_eq!(parsed.rtt_avg, Some(12.0));
+        assert_eq!(parsed.rtt_max, Some(14.0));
+        assert!(parsed.jitter.is_none());
     }
 
     #[test]

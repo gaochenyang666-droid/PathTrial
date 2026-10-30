@@ -5,11 +5,16 @@
 //! the OS tooling (`route` on macOS, `ip` on Linux) because both expose the
 //! resolved route, not just the table, which is what a diagnostic needs.
 
+#[cfg(unix)]
 use std::collections::BTreeMap;
+#[cfg(unix)]
 use std::ffi::CStr;
 use std::fmt::Write as _;
+#[cfg(unix)]
 use std::io;
-use std::net::{Ipv4Addr, Ipv6Addr};
+#[cfg(unix)]
+use std::net::Ipv4Addr;
+use std::net::Ipv6Addr;
 use std::process::Command;
 
 use crate::models::{Family, InterfaceInfo, LocalLinkInfo, RouteInfo};
@@ -18,14 +23,19 @@ use crate::models::{Family, InterfaceInfo, LocalLinkInfo, RouteInfo};
 mod linux;
 #[cfg(target_os = "macos")]
 mod macos;
+#[cfg(windows)]
+mod windows;
+pub(crate) mod winparse;
 
 #[cfg(target_os = "linux")]
 pub use linux::{default_route, route_to};
 #[cfg(target_os = "macos")]
 pub use macos::{default_route, route_to};
+#[cfg(windows)]
+pub use windows::{default_route, route_to};
 
-#[cfg(not(any(target_os = "macos", target_os = "linux")))]
-compile_error!("PathTrial V1 supports macOS and Linux only");
+#[cfg(not(any(target_os = "macos", target_os = "linux", windows)))]
+compile_error!("PathTrial supports macOS, Linux, and Windows x86_64");
 
 /// Heuristic: names used by common tunnel adapters. This is a hint for the
 /// report, never a conclusion.
@@ -37,6 +47,7 @@ pub fn looks_like_tunnel(name: &str) -> bool {
 }
 
 /// Enumerate interfaces and their assigned addresses.
+#[cfg(unix)]
 pub fn interfaces() -> Result<Vec<InterfaceInfo>, String> {
     let mut head: *mut libc::ifaddrs = std::ptr::null_mut();
     // SAFETY: getifaddrs allocates a linked list owned by us; it is released
@@ -101,7 +112,17 @@ pub fn interfaces() -> Result<Vec<InterfaceInfo>, String> {
     Ok(by_name.into_values().collect())
 }
 
+/// Enumerate interfaces. On Windows this shells out to `Get-NetIPAddress` and
+/// falls back to English `ipconfig /all`. Adapters without a printed address
+/// are omitted. `up` means an address was reported, not a separate link-state
+/// reading. Index 0 from the ipconfig fallback means the index was not printed.
+#[cfg(windows)]
+pub fn interfaces() -> Result<Vec<InterfaceInfo>, String> {
+    windows::interfaces()
+}
+
 /// Kernel release string, when the platform exposes it.
+#[cfg(unix)]
 pub fn kernel_version() -> Option<String> {
     // SAFETY: uname writes into a zeroed utsname owned by this stack frame.
     let mut info: libc::utsname = unsafe { std::mem::zeroed() };
@@ -113,6 +134,12 @@ pub fn kernel_version() -> Option<String> {
     // SAFETY: release is a NUL-terminated array inside utsname.
     let release = unsafe { CStr::from_ptr(info.release.as_ptr()) };
     Some(release.to_string_lossy().to_string())
+}
+
+/// Kernel string from `cmd /C ver`, when that command succeeds.
+#[cfg(windows)]
+pub fn kernel_version() -> Option<String> {
+    windows::kernel_version()
 }
 
 /// Render a route for human summaries.
@@ -273,6 +300,10 @@ pub fn local_links(interfaces: &[InterfaceInfo]) -> Vec<LocalLinkInfo> {
         "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport",
         &["-I"],
     );
+    #[cfg(windows)]
+    let wlan = command_text("netsh", &["wlan", "show", "interfaces"])
+        .map(|text| winparse::parse_netsh_wlan(&text))
+        .unwrap_or_default();
 
     interfaces
         .iter()
@@ -288,9 +319,14 @@ pub fn local_links(interfaces: &[InterfaceInfo]) -> Vec<LocalLinkInfo> {
             let is_wifi = wifi_names.iter().any(|candidate| candidate == &name);
             #[cfg(target_os = "linux")]
             let is_wifi = std::path::Path::new(&format!("/sys/class/net/{name}/wireless")).exists();
+            #[cfg(windows)]
+            let is_wifi = winparse::looks_like_wifi(&name);
 
             let mut ssid = None;
+            #[cfg(not(windows))]
             let mut signal_dbm = None;
+            #[cfg(windows)]
+            let signal_dbm = None;
             let mut tx_rate_mbps = None;
             if is_wifi {
                 #[cfg(target_os = "macos")]
@@ -321,6 +357,28 @@ pub fn local_links(interfaces: &[InterfaceInfo]) -> Vec<LocalLinkInfo> {
                             .push("iw is unavailable; Wi-Fi link metrics were skipped".to_string());
                     }
                 }
+                #[cfg(windows)]
+                {
+                    if let Some(facts) = wlan.iter().find(|item| item.name == name) {
+                        ssid = facts.ssid.clone();
+                        tx_rate_mbps = facts.receive_mbps;
+                        if let Some(percent) = facts.signal_percent {
+                            notes.push(format!(
+                                "netsh reported signal {percent}%; dBm was not provided and is not established"
+                            ));
+                        } else {
+                            notes.push(
+                                "netsh did not report a signal percentage; dBm is not established"
+                                    .to_string(),
+                            );
+                        }
+                    } else {
+                        notes.push(
+                            "netsh wlan did not report this interface; Wi-Fi link metrics were skipped"
+                                .to_string(),
+                        );
+                    }
+                }
             }
 
             let mut dhcp = None;
@@ -344,6 +402,28 @@ pub fn local_links(interfaces: &[InterfaceInfo]) -> Vec<LocalLinkInfo> {
                         "DHCP state directories exist, but no active lease was safely readable"
                             .to_string(),
                     );
+                }
+            }
+            #[cfg(windows)]
+            {
+                let query = format!("name={name}");
+                if let Some(text) =
+                    command_text("netsh", &["interface", "ip", "show", "config", &query])
+                {
+                    match winparse::parse_dhcp_enabled(&text) {
+                        Some(true) => {
+                            dhcp = Some("netsh reports DHCP enabled for this interface".to_string());
+                        }
+                        Some(false) => notes.push(
+                            "netsh reports DHCP is not enabled for this interface".to_string(),
+                        ),
+                        None => notes.push(
+                            "netsh config was read, but a DHCP enabled line was not found"
+                                .to_string(),
+                        ),
+                    }
+                } else {
+                    notes.push("netsh interface ip show config was unavailable".to_string());
                 }
             }
 

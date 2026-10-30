@@ -10,9 +10,10 @@
 3. **No silent fallbacks.** If interface binding, DNS or TLS cannot be done as
    requested, report it. Do not degrade to a different measurement and keep the
    original label.
-4. **Keep scope explicit.** Windows and automatic packet-capture analysis are
-   out of scope for this release. QUIC and dual-end reports must preserve their
-   documented evidence limits.
+4. **Keep scope explicit.** Windows x86_64 is in scope with the limits in
+   `docs/windows.md`. Do not mark an unsupported Windows probe VERIFIED.
+   Automatic packet-capture analysis stays out of scope. QUIC and dual-end
+   reports must preserve their documented evidence limits.
 
 ## Development
 
@@ -25,7 +26,8 @@ scripts/sync-plugin-skills.sh --check
 ```
 
 All checks must pass before a change is proposed. CI runs them on Ubuntu 24.04,
-macOS ARM and macOS Intel.
+macOS ARM, macOS Intel, and Windows x86_64. A Windows job that has not gone
+green yet is not a VERIFIED Windows result.
 
 MCP protocol tests live in `tests/mcp.rs`; plugin manifest and Skills checks
 live in `tests/plugins.rs`. The shared Skills under

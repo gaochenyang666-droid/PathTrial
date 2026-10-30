@@ -23,6 +23,10 @@ impl McpClient {
         for target in allow {
             command.args(["--allow-target", target]);
         }
+        Self::from_command(command)
+    }
+
+    fn from_command(mut command: Command) -> Self {
         let mut child = command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -176,6 +180,61 @@ fn capabilities_do_not_expose_allowlist_addresses() {
     assert_eq!(authorization["contains_hostname_rule"], true);
     assert_eq!(authorization["contains_non_public_literal"], true);
     client.close();
+}
+
+#[test]
+fn allow_file_rejects_wildcards() {
+    let path = std::env::temp_dir().join(format!(
+        "pathtrial-allow-wild-{}-{}.txt",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::write(&path, "*\n").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+    let output = Command::new(binary())
+        .args(["mcp", "--allow-file", path.to_str().unwrap()])
+        .output()
+        .expect("run mcp");
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("wildcard"), "{stderr}");
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn allow_file_is_loaded_without_putting_targets_in_capabilities() {
+    let path = std::env::temp_dir().join(format!(
+        "pathtrial-allow-ok-{}-{}.txt",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::write(&path, "203.0.113.9:443\n").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+    let mut command = Command::new(binary());
+    command.args(["mcp", "--allow-file", path.to_str().unwrap()]);
+    let mut client = McpClient::from_command(command);
+    let caps = client.call(2, "pathtrial_capabilities", json!({}));
+    let serialized = serde_json::to_string(&caps).unwrap();
+    assert!(!serialized.contains("203.0.113.9"), "{serialized}");
+    let authorization = &caps["result"]["structuredContent"]["authorization"];
+    assert_eq!(authorization["allow_rule_count"], 1);
+    assert_eq!(authorization["allow_file_loaded"], true);
+    client.close();
+    let _ = std::fs::remove_file(path);
 }
 
 #[test]

@@ -64,4 +64,4 @@ The RackNerd measurements were taken before PathTrial existed. They must not be 
 
 ## Boundaries and privacy
 
-PathTrial currently supports macOS Apple Silicon, macOS Intel, and Linux x86_64; Windows support is not available in v1.5.0-rc.1. The program has no GUI or autonomous repairs. Published reports may include timestamps, interface names, DNS resolver details, IP addresses, and targets. Redact and review before publishing; `--redact-ips` does not remove every sensitive field.
+Published v1.5.0-rc.1 supports macOS Apple Silicon, macOS Intel, and Linux x86_64. Windows x86_64 is a later release-workflow target; that tag has no Windows archive. See docs/windows.md. The program has no GUI or autonomous repairs. `pathtrial report render` and `pathtrial baseline` read local files only. `scripts/peer.sh` does not change firewall, DNS, or routes. Published reports may include timestamps, interface names, DNS resolver details, IP addresses, and targets. Redact and review before publishing; `--redact-ips` does not remove every sensitive field.

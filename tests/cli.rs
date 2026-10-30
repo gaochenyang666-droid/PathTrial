@@ -183,7 +183,7 @@ fn free_port() -> u16 {
 fn closed_port_is_a_failed_check_with_exit_2() {
     let port = free_port();
     let (status, value) = run_json(&scan_args_with(port, 5, "tcp", 1000, &[]));
-    assert_eq!(status.code(), Some(2), "refused connections are a finding");
+    assert_eq!(status.code(), Some(2), "failed connections are a finding");
     let stage = value["stages"]
         .as_array()
         .unwrap()
@@ -192,14 +192,20 @@ fn closed_port_is_a_failed_check_with_exit_2() {
         .expect("tcp stage");
     assert_eq!(stage["status"], "FAIL");
     assert_eq!(value["summaries"][0]["tcp_success"], 0);
-    let finding = value["findings"]
-        .as_array()
-        .unwrap()
+    let findings = value["findings"].as_array().unwrap();
+    #[cfg(not(windows))]
+    let finding = findings
         .iter()
         .find(|finding| finding["rule_id"] == "R015")
         .expect("R015 finding");
+    #[cfg(windows)]
+    let finding = findings
+        .iter()
+        .find(|finding| finding["rule_id"] == "R015" || finding["rule_id"] == "R004")
+        .unwrap_or_else(|| panic!("expected R015 or R004, got {findings:?}"));
     assert_eq!(finding["status"], "FAIL");
     let claim = finding["claim"].as_str().unwrap();
+    #[cfg(not(windows))]
     assert!(claim.contains("拒绝"));
     assert!(!claim.contains("主机可达"));
 }
@@ -430,7 +436,17 @@ fn http_connection_refused_is_reported() {
         .expect("run");
     assert_eq!(output.status.code(), Some(2));
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
-    assert_eq!(value["probes"][0]["detail"]["error"], "connection_refused");
+    let error = value["probes"][0]["detail"]["error"].as_str();
+    #[cfg(not(windows))]
+    assert_eq!(error, Some("connection_refused"));
+    #[cfg(windows)]
+    assert!(
+        matches!(
+            error,
+            Some("connection_refused") | Some("timeout") | Some("connection_reset")
+        ),
+        "closed port observation was {error:?}"
+    );
 }
 
 #[test]
@@ -1412,4 +1428,125 @@ fn compare_writes_json_and_markdown_without_overwriting() {
         .expect("run compare");
     assert_eq!(again.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&again.stderr).contains("refusing to overwrite"));
+}
+
+#[test]
+fn report_render_and_baseline_stay_on_local_files() {
+    let dir = std::env::temp_dir().join(format!(
+        "pathtrial-view-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&dir).unwrap();
+    let report = dir.join("report.json");
+    let html = dir.join("view.html");
+    let later = dir.join("later.json");
+    let body = serde_json::json!({
+        "schema_version": "1.5.0",
+        "tool_version": "1.5.0-rc.1",
+        "run_id": "run-view",
+        "started_at": "2026-01-01T00:00:00Z",
+        "finished_at": "2026-01-01T00:00:01Z",
+        "target": {"input": "203.0.113.10", "port": 443, "profile": "tcp", "literal_ip": true},
+        "configuration": {"timeout_ms": 1000, "rounds": 1, "bind_interface": null},
+        "environment": {"os": "test", "arch": "test"},
+        "stages": [{
+            "id": "tcp",
+            "name": "TCP",
+            "status": "PASS",
+            "summary": "connected",
+            "evidence": ["tcp_001"],
+            "started_at": "2026-01-01T00:00:00Z",
+            "finished_at": "2026-01-01T00:00:01Z"
+        }],
+        "probes": [{"id": "tcp_001", "kind": "tcp", "outcome": "ok"}],
+        "findings": [],
+        "limitations": ["clock sync is not established"]
+    });
+    std::fs::write(&report, serde_json::to_vec_pretty(&body).unwrap()).unwrap();
+    let mut failed = body.clone();
+    failed["stages"][0]["status"] = serde_json::json!("FAIL");
+    std::fs::write(&later, serde_json::to_vec_pretty(&failed).unwrap()).unwrap();
+
+    let rendered = Command::new(binary())
+        .args([
+            "report",
+            "render",
+            report.to_str().unwrap(),
+            "--format",
+            "html",
+            "--out",
+            html.to_str().unwrap(),
+            "--redact-ips",
+        ])
+        .output()
+        .expect("render");
+    assert!(rendered.status.success(), "{:?}", rendered.stderr);
+    let page = std::fs::read_to_string(&html).unwrap();
+    assert!(page.contains("tcp_001"));
+    assert!(!page.contains("203.0.113.10"));
+    assert!(!page.contains("src="));
+
+    let saved = Command::new(binary())
+        .args([
+            "baseline",
+            "save",
+            report.to_str().unwrap(),
+            "--dir",
+            dir.to_str().unwrap(),
+            "--redact-ips",
+        ])
+        .output()
+        .expect("baseline save");
+    assert!(saved.status.success(), "{:?}", saved.stderr);
+    let compared = Command::new(binary())
+        .args([
+            "baseline",
+            "compare",
+            later.to_str().unwrap(),
+            "--dir",
+            dir.to_str().unwrap(),
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("baseline compare");
+    assert_eq!(compared.status.code(), Some(2), "{:?}", compared.stderr);
+    let comparison: serde_json::Value = serde_json::from_slice(&compared.stdout).unwrap();
+    assert_eq!(comparison["comparability"]["verdict"], "worse");
+    let stage = comparison["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["name"] == "stage TCP")
+        .unwrap();
+    assert_eq!(stage["relation"], "worse");
+    assert_eq!(stage["evidence_ids"][0], "tcp_001");
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn endpoint_refuses_public_peer_without_the_flag() {
+    let output = Command::new(binary())
+        .args([
+            "endpoint",
+            "--peer",
+            "--bind",
+            "0.0.0.0:39001",
+            "--listen",
+            "0.0.0.0:39002",
+            "--task-id",
+            "demo",
+            "--max-seconds",
+            "5",
+        ])
+        .output()
+        .expect("endpoint");
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("allow-public-bind"), "{stderr}");
+    assert!(stderr.contains("firewall"), "{stderr}");
 }

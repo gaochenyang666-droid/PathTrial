@@ -52,6 +52,21 @@ pub fn system_resolvers() -> (Vec<String>, Vec<String>) {
         }
     }
 
+    #[cfg(windows)]
+    if resolvers.is_empty() {
+        if let Ok(output) = std::process::Command::new("ipconfig").arg("/all").output() {
+            let text = String::from_utf8_lossy(&output.stdout);
+            resolvers.extend(crate::platform::winparse::parse_windows_dns_servers(&text));
+        }
+        if resolvers.is_empty() {
+            notes.push(
+                "Windows DNS servers were not parsed from ipconfig /all; localized output may be unsupported"
+                    .to_string(),
+            );
+        }
+    }
+
+    #[cfg(not(windows))]
     if resolvers.is_empty() {
         if let Ok(text) = std::fs::read_to_string("/etc/resolv.conf") {
             for line in text.lines() {

@@ -164,6 +164,10 @@ pub enum Command {
     Mcp(McpArgs),
     /// Compare two saved JSON reports with explicit comparability checks.
     Compare(CompareArgs),
+    /// Render a saved JSON report offline.
+    Report(ReportArgs),
+    /// Store or compare a local baseline for one target.
+    Baseline(BaselineArgs),
     /// Run a temporary local endpoint for repeatable tests.
     Endpoint(EndpointArgs),
     /// Print a JSON Schema to stdout.
@@ -670,19 +674,137 @@ pub struct McpArgs {
     /// Authorized probe target, repeatable. Use HOST or HOST:PORT.
     #[arg(long = "allow-target", value_name = "HOST[:PORT]")]
     pub allow_target: Vec<String>,
+
+    /// Allowlist file with one explicit HOST or HOST:PORT per line.
+    /// When omitted, an existing user config file is loaded if present.
+    #[arg(long = "allow-file", value_name = "PATH")]
+    pub allow_file: Option<PathBuf>,
+
+    /// Print the allow-file path that would be read, then exit.
+    #[arg(long)]
+    pub print_allow_path: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct ReportArgs {
+    #[command(subcommand)]
+    pub action: ReportAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ReportAction {
+    /// Render a saved report as offline HTML, SVG, or a text timeline.
+    Render(RenderArgs),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum RenderFormat {
+    Html,
+    Svg,
+    Summary,
+}
+
+#[derive(Debug, Args)]
+pub struct RenderArgs {
+    /// Saved PathTrial JSON report.
+    pub input: PathBuf,
+
+    /// Output format. HTML and SVG contain no external resources.
+    #[arg(long, value_enum, default_value_t = RenderFormat::Html)]
+    pub format: RenderFormat,
+
+    /// Write the rendering to this path instead of stdout.
+    #[arg(long)]
+    pub out: Option<PathBuf>,
+
+    /// Mask IP literals in the rendering. This does not change the input file.
+    #[arg(long)]
+    pub redact_ips: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct BaselineArgs {
+    #[command(subcommand)]
+    pub action: BaselineAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum BaselineAction {
+    /// Store a report as the local baseline for its target and scenario.
+    Save(BaselineSaveArgs),
+    /// Compare a report with the stored baseline for the same identity.
+    Compare(BaselineCompareArgs),
+    /// Print the local baseline directory.
+    Path,
+}
+
+#[derive(Debug, Args)]
+pub struct BaselineSaveArgs {
+    /// Saved PathTrial JSON report.
+    pub report: PathBuf,
+
+    /// Baseline directory. Defaults to the user data directory.
+    #[arg(long)]
+    pub dir: Option<PathBuf>,
+
+    /// Replace an existing baseline for this identity.
+    #[arg(long)]
+    pub replace: bool,
+
+    /// Mask IP literals inside the stored report copy.
+    #[arg(long)]
+    pub redact_ips: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct BaselineCompareArgs {
+    /// Current PathTrial JSON report.
+    pub report: PathBuf,
+
+    /// Baseline directory. Defaults to the user data directory.
+    #[arg(long)]
+    pub dir: Option<PathBuf>,
+
+    /// Output format on stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Summary)]
+    pub format: OutputFormat,
 }
 
 #[derive(Debug, Args)]
 pub struct EndpointArgs {
-    /// Serve UDP echo on --bind.
+    /// Serve UDP echo on --bind until interrupted.
     #[arg(long)]
     pub udp_echo: bool,
 
-    /// Address to listen on. Defaults to loopback.
+    /// Serve the collect server on --listen for --max-seconds.
+    #[arg(long)]
+    pub collect: bool,
+
+    /// Serve UDP echo and the collect server together for --max-seconds.
+    #[arg(long)]
+    pub peer: bool,
+
+    /// UDP echo listen address. Defaults to loopback.
     #[arg(long, default_value = "127.0.0.1:39001")]
     pub bind: String,
 
-    /// Allow binding a non-loopback address.
+    /// Collect listen address. Defaults to 127.0.0.1:39002 for --collect/--peer.
+    #[arg(long)]
+    pub listen: Option<String>,
+
+    /// Shared collect task id. Required for --collect and --peer.
+    #[arg(long)]
+    pub task_id: Option<String>,
+
+    /// Wall-clock window for --collect and --peer, in seconds (1-3600).
+    #[arg(long, default_value_t = 120)]
+    pub max_seconds: u64,
+
+    /// Collect JSON path for --collect and --peer.
+    #[arg(long, default_value = "pathtrial-peer-collect.json")]
+    pub output: PathBuf,
+
+    /// Allow binding a non-loopback address. Does not change firewall rules.
     #[arg(long)]
     pub allow_public_bind: bool,
 }

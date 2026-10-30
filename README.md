@@ -4,7 +4,7 @@
 **网站语言：** [简体中文](https://gaochenyang666-droid.github.io/PathTrial/) · [English](https://gaochenyang666-droid.github.io/PathTrial/en/) · [Español](https://gaochenyang666-droid.github.io/PathTrial/es/) · [Русский](https://gaochenyang666-droid.github.io/PathTrial/ru/)
 **语言 / Languages / Idiomas / Языки:** **简体中文** · [English](README.en.md) · [Español](README.es.md) · [Русский](README.ru.md)
 [**下载 v1.5.0-rc.1 测试版**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) · [**报告 Bug**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**AI 集成指南**](docs/ai-integrations.md) · [**CLI 使用指南**](docs/cli.md)
-> **当前版本：** PathTrial Core `v1.5.0-rc.1` 已公开发布为 Release Candidate，支持 CLI、引导式 `diagnose` 和本地 MCP；AI Plugins `0.3.0`，共 10 个 MCP 工具。提供 macOS Apple Silicon、macOS Intel 与 Linux x86_64 预编译包，无需 Rust。CLI 和报告暂未全面本地化。
+> **当前版本：** PathTrial Core `v1.5.0-rc.1` 已公开发布为 Release Candidate，支持 CLI、引导式 `diagnose` 和本地 MCP；AI Plugins `0.3.0`，共 10 个 MCP 工具。已发布的预编译包覆盖 macOS Apple Silicon、macOS Intel 与 Linux x86_64，无需 Rust。Windows x86_64 由后续发布工作流产出，`v1.5.0-rc.1` 资产里还没有 Windows 包。CLI 和报告暂未全面本地化。
 > **历史版本：** [v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) 仍可下载（9 个 MCP 工具）；v1.5 增加 `pathtrial_diagnose`，`pathtrial_explain_report` 已可直接解释 diagnose 报告。
 > **欢迎测试与反馈：** Codex 和 Claude Code 插件已进入默认 `main` 分支。欢迎通过 [GitHub Issues](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) 报告安装、兼容性或诊断问题，附上脱敏后的版本信息、复现步骤及预期和实际结果。
 ## 网络诊断场景：DNS 故障、VPS 端口、代理与 IPv4/IPv6
@@ -66,8 +66,16 @@ export PATHTRIAL_MCP_ALLOW_TARGETS="example.com:443"
 codex
 # 使用 Claude Code 时，在同一个终端改为运行 claude
 ~~~
-`PATHTRIAL_MCP_ALLOW_TARGETS` 支持用逗号或空格分隔多个明确的 `host:port` 目标。MCP 进程需要继承此变量；**从桌面图标启动的 GUI 不一定继承终端环境变量**，请使用客户端支持的 MCP 环境配置方式，或设置 `--allow-target` 参数，参见 [AI 集成指南](docs/ai-integrations.md)。
-不要使用通配符或检测未经授权的设备。变更授权后重新启动 AI 客户端。
+`PATHTRIAL_MCP_ALLOW_TARGETS` 支持用逗号或空格分隔多个明确的 `host:port` 目标。MCP 进程需要继承此变量。**从桌面图标启动的 GUI 不一定继承终端环境变量。** 这时不要手改 Marketplace 缓存里的 `mcp.json`。在用户配置文件里写明确目标，每行一个，不要使用通配符：
+
+~~~bash
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/pathtrial"
+printf '%s\n' 'example.com:443' >> "${XDG_CONFIG_HOME:-$HOME/.config}/pathtrial/allow-targets"
+pathtrial mcp --print-allow-path
+~~~
+
+Windows 对应文件是 `%APPDATA%\pathtrial\allow-targets`。文件不存在时仍然默认拒绝。改完后重新启动 AI 客户端。详见 [AI 集成指南](docs/ai-integrations.md)。
+不要检测未经授权的设备。
 ### 2. 直接问 AI
 **网站无法访问**
 > 帮我使用 PathTrial 诊断 example.com，区分 DNS、TCP、TLS 和 HTTP 问题，最后用中文解释结果。
@@ -84,18 +92,40 @@ DNS、IPv4/IPv6、TCP、TLS、HTTP、ICMP、路由追踪、UDP Echo、QUIC、HTT
 - [macOS Apple Silicon](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz)
 - [macOS Intel](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz)
 - [Linux x86_64](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz)
-每个包都有相应的 SHA-256 校验文件；可使用上面的安装脚本安装，或手动下载并校验。安装后试运行：
+每个已发布包都有相应的 SHA-256 校验文件。macOS 与 Linux 用仓库里的 `scripts/install.sh`。Windows x86_64 用 `scripts/install.ps1`：它在**后续包含该归档的版本**里校验 SHA-256，再把 `pathtrial.exe` 复制到 `%LOCALAPPDATA%\PathTrial`。它不修改 PATH、防火墙、DNS 或路由。`v1.5.0-rc.1` 还没有 Windows 归档，对这个标签运行安装脚本会下载失败，这不是安装成功。限制见 [Windows 说明](docs/windows.md)。
+
+~~~powershell
+# 仅在目标版本已发布 pathtrial-x86_64-pc-windows-msvc.tar.gz 之后执行
+$env:PATHTRIAL_VERSION = "v1.5.0-rc.1"
+powershell -File .\scripts\install.ps1
+& "$env:LOCALAPPDATA\PathTrial\pathtrial.exe" --version
+~~~
+
+安装后试运行：
+
 ~~~bash
 pathtrial --version
 pathtrial scan example.com --profile web --rounds 5 --redact-ips
 ~~~
-更多 HTTP、QUIC、UDP、代理、双端采集和退出码说明见 [CLI 使用指南](docs/cli.md)。
+
+离线查看已保存的报告、和本机基线对比，或在自己的机器上临时跑采集端：
+
+~~~bash
+pathtrial report render report.json --format html --out report.html --redact-ips
+pathtrial report render report.json --format svg --out report.svg
+pathtrial baseline path
+pathtrial baseline save report.json --redact-ips
+pathtrial baseline compare later.json --format json
+sh scripts/peer.sh demo 0.0.0.0:39002 0.0.0.0:39001 120
+~~~
+
+`report render` 只读本地 JSON，不联网，也不改原文件。`--redact-ips` 只遮盖这次输出里的 IP。`baseline save` 把这一份报告存到本机数据目录；`baseline compare` 只拿它和当前文件比较。可以直接比较时给出 better、worse 或 same，并引用当前文件里的证据 ID；否则是 `not_established`，不会编造历史。更差时退出码为 2，不可比时为 3。`peer.sh` 在你写出的地址上同时提供 UDP echo 和有限时间的 collect 服务，不修改防火墙、DNS 或路由，也不保存 UDP 载荷。非回环地址才需要 `--allow-public-bind`。更多 HTTP、QUIC、UDP、代理、双端采集和退出码说明见 [CLI 使用指南](docs/cli.md)。
 ## 测试版状态与已知限制
 - PathTrial Core：`v1.5.0-rc.1`，已公开发布为 Release Candidate，**不是稳定正式版**。
 - AI Plugins：`0.3.0`（10 工具）；历史 v1.4 插件为 `0.2.0`（9 工具）。
-- 平台：macOS ARM64、macOS Intel、Linux x86_64 的 Release 构建均成功，附 SHA-256。
+- 平台：macOS ARM64、macOS Intel、Linux x86_64 的 `v1.5.0-rc.1` Release 构建均成功，附 SHA-256。Windows x86_64 已接入构建和安装脚本，但该标签没有 Windows 资产，不能标成 VERIFIED。
 - 自动化验收：[v1.5 三平台 Release 构建及 MCP smoke](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39255364100) 全部成功；Codex 的真实 HTTP 和 local 诊断已验证，Claude Code 真实模型会话已由项目方完成。
-- 网络目标必须由用户明确授权；Windows、图形界面和自动网络修复暂不支持。
+- 网络目标必须由用户明确授权。图形界面和自动网络修复仍然没有。Windows 探测限制见 [Windows 说明](docs/windows.md)。
 查看 [工程验收矩阵](docs/ai-plugin-completeness.md) 和 [发行工作流](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39149532255)。后续社区兼容性和诊断问题欢迎通过 [Issue](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) 反馈。
 ## 常见网络诊断问题（FAQ）
 ### 网站打不开，如何判断是 DNS、TCP、TLS 还是 HTTP 故障？
@@ -105,7 +135,7 @@ pathtrial scan example.com --profile web --rounds 5 --redact-ips
 ### 如何在 Codex 或 Claude Code 中使用 PathTrial MCP 插件？
 安装 [v1.5.0-rc.1 预编译核心](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) 后，按上方的[插件安装步骤](#快速安装-ai-插件)从默认 `main` 的 Marketplace 添加插件。MCP 依赖本地 `pathtrial`，网络探测必须显式授权目标。
 ### 安装 PathTrial 需要 Rust 吗？支持哪些系统？
-无需 Rust。v1.5.0-rc.1 已提供 macOS Apple Silicon、macOS Intel、Linux x86_64 的预编译包；Windows 尚不支持。只有从源码开发或编译时才需要 Rust。
+已发布的 v1.5.0-rc.1 预编译包覆盖 macOS Apple Silicon、macOS Intel 和 Linux x86_64，这些系统安装不需要 Rust。Windows x86_64 要等后续带有归档的版本，再用 `install.ps1` 安装；在那之前从源码编译需要 Rust。Windows 上 `--bind-interface` 会报错而不会改走别的网卡。
 ### PathTrial 与 ping、curl 有什么不同？
 `ping` 主要检查 ICMP 连通性，`curl` 常用于 HTTP 请求。PathTrial 把 DNS、TCP、TLS、HTTP、UDP、QUIC 等检查拆分为有边界的探测，在 JSON 报告中引用实际测量证据，不会仅凭一次失败断定故障根因。
 ## 反馈 Bug 与参与贡献

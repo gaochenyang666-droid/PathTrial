@@ -23,15 +23,25 @@ jobs:
         include:
           - os: macos-15
             target: aarch64-apple-darwin
+            binary: pathtrial
           - os: macos-15-intel
             target: x86_64-apple-darwin
+            binary: pathtrial
           - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
+            binary: pathtrial
+          - os: windows-2022
+            target: x86_64-pc-windows-msvc
+            binary: pathtrial.exe
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+      - uses: actions/setup-python@v5
+        if: runner.os == 'Windows'
+        with:
+          python-version: "3.12"
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
@@ -53,7 +63,7 @@ jobs:
       - name: MCP smoke test
         shell: bash
         env:
-          BINARY: target/${{ matrix.target }}/release/pathtrial
+          BINARY: target/${{ matrix.target }}/release/${{ matrix.binary }}
         run: |
           python3 - <<'PY'
           import json
@@ -81,19 +91,31 @@ jobs:
           version=$(cargo metadata --format-version 1 --no-deps | python3 -c "import json,sys; print(json.load(sys.stdin)['packages'][0]['version'])")
           name="pathtrial-${version}-${{ matrix.target }}"
           mkdir -p "dist/${name}"
-          cp "target/${{ matrix.target }}/release/pathtrial" "dist/${name}/"
+          bin="target/${{ matrix.target }}/release/pathtrial"
+          if [ -f "${bin}.exe" ]; then
+            bin="${bin}.exe"
+          fi
+          cp "$bin" "dist/${name}/"
           cp README.md LICENSE CHANGELOG.md "dist/${name}/"
           tar -C dist -czf "dist/${name}.tar.gz" "${name}"
           # Checksums must name the downloadable asset (not the build-local dist/ path).
+          write_sha256() {
+            file=$1
+            out=$2
+            if command -v shasum >/dev/null 2>&1; then
+              shasum -a 256 "$file" > "$out"
+            elif command -v sha256sum >/dev/null 2>&1; then
+              sha256sum "$file" > "$out"
+            else
+              python3 -c 'import hashlib, pathlib, sys; src, dest = sys.argv[1], sys.argv[2]; digest = hashlib.sha256(pathlib.Path(src).read_bytes()).hexdigest(); pathlib.Path(dest).write_text("%s  %s\n" % (digest, pathlib.Path(src).name), encoding="ascii")' "$file" "$out"
+            fi
+          }
           (
             cd dist
-            shasum -a 256 "${name}.tar.gz" > "${name}.tar.gz.sha256" 2>/dev/null \
-              || sha256sum "${name}.tar.gz" > "${name}.tar.gz.sha256"
+            write_sha256 "${name}.tar.gz" "${name}.tar.gz.sha256"
             cp "${name}.tar.gz" "pathtrial-${{ matrix.target }}.tar.gz"
-            shasum -a 256 "pathtrial-${{ matrix.target }}.tar.gz" \
-              > "pathtrial-${{ matrix.target }}.tar.gz.sha256" 2>/dev/null \
-              || sha256sum "pathtrial-${{ matrix.target }}.tar.gz" \
-                > "pathtrial-${{ matrix.target }}.tar.gz.sha256"
+            write_sha256 "pathtrial-${{ matrix.target }}.tar.gz" \
+              "pathtrial-${{ matrix.target }}.tar.gz.sha256"
           )
       - uses: actions/upload-artifact@v4
         with:
