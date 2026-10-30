@@ -1,5 +1,6 @@
 //! M04: hop-by-hop path via the system `traceroute`.
 
+use std::net::IpAddr;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
@@ -19,13 +20,24 @@ pub struct TraceOutcome {
     pub protocol: String,
 }
 
-/// Run `traceroute -n` and parse the hops.
+/// Run `traceroute -n` or Windows `tracert -d` and parse the hops.
 pub fn trace(host: &str, max_hops: u32, timeout: Duration) -> TraceOutcome {
-    let candidates = ["/usr/sbin/traceroute", "/usr/bin/traceroute", "traceroute"];
+    let candidates: &[&str] = if cfg!(windows) {
+        &["tracert"]
+    } else {
+        &["/usr/sbin/traceroute", "/usr/bin/traceroute", "traceroute"]
+    };
     let mut missing = None;
     for program in candidates {
-        let mut child = match Command::new(program)
-            .args(["-n", "-m", &max_hops.to_string(), "-w", "1", host])
+        let hops = max_hops.to_string();
+        let mut command = Command::new(program);
+        if cfg!(windows) {
+            // tracert -w is a per-hop timeout in milliseconds. -d skips DNS.
+            command.args(["-d", "-h", &hops, "-w", "1000", host]);
+        } else {
+            command.args(["-n", "-m", &hops, "-w", "1", host]);
+        }
+        let mut child = match command
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
@@ -98,9 +110,12 @@ pub fn trace(host: &str, max_hops: u32, timeout: Duration) -> TraceOutcome {
 
 fn default_protocol() -> &'static str {
     // macOS uses UDP probes by default; Linux traceroute defaults to ICMP when
-    // run unprivileged (or UDP with CAP_NET_RAW). Reported per platform.
+    // run unprivileged (or UDP with CAP_NET_RAW). Windows tracert uses ICMP.
+    // Reported per platform.
     if cfg!(target_os = "macos") {
         "udp"
+    } else if cfg!(windows) {
+        "icmp"
     } else {
         "icmp-or-udp"
     }
@@ -131,7 +146,7 @@ pub fn parse_trace(text: &str) -> TraceOutcome {
             if token.eq_ignore_ascii_case("ms") {
                 continue;
             }
-            if address.is_none() && (token.contains('.') || token.contains(':') || token == "(no") {
+            if address.is_none() && looks_like_hop_address(token) {
                 address = Some(token.to_string());
                 timed_out = false;
             }
@@ -152,6 +167,14 @@ pub fn parse_trace(text: &str) -> TraceOutcome {
     outcome
 }
 
+fn looks_like_hop_address(token: &str) -> bool {
+    if token == "(no" {
+        return true;
+    }
+    let trimmed = token.trim_matches(|character: char| character == '(' || character == ')');
+    trimmed.parse::<IpAddr>().is_ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::parse_trace;
@@ -165,6 +188,23 @@ mod tests {
         assert_eq!(parsed.hops[0].rtt_ms.len(), 3);
         assert!(parsed.hops[1].timed_out);
         assert!(parsed.reached, "last hop answered, so reached must be set");
+    }
+
+    #[test]
+    fn parses_tracert_without_treating_timeout_text_as_an_address() {
+        let text = "\
+Tracing route to 203.0.113.10\n\
+  1    <1 ms    <1 ms    <1 ms  192.168.1.1\n\
+  2     *        *        *     Request timed out.\n\
+";
+        let parsed = parse_trace(text);
+        assert_eq!(parsed.hops.len(), 2);
+        assert_eq!(parsed.hops[0].address.as_deref(), Some("192.168.1.1"));
+        assert!(parsed.hops[0].rtt_ms.is_empty());
+        assert!(!parsed.hops[0].timed_out);
+        assert!(parsed.hops[1].timed_out);
+        assert!(parsed.hops[1].address.is_none());
+        assert!(!parsed.reached);
     }
 
     #[test]

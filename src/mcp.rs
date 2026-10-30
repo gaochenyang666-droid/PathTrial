@@ -60,11 +60,22 @@ impl ToolError {
 }
 
 pub fn run(args: &McpArgs) -> Result<(), String> {
-    let allowlist = build_allowlist(args)?;
+    if args.print_allow_path {
+        let path = crate::allow::path_to_print(args)?;
+        println!("{}", path.display());
+        println!("exists={}", path.is_file());
+        return Ok(());
+    }
+    let (allowlist, file_loaded) = build_allowlist(args)?;
     eprintln!(
-        "pathtrial mcp {} starting with {} authorized target rule(s)",
+        "pathtrial mcp {} starting with {} authorized target rule(s){}",
         PLUGIN_VERSION,
-        allowlist.len()
+        allowlist.len(),
+        if file_loaded {
+            "; allow file loaded"
+        } else {
+            ""
+        }
     );
     let cancelled = Arc::new(AtomicBool::new(false));
     let (sender, receiver) = mpsc::sync_channel(MCP_INPUT_QUEUE);
@@ -161,7 +172,7 @@ pub fn run(args: &McpArgs) -> Result<(), String> {
                 json!({
                     "jsonrpc": "2.0",
                     "id": id,
-                    "result": call_tool(params, &allowlist, &cancelled)
+                    "result": call_tool(params, &allowlist, file_loaded, &cancelled)
                 })
             }
             "resources/list" => json!({
@@ -455,7 +466,12 @@ fn tool(name: &str, description: &str, input_schema: Value) -> Value {
     })
 }
 
-fn call_tool(params: Value, allowlist: &[AllowRule], cancelled: &Arc<AtomicBool>) -> Value {
+fn call_tool(
+    params: Value,
+    allowlist: &[AllowRule],
+    file_loaded: bool,
+    cancelled: &Arc<AtomicBool>,
+) -> Value {
     let name = params
         .get("name")
         .and_then(Value::as_str)
@@ -469,7 +485,7 @@ fn call_tool(params: Value, allowlist: &[AllowRule], cancelled: &Arc<AtomicBool>
         .and_then(Value::as_bool)
         .unwrap_or(false);
     let result = match name {
-        "pathtrial_capabilities" => Ok(capabilities(allowlist)),
+        "pathtrial_capabilities" => Ok(capabilities(allowlist, file_loaded)),
         "pathtrial_scan" => tool_scan(&arguments, allowlist, cancelled),
         "pathtrial_http" => tool_http(&arguments, allowlist, cancelled),
         "pathtrial_quic" => tool_quic(&arguments, allowlist, cancelled),
@@ -533,7 +549,7 @@ fn tool_result(value: Value, is_error: bool) -> Value {
     })
 }
 
-fn capabilities(allowlist: &[AllowRule]) -> Value {
+fn capabilities(allowlist: &[AllowRule], file_loaded: bool) -> Value {
     let modules = [
         ("dns", true),
         ("tcp", true),
@@ -548,7 +564,7 @@ fn capabilities(allowlist: &[AllowRule]) -> Value {
         ("http3", true),
         ("dual_end_cli", true),
         ("dual_end_mcp", false),
-        ("windows", false),
+        ("windows", cfg!(windows)),
         ("packet_capture", false),
         ("ssh_orchestration", false),
     ];
@@ -570,12 +586,7 @@ fn capabilities(allowlist: &[AllowRule]) -> Value {
         "os": std::env::consts::OS,
         "arch": std::env::consts::ARCH,
         "modules": modules.iter().map(|(name, available)| json!({"name": name, "available": available})).collect::<Vec<_>>(),
-        "unsupported": [
-            "Windows",
-            "automatic packet capture",
-            "SSH orchestration",
-            "MCP dual-end orchestration (use the collect and correlate CLI commands)"
-        ],
+        "unsupported": unsupported_modules(),
         "schema_versions": {
             "scan": crate::models::SCHEMA_VERSION,
             "command": "1.1.0",
@@ -595,6 +606,7 @@ fn capabilities(allowlist: &[AllowRule]) -> Value {
             "probe_requires_allowlist": true,
             "allow_rule_count": allowlist.len(),
             "allow_rules_redacted": true,
+            "allow_file_loaded": file_loaded,
             "contains_hostname_rule": contains_hostname_rule,
             "contains_non_public_literal": contains_non_public_literal,
             "contains_portless_rule": contains_portless_rule
@@ -1639,69 +1651,37 @@ fn worst_status<'a>(statuses: impl Iterator<Item = &'a Value>) -> Option<&'a str
     label
 }
 
-fn build_allowlist(args: &McpArgs) -> Result<Vec<AllowRule>, String> {
-    let mut values = args.allow_target.clone();
-    if let Ok(env) = std::env::var("PATHTRIAL_MCP_ALLOW_TARGETS") {
-        values.extend(
-            env.split(',')
-                .flat_map(str::split_whitespace)
-                .filter(|value| !value.is_empty())
-                .map(str::to_string),
-        );
+fn unsupported_modules() -> Vec<&'static str> {
+    let mut items = Vec::new();
+    if !cfg!(windows) {
+        items.push("this binary is not a Windows build");
     }
-    let mut rules = Vec::new();
-    for value in values {
-        let value = value.trim();
-        if value.is_empty() {
-            continue;
-        }
-        if value == "*" {
-            return Err("wildcard target authorization is not supported".to_string());
-        }
-        let (host, port) = split_host_port(value)?;
-        rules.push(AllowRule {
-            host: normalize_host(&host),
-            port,
-        });
-    }
-    Ok(rules)
-}
-
-fn split_host_port(value: &str) -> Result<(String, Option<u16>), String> {
-    if let Some(rest) = value.strip_prefix('[') {
-        let (host, tail) = rest
-            .split_once(']')
-            .ok_or_else(|| format!("unterminated IPv6 allow rule {value}"))?;
-        let port = if let Some(port) = tail.strip_prefix(':') {
-            Some(
-                port.parse::<u16>()
-                    .map_err(|_| format!("invalid port in allow rule {value}"))?,
-            )
-        } else if tail.is_empty() {
-            None
-        } else {
-            return Err(format!("invalid allow rule {value}"));
-        };
-        return Ok((host.to_string(), port));
-    }
-    match value.rsplit_once(':') {
-        Some((host, port)) if !host.contains(':') => Ok((
-            host.to_string(),
-            Some(
-                port.parse::<u16>()
-                    .map_err(|_| format!("invalid port in allow rule {value}"))?,
-            ),
-        )),
-        Some(_) => Ok((value.to_string(), None)),
-        None => Ok((value.to_string(), None)),
-    }
+    items.extend([
+        "binding sockets to a named interface on Windows",
+        "Windows per-target route lookup",
+        "Windows ICMP jitter from ping.exe summaries",
+        "automatic packet capture",
+        "SSH orchestration",
+        "MCP dual-end orchestration (use the collect and correlate CLI commands)",
+    ]);
+    items
 }
 
 fn normalize_host(host: &str) -> String {
-    host.trim()
-        .trim_matches(['[', ']'])
-        .trim_end_matches('.')
-        .to_ascii_lowercase()
+    crate::allow::normalize_host(host)
+}
+
+fn build_allowlist(args: &McpArgs) -> Result<(Vec<AllowRule>, bool), String> {
+    let loaded = crate::allow::load_for_mcp(args)?;
+    let rules = loaded
+        .rules
+        .into_iter()
+        .map(|rule| AllowRule {
+            host: rule.host,
+            port: rule.port,
+        })
+        .collect();
+    Ok((rules, loaded.file_loaded))
 }
 
 fn authorize_ip(ip: IpAddr, port: u16, allowlist: &[AllowRule]) -> Result<(), ToolError> {
@@ -1946,6 +1926,7 @@ fn run_cli_json(args: &[String], cancelled: &Arc<AtomicBool>) -> Result<Value, T
 }
 
 #[cfg(test)]
+#[cfg(all(test, unix))]
 fn run_command_limited(
     command: Command,
     timeout: Duration,
@@ -2412,6 +2393,7 @@ mod tests {
         assert_eq!(plan.connect_ip, Some("127.0.0.1".parse().unwrap()));
     }
 
+    #[cfg(unix)]
     #[test]
     fn child_timeout_is_enforced_and_reaped() {
         let mut command = Command::new("sleep");
@@ -2420,6 +2402,7 @@ mod tests {
         assert!(error.message.contains("timeout"));
     }
 
+    #[cfg(unix)]
     #[test]
     fn child_output_limit_is_enforced() {
         let error =
@@ -2427,6 +2410,7 @@ mod tests {
         assert!(error.message.contains("exceeded"));
     }
 
+    #[cfg(unix)]
     #[test]
     fn child_stderr_limit_is_enforced() {
         let mut command = Command::new("sh");
@@ -2435,6 +2419,7 @@ mod tests {
         assert!(error.message.contains("exceeded"));
     }
 
+    #[cfg(unix)]
     #[test]
     fn child_abnormal_exit_is_returned_to_the_caller() {
         let (status, _, _) = run_command_limited(
@@ -2450,6 +2435,7 @@ mod tests {
         assert_eq!(status.code(), Some(7));
     }
 
+    #[cfg(unix)]
     #[test]
     fn child_is_killed_when_the_client_disconnects() {
         let cancelled = Arc::new(AtomicBool::new(false));

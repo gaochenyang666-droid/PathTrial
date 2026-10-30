@@ -135,7 +135,15 @@ mod tests {
             Duration::from_millis(800),
             None,
         );
-        assert!(!sample.ok);
-        assert!(matches!(sample.error, Some(NetError::ConnectionRefused)));
+        assert!(!sample.ok, "a closed port must not be stored as success");
+        match sample.error {
+            Some(NetError::ConnectionRefused) => {}
+            // A Windows stack can time out or reset a just-closed loopback
+            // port instead of returning WSAECONNREFUSED. Record that
+            // observation; do not relabel it as a refusal.
+            #[cfg(windows)]
+            Some(NetError::Timeout) | Some(NetError::ConnectionReset) => {}
+            other => panic!("closed loopback port classified as {other:?}"),
+        }
     }
 }

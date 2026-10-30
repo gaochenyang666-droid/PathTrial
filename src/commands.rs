@@ -376,15 +376,36 @@ pub fn udp(args: &crate::cli::UdpArgs) -> Result<u8, String> {
 
 /// `pathtrial endpoint --udp-echo --bind 127.0.0.1:39001`
 pub fn endpoint(args: &crate::cli::EndpointArgs) -> Result<u8, String> {
-    if !args.udp_echo {
-        return Err("only --udp-echo is implemented for `endpoint`".to_string());
+    let udp = args.udp_echo || args.peer;
+    let collect = args.collect || args.peer;
+    if !udp && !collect {
+        return Err("choose --udp-echo, --collect, or --peer".to_string());
     }
-    crate::endpoint::udp_echo(
-        &args.bind,
+    if udp && !collect {
+        crate::endpoint::udp_echo(
+            &args.bind,
+            args.allow_public_bind,
+            crate::probes::udp::MAX_PAYLOAD,
+        )?;
+        return Ok(0);
+    }
+    let task_id = args
+        .task_id
+        .as_deref()
+        .ok_or_else(|| "--task-id is required for --collect and --peer".to_string())?;
+    let listen = args
+        .listen
+        .clone()
+        .unwrap_or_else(|| "127.0.0.1:39002".to_string());
+    crate::endpoint::peer(
+        udp.then_some(args.bind.as_str()),
+        &listen,
         args.allow_public_bind,
+        task_id,
+        args.max_seconds,
+        &args.output,
         crate::probes::udp::MAX_PAYLOAD,
-    )?;
-    Ok(0)
+    )
 }
 
 /// Split `HOST:PORT` (IPv6 uses brackets) into host and port.

@@ -16,7 +16,7 @@ The MCP server denies all active probes unless targets are explicitly allowliste
 "args": ["mcp", "--allow-target", "example.com:443"]
 ```
 
-Repeat `--allow-target` for multiple targets. Report explanation and report comparison work without network authorization.
+Repeat `--allow-target` for multiple targets. A desktop app that does not inherit the shell can use `~/.config/pathtrial/allow-targets` (or `%APPDATA%\pathtrial\allow-targets`). One explicit target per line, no wildcards. `pathtrial mcp --print-allow-path` prints the path only. Report explanation and report comparison work without network authorization.
 
 ## Install
 

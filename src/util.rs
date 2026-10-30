@@ -27,6 +27,11 @@ pub fn new_run_id() -> String {
 /// Map a connect error to a stable category. Categories drive aggregation and
 /// are part of the public report, so they must not change casually.
 pub fn classify_io_error(error: &io::Error) -> NetError {
+    if let Some(code) = error.raw_os_error() {
+        if let Some(mapped) = classify_raw_os_error(code) {
+            return mapped;
+        }
+    }
     match error.kind() {
         io::ErrorKind::TimedOut | io::ErrorKind::WouldBlock => NetError::Timeout,
         io::ErrorKind::ConnectionRefused => NetError::ConnectionRefused,
@@ -44,12 +49,27 @@ pub fn classify_io_error(error: &io::Error) -> NetError {
                 NetError::HostUnreachable
             } else if lower.contains("network is unreachable") {
                 NetError::NetworkUnreachable
-            } else if lower.contains("connection refused") {
+            } else if lower.contains("connection refused") || lower.contains("actively refused") {
                 NetError::ConnectionRefused
             } else {
                 NetError::Other(text)
             }
         }
+    }
+}
+
+/// Stable OS codes for the categories above.
+///
+/// 61/111 are `ECONNREFUSED` on macOS/Linux. 10061 is `WSAECONNREFUSED`.
+/// The timeout, reset, and unreachable codes are the matching platform values.
+fn classify_raw_os_error(code: i32) -> Option<NetError> {
+    match code {
+        61 | 111 | 10061 => Some(NetError::ConnectionRefused),
+        60 | 110 | 10060 => Some(NetError::Timeout),
+        54 | 104 | 10054 => Some(NetError::ConnectionReset),
+        51 | 101 | 10051 => Some(NetError::NetworkUnreachable),
+        65 | 113 | 10065 => Some(NetError::HostUnreachable),
+        _ => None,
     }
 }
 
@@ -175,6 +195,31 @@ impl IpMasker {
     }
 }
 
+/// Mask IP literals inside every string of a JSON value. The input file is not
+/// modified unless the caller writes `value` back out.
+pub fn mask_json(value: &mut serde_json::Value) -> usize {
+    let mut masker = IpMasker::default();
+    mask_json_with(value, &mut masker);
+    masker.masked
+}
+
+fn mask_json_with(value: &mut serde_json::Value, masker: &mut IpMasker) {
+    match value {
+        serde_json::Value::String(text) => *text = masker.mask_text(text),
+        serde_json::Value::Array(items) => {
+            for item in items {
+                mask_json_with(item, masker);
+            }
+        }
+        serde_json::Value::Object(map) => {
+            for item in map.values_mut() {
+                mask_json_with(item, masker);
+            }
+        }
+        _ => {}
+    }
+}
+
 #[cfg(test)]
 mod masker_tests {
     use super::IpMasker;
@@ -231,6 +276,22 @@ pub fn validate_host_token(label: &str, value: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn raw_refused_codes_stay_connection_refused() {
+        for code in [61, 111, 10061] {
+            let error = io::Error::from_raw_os_error(code);
+            assert_eq!(
+                classify_io_error(&error),
+                NetError::ConnectionRefused,
+                "code {code}"
+            );
+        }
+        let message = io::Error::other(
+            "No connection could be made because the target machine actively refused it.",
+        );
+        assert_eq!(classify_io_error(&message), NetError::ConnectionRefused);
+    }
 
     #[test]
     fn median_handles_even_and_odd_lengths() {

@@ -7,11 +7,15 @@
 //! TUN adapter installed by a local proxy.
 
 use std::io;
+#[cfg(unix)]
 use std::mem;
 use std::net::UdpSocket;
 use std::net::{IpAddr, SocketAddr, TcpStream};
+#[cfg(unix)]
 use std::os::unix::io::FromRawFd;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+#[cfg(any(unix, test))]
+use std::time::Instant;
 
 #[cfg(target_os = "macos")]
 const IP_BOUND_IF: libc::c_int = 25;
@@ -32,6 +36,17 @@ pub fn connect(
     }
 }
 
+#[cfg(not(unix))]
+fn connect_bound(address: SocketAddr, _timeout: Duration, name: &str) -> io::Result<TcpStream> {
+    Err(io::Error::new(
+        io::ErrorKind::Unsupported,
+        format!(
+            "binding TCP {address} to interface {name} is not supported on this OS; refusing to fall back to another interface"
+        ),
+    ))
+}
+
+#[cfg(unix)]
 fn sockaddr(address: SocketAddr) -> (libc::sockaddr_storage, libc::socklen_t) {
     // SAFETY: the storage is zero-initialised and large enough for both
     // families; the returned length matches the family written.
@@ -129,6 +144,7 @@ fn bind_interface(fd: libc::c_int, _address: &SocketAddr, name: &str) -> io::Res
     Ok(())
 }
 
+#[cfg(unix)]
 fn connect_bound(address: SocketAddr, timeout: Duration, name: &str) -> io::Result<TcpStream> {
     let domain = if address.is_ipv4() {
         libc::AF_INET
@@ -264,6 +280,7 @@ pub fn is_private_path(ip: IpAddr) -> bool {
 /// Interface index for a name, or `None` when the interface does not exist.
 /// Checking this before probing turns a bad `--bind-interface` value into a
 /// tool error instead of a scan full of connection failures.
+#[cfg(unix)]
 pub fn interface_index(name: &str) -> Option<u32> {
     let c_name = std::ffi::CString::new(name).ok()?;
     // SAFETY: if_nametoindex only reads the NUL-terminated string.
@@ -275,17 +292,38 @@ pub fn interface_index(name: &str) -> Option<u32> {
     }
 }
 
+#[cfg(windows)]
+pub fn interface_index(name: &str) -> Option<u32> {
+    crate::platform::interfaces()
+        .ok()?
+        .into_iter()
+        .find(|interface| interface.name.eq_ignore_ascii_case(name))
+        .map(|interface| interface.index)
+}
+
 /// Create a UDP socket bound to `bind`, optionally pinned to an interface.
 /// Binding is applied with the same platform option used for TCP, so a caller
 /// that asked for `en0` never silently falls back to the default route.
 pub fn udp_socket(bind: SocketAddr, interface: Option<&str>) -> io::Result<UdpSocket> {
-    let socket = UdpSocket::bind(bind)?;
     if let Some(name) = interface {
-        use std::os::unix::io::AsRawFd;
-        let fd = socket.as_raw_fd();
-        bind_interface(fd, &bind, name)?;
+        #[cfg(unix)]
+        {
+            let socket = UdpSocket::bind(bind)?;
+            use std::os::unix::io::AsRawFd;
+            bind_interface(socket.as_raw_fd(), &bind, name)?;
+            return Ok(socket);
+        }
+        #[cfg(not(unix))]
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
+                format!(
+                    "binding UDP {bind} to interface {name} is not supported on this OS; refusing to fall back to another interface"
+                ),
+            ));
+        }
     }
-    Ok(socket)
+    UdpSocket::bind(bind)
 }
 
 /// Classification of an address, used to decide how much a measurement can say
@@ -418,8 +456,10 @@ mod tests {
 
     #[test]
     fn interface_lookup_reports_missing_names() {
-        assert!(interface_index("lo0").is_some() || interface_index("lo").is_some());
         assert!(interface_index("definitely-not-an-interface").is_none());
+        // Windows has no `lo`/`lo0`. A missing name is the portable check.
+        #[cfg(unix)]
+        assert!(interface_index("lo0").is_some() || interface_index("lo").is_some());
     }
 
     #[test]
@@ -457,7 +497,9 @@ mod tests {
                 errors.iter().any(|error| {
                     matches!(
                         error.kind(),
-                        std::io::ErrorKind::PermissionDenied | std::io::ErrorKind::AddrNotAvailable
+                        std::io::ErrorKind::PermissionDenied
+                            | std::io::ErrorKind::AddrNotAvailable
+                            | std::io::ErrorKind::Unsupported
                     )
                 }),
                 "binding failed without an explicit permission or interface error: {errors:?}"

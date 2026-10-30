@@ -4,7 +4,7 @@
 **Языки сайта:** [简体中文](https://gaochenyang666-droid.github.io/PathTrial/) · [English](https://gaochenyang666-droid.github.io/PathTrial/en/) · [Español](https://gaochenyang666-droid.github.io/PathTrial/es/) · [Русский](https://gaochenyang666-droid.github.io/PathTrial/ru/)
 **Языки:** [简体中文](README.md) · [English](README.en.md) · [Español](README.es.md) · **Русский**
 [**Скачать v1.5.0-rc.1**](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1) · [**Сообщить об ошибке**](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md) · [**Руководство по интеграции с ИИ**](docs/ai-integrations.md) · [**Руководство по CLI**](docs/cli.md)
-> **Текущая версия:** PathTrial Core `v1.5.0-rc.1` выпущена как кандидат на выпуск с командой `diagnose` и локальным MCP. Версия AI Plugins — `0.3.0` (десять инструментов). Готовые пакеты есть для macOS Apple Silicon, macOS Intel и Linux x86_64, Rust для установки не нужен.
+> **Текущая версия:** PathTrial Core `v1.5.0-rc.1` выпущена как кандидат на выпуск с командой `diagnose` и локальным MCP. Версия AI Plugins — `0.3.0` (десять инструментов). Опубликованные пакеты есть для macOS Apple Silicon, macOS Intel и Linux x86_64, Rust для них не нужен. Windows x86_64 собирается в последующем выпуске; в `v1.5.0-rc.1` этого архива нет.
 > **Предыдущий выпуск:** [v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) остаётся доступным (девять MCP-инструментов). v1.5 добавляет `pathtrial_diagnose` и поддержку отчётов diagnose в `pathtrial_explain_report`.
 > **Приглашаем к тестированию:** плагины Codex и Claude Code доступны в основной ветке `main`. [Сообщайте об ошибках установки, совместимости и диагностики](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md), указывая версии, шаги воспроизведения и ожидаемый/фактический результат без конфиденциальных данных.
 ## Диагностика DNS, портов VPS, прокси и IPv4/IPv6
@@ -64,8 +64,16 @@ export PATHTRIAL_MCP_ALLOW_TARGETS="example.com:443"
 codex
 # Для Claude Code вместо codex запустите claude в этом терминале
 ~~~
-`PATHTRIAL_MCP_ALLOW_TARGETS` принимает несколько явных целей `host:port`, разделённых запятыми или пробелами. MCP-сервер должен наследовать переменную. **Приложения, запущенные через графический интерфейс, могут не наследовать окружение терминала**; настройте окружение MCP-клиента или используйте параметр `--allow-target`. См. [руководство по интеграции](docs/ai-integrations.md).
-Не используйте шаблоны и не проверяйте чужие устройства без разрешения. Перезапустите клиент после изменения настроек.
+`PATHTRIAL_MCP_ALLOW_TARGETS` принимает несколько явных целей `host:port`, разделённых запятыми или пробелами. MCP-сервер должен наследовать переменную. **Приложение, запущенное с рабочего стола, может не унаследовать окружение терминала.** Не редактируйте `mcp.json` в кэше Marketplace. Запишите по одной явной цели в строке пользовательского файла. Подстановки и префиксы CIDR отклоняются. Если файла нет, проверки по-прежнему запрещены по умолчанию:
+
+~~~bash
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/pathtrial"
+printf '%s\n' 'example.com:443' >> "${XDG_CONFIG_HOME:-$HOME/.config}/pathtrial/allow-targets"
+pathtrial mcp --print-allow-path
+~~~
+
+В Windows файл — `%APPDATA%\pathtrial\allow-targets`. `--print-allow-path` печатает путь и не печатает правила. После изменения файла перезапустите клиент. См. [руководство по интеграции](docs/ai-integrations.md).
+Не проверяйте чужие устройства без разрешения.
 ### 2. Задайте вопрос обычным языком
 **Сайт недоступен**
 > Используй PathTrial, чтобы проверить example.com. Раздели проблемы DNS, TCP, TLS и HTTP и объясни результат по-русски.
@@ -82,18 +90,40 @@ DNS, IPv4/IPv6, TCP, TLS, HTTP, ICMP, трассировка маршрута, U
 - [macOS Apple Silicon](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-aarch64-apple-darwin.tar.gz)
 - [macOS Intel](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-x86_64-apple-darwin.tar.gz)
 - [Linux x86_64](https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.1/pathtrial-x86_64-unknown-linux-gnu.tar.gz)
-У каждого архива есть файл контрольной суммы SHA-256. Можно использовать установочный скрипт выше или скачать архив и проверить его вручную.
+У каждого опубликованного архива есть файл SHA-256. macOS и Linux используют `scripts/install.sh`. Windows x86_64 использует `scripts/install.ps1`. Скрипт проверяет SHA-256 и копирует `pathtrial.exe` в `%LOCALAPPDATA%\PathTrial`. Он не меняет PATH, брандмауэр, DNS и маршруты. В `v1.5.0-rc.1` нет архива Windows; запуск скрипта для этого тега завершит загрузку ошибкой. Это не успешная установка. Ограничения — в [Windows](docs/windows.md).
+
+~~~powershell
+# Только после того, как выбранный выпуск содержит pathtrial-x86_64-pc-windows-msvc.tar.gz
+$env:PATHTRIAL_VERSION = "v1.5.0-rc.1"
+powershell -File .\scripts\install.ps1
+& "$env:LOCALAPPDATA\PathTrial\pathtrial.exe" --version
+~~~
+
+После установки:
+
 ~~~bash
 pathtrial --version
 pathtrial scan example.com --profile web --rounds 5 --redact-ips
 ~~~
-Подробности о HTTP, QUIC, UDP, прокси, сборе данных с двух сторон и кодах завершения — в [руководстве по CLI](docs/cli.md).
+
+Локальный просмотр отчёта, локальная база и временный узел на машине, которой вы управляете:
+
+~~~bash
+pathtrial report render report.json --format html --out report.html --redact-ips
+pathtrial report render report.json --format svg --out report.svg
+pathtrial baseline path
+pathtrial baseline save report.json --redact-ips
+pathtrial baseline compare later.json --format json
+sh scripts/peer.sh demo 0.0.0.0:39002 0.0.0.0:39001 120
+~~~
+
+`report render` читает один локальный JSON. Сеть не используется, исходный файл не меняется. `--redact-ips` маскирует адреса только в этом представлении. `baseline save` сохраняет этот отчёт в локальном каталоге данных. `baseline compare` использует только его и текущий отчёт. Если прогоны прямо сопоставимы, отношение будет better, worse или same, со ссылкой на идентификаторы доказательств текущего файла. Иначе отношение — `not_established`; история не выдумывается. Код выхода 2 означает worse. Код 3 означает, что файлы несопоставимы. `peer.sh` поднимает UDP echo и ограниченный по времени collect-сервер на указанных адресах. Он не меняет брандмауэр, DNS и маршруты и не сохраняет UDP-нагрузку. Для адресов вне loopback нужен `--allow-public-bind`. Подробности о HTTP, QUIC, UDP, прокси, сборе с двух сторон и кодах завершения — в [руководстве по CLI](docs/cli.md).
 ## Статус тестовой версии и известные ограничения
 - Ядро: `v1.5.0-rc.1`, опубликованный **кандидат на выпуск**, не стабильная версия.
 - AI Plugins: `0.3.0` (10 инструментов); предыдущий плагин v1.4 — `0.2.0` (9 инструментов).
 - Готовые пакеты: macOS ARM64, macOS Intel и Linux x86_64; сборка успешна, файлы SHA-256 доступны.
 - Проверки: [трёхплатформенный выпуск v1.5](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39255364100) прошёл сборку и тестирование MCP. Реальные сеансы Codex проверены, проект сообщил о завершении проверки Claude Code.
-- Для сетевой диагностики требуется явное разрешение. Windows, графический интерфейс и автоматическое исправление сети не поддерживаются.
+- Для сетевой диагностики требуется явное разрешение. Графического интерфейса и автоматического исправления сети нет. Windows x86_64 собирается последующим выпуском; в активах `v1.5.0-rc.1` этого архива нет. Ограничения: [Windows](docs/windows.md). Команды `report render`, `baseline` и `peer.sh` приведены в разделе [Использование PathTrial без ИИ-клиента](#использование-pathtrial-без-ии-клиента).
 Подробности см. в [матрице приёмки](docs/ai-plugin-completeness.md) и [отчёте о сборке](https://github.com/gaochenyang666-droid/PathTrial/actions/runs/39149532255). [Сообщайте о воспроизводимых ошибках](https://github.com/gaochenyang666-droid/PathTrial/issues/new?template=bug_report.md).
 ## Частые вопросы по диагностике сети
 ### Сайт не открывается: как отличить сбой DNS, TCP, TLS от HTTP?
@@ -103,7 +133,7 @@ pathtrial scan example.com --profile web --rounds 5 --redact-ips
 ### Как подключить PathTrial к Codex или Claude Code через MCP?
 Установите [готовое ядро v1.5.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1), затем используйте [инструкцию по плагинам](#установка-плагинов-ии) и Marketplace из `main`. MCP вызывает локальную программу `pathtrial`; сетевые проверки требуют разрешения цели.
 ### Нужен ли Rust для установки? Работает ли PathTrial в Windows?
-Нет. Готовые бинарные файлы v1.5.0-rc.1 существуют для macOS Apple Silicon, macOS Intel и Linux x86_64. Windows пока не поддерживается. Rust нужен только при сборке из исходного кода.
+Опубликованные файлы v1.5.0-rc.1 есть для macOS Apple Silicon, macOS Intel и Linux x86_64, Rust для них не нужен. Windows x86_64 ставится через `scripts/install.ps1`, когда в выпуске появится этот архив. В `v1.5.0-rc.1` его нет. До этого сборка на Windows требует Rust. `--bind-interface` на Windows завершается ошибкой и не переключается на другой интерфейс.
 ### Чем PathTrial отличается от ping и curl?
 `ping` в основном проверяет ICMP-доступность, а `curl` часто используют для HTTP-запросов. PathTrial разделяет измерения DNS, TCP, TLS, HTTP, UDP и QUIC на ограниченные проверки, указывает фактические данные в JSON-отчётах и не делает вывод о причине по одному неудачному тесту.
 ## Ошибки и участие в разработке
