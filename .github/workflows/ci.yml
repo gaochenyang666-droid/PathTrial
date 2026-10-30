@@ -133,7 +133,7 @@ jobs:
           "$bin" udp --target 127.0.0.1:39001 --rounds 3 \
             --timeout-ms 1000 --format json > udp.json
           kill "$endpoint_pid" 2>/dev/null || true
-          python -c "import json; d=json.load(open('udp.json')); assert d['status']=='PASS', d['status']"
+          python -c "import json; d=json.load(open('udp.json', encoding='utf-8')); assert d['status']=='PASS', d['status']"
       - name: Package checksum
         shell: bash
         run: |
