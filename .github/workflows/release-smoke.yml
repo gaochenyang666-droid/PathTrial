@@ -31,7 +31,7 @@ jobs:
       - name: Verify public release without Rust
         shell: bash
         env:
-          PATHTRIAL_VERSION: v1.4.0-rc.1
+          PATHTRIAL_VERSION: v1.6.0
         run: |
           set -euo pipefail
           if command -v cargo >/dev/null 2>&1; then
@@ -47,5 +47,5 @@ jobs:
       - name: Verify Windows release asset or record that it is absent
         shell: pwsh
         env:
-          PATHTRIAL_VERSION: v1.5.0-rc.2
+          PATHTRIAL_VERSION: v1.6.0
         run: ./scripts/verify-release.ps1

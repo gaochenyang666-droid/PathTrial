@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathtrial.dev/schemas/fingerprint-diff-1.0.0.json",
+  "title": "PathTrial fingerprint comparison",
+  "description": "Deterministic comparison of two local-path fingerprint reports.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "before_fingerprint",
+    "after_fingerprint",
+    "verdict",
+    "changes",
+    "findings",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "tool_version": {"type": "string"},
+    "before_fingerprint": {"type": "string"},
+    "after_fingerprint": {"type": "string"},
+    "verdict": {"type": "string", "enum": ["IDENTICAL", "CHANGED", "INCOMPARABLE"]},
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["component", "before", "after"],
+        "properties": {
+          "component": {"type": "string"},
+          "before": {},
+          "after": {}
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/finding"}
+    },
+    "limitations": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "rule_id",
+        "claim",
+        "severity",
+        "status",
+        "evidence",
+        "probe_id",
+        "not_established",
+        "confidence",
+        "limits"
+      ],
+      "properties": {
+        "id": {"type": "string"},
+        "rule_id": {"type": "string", "pattern": "^R\\d{3}$"},
+        "claim": {"type": "string", "minLength": 1},
+        "severity": {"type": "string", "enum": ["info", "warn", "fail"]},
+        "status": {"type": "string", "enum": ["PASS", "WARN", "FAIL", "SKIP", "INCONCLUSIVE"]},
+        "evidence": {"type": "array", "items": {"type": "string"}},
+        "probe_id": {"type": "string", "minLength": 1},
+        "not_established": {"type": "array", "items": {"type": "string"}},
+        "confidence": {"type": "string", "enum": ["low", "moderate", "high"]},
+        "limits": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}

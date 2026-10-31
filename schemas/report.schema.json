@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pathtrial.dev/schemas/report-1.5.0.json",
+  "$id": "https://pathtrial.dev/schemas/report-1.6.0.json",
   "title": "PathTrial diagnostic report",
-  "description": "Machine readable output of PathTrial commands. Every finding references probe IDs that exist in this document. 1.5.0 adds QUIC/HTTP3 probe evidence and the quic probe kind.",
+  "description": "Machine readable output of PathTrial commands. Every finding references probe IDs that exist in this document. 1.6.0 adds the primary probe_id on every finding.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -470,6 +470,12 @@
         "chain_len"
       ],
       "properties": {
+        "cert_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "subject": {
           "type": [
             "string",
@@ -1535,6 +1541,7 @@
         "severity",
         "status",
         "evidence",
+    "probe_id",
         "not_established",
         "confidence",
         "limits"
@@ -1564,6 +1571,10 @@
             "type": "string"
           }
         },
+    "probe_id": {
+      "type": "string",
+      "minLength": 1
+    },
         "not_established": {
           "type": "array",
           "items": {

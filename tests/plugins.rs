@@ -45,7 +45,7 @@ fn codex_manifest_matches_package_and_mcp() {
     let plugin = root().join("plugins/codex/pathtrial");
     let manifest = read_json(&plugin.join("plugin.json"));
     assert_eq!(manifest["name"], "pathtrial");
-    assert_eq!(manifest["version"], "0.3.0");
+    assert_eq!(manifest["version"], "0.4.0");
     assert_eq!(
         manifest["extensions"]["com.openai"]["interface"]["displayName"],
         "PathTrial Network Diagnostics"
@@ -77,7 +77,7 @@ fn claude_manifest_matches_package_and_mcp() {
     let plugin = root().join("plugins/claude-code/pathtrial");
     let manifest = read_json(&plugin.join(".claude-plugin/plugin.json"));
     assert_eq!(manifest["name"], "pathtrial");
-    assert_eq!(manifest["version"], "0.3.0");
+    assert_eq!(manifest["version"], "0.4.0");
     let mcp = read_json(&plugin.join(".mcp.json"));
     assert_eq!(mcp["mcpServers"]["pathtrial"]["command"], "pathtrial");
     assert_eq!(mcp["mcpServers"]["pathtrial"]["args"][0], "mcp");
@@ -109,6 +109,22 @@ fn shared_skills_match_both_generated_copies() {
             "{generated} differs from the authoritative shared skills"
         );
     }
+}
+
+#[test]
+fn diagnostic_skills_require_capabilities_allowlist_and_evidence() {
+    let network =
+        std::fs::read_to_string(root().join("plugins/shared/skills/network-diagnostics/SKILL.md"))
+            .expect("network skill");
+    assert!(network.contains("Call `pathtrial_capabilities` before any probe"));
+    assert!(network.contains("classify the attempt as `FAIL`"));
+    assert!(network.contains("Raw command output"));
+    assert!(network.contains("pathtrial_fingerprint_diff"));
+
+    let setup = std::fs::read_to_string(root().join("plugins/shared/skills/setup/SKILL.md"))
+        .expect("setup skill");
+    assert!(setup.contains("Call `pathtrial_capabilities` first"));
+    assert!(setup.contains("exact target allowlist"));
 }
 
 #[test]
@@ -150,7 +166,7 @@ fn cursor_package_keeps_default_deny_mcp_and_rule() {
     let plugin = root().join("plugins/cursor/pathtrial");
     let manifest = read_json(&plugin.join(".cursor-plugin/plugin.json"));
     assert_eq!(manifest["name"], "pathtrial");
-    assert_eq!(manifest["version"], "0.3.0");
+    assert_eq!(manifest["version"], "0.4.0");
     assert!(manifest.get("mcpServers").is_none());
 
     let mcp = read_json(&plugin.join("mcp.json"));

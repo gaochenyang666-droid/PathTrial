@@ -1,6 +1,7 @@
 # PathTrial for Claude Code
 
-This plugin bundles four skills and a local stdio MCP server.
+This plugin exposes PathTrial as a local-evidence-first network diagnostics MCP over stdio.
+It includes twelve tools covering guided diagnosis, path fingerprints, report comparison and explanation.
 
 ## Requirements
 
@@ -17,6 +18,14 @@ Active probes are denied until the target is allowlisted in `.mcp.json`:
 ```
 
 Repeat `--allow-target` for multiple targets. A desktop app that does not inherit the shell can use `~/.config/pathtrial/allow-targets` (or `%APPDATA%\pathtrial\allow-targets`). One explicit target per line, no wildcards. `pathtrial mcp --print-allow-path` prints the path only. The server itself enforces this boundary. Report explanation and report comparison do not require network authorization.
+
+## Required order
+
+1. Call `pathtrial_capabilities`.
+2. Add the exact target with `--allow-target` and restart the MCP server when needed.
+3. Call `pathtrial_diagnose` or `pathtrial_fingerprint`.
+4. Treat `target_not_allowed` as `FAIL` and stop. Do not retry with another IP, spelling or redirect.
+5. Explain only the returned evidence fields. Raw shell output is not a finding.
 
 ## Local validation
 

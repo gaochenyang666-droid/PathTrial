@@ -317,6 +317,11 @@ fn every_finding_cites_existing_probes() {
                 "{case}: finding {} has no evidence",
                 finding.rule_id
             );
+            assert!(
+                finding.evidence.iter().any(|id| id == &finding.probe_id),
+                "{case}: finding probe_id {} is absent from evidence",
+                finding.probe_id
+            );
             for id in &finding.evidence {
                 assert!(ids.contains(id.as_str()), "{case}: unknown probe id {id}");
             }

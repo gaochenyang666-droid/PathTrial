@@ -147,6 +147,7 @@ pub struct HttpOutcome {
     pub http_version: Option<String>,
     pub redirect: Option<String>,
     pub body_bytes: usize,
+    pub body_preview: Vec<u8>,
     pub tls_verified: Option<bool>,
     pub timings: HttpTimings,
     pub error: Option<NetError>,
@@ -208,6 +209,7 @@ pub fn run(recorder: &mut Recorder, request: &HttpRequest<'_>) -> Result<HttpOut
     let mut version = None;
     let mut redirect = None;
     let mut body_bytes = 0usize;
+    let mut body_preview = Vec::new();
     let mut tls_verified = None;
     let mut error: Option<NetError> = None;
     let mut matches = None;
@@ -250,6 +252,7 @@ pub fn run(recorder: &mut Recorder, request: &HttpRequest<'_>) -> Result<HttpOut
                             version,
                             redirect,
                             body_bytes,
+                            body_preview.clone(),
                             tls_verified,
                             error,
                             matches,
@@ -272,6 +275,7 @@ pub fn run(recorder: &mut Recorder, request: &HttpRequest<'_>) -> Result<HttpOut
                         version,
                         redirect,
                         body_bytes,
+                        body_preview.clone(),
                         tls_verified,
                         error,
                         matches,
@@ -306,6 +310,7 @@ pub fn run(recorder: &mut Recorder, request: &HttpRequest<'_>) -> Result<HttpOut
                 version,
                 redirect,
                 body_bytes,
+                body_preview.clone(),
                 tls_verified,
                 error,
                 matches,
@@ -343,6 +348,7 @@ pub fn run(recorder: &mut Recorder, request: &HttpRequest<'_>) -> Result<HttpOut
                     version,
                     redirect,
                     body_bytes,
+                    body_preview.clone(),
                     tls_verified,
                     error,
                     matches,
@@ -364,6 +370,7 @@ pub fn run(recorder: &mut Recorder, request: &HttpRequest<'_>) -> Result<HttpOut
                     version,
                     redirect,
                     body_bytes,
+                    body_preview.clone(),
                     tls_verified,
                     error,
                     matches,
@@ -408,6 +415,7 @@ pub fn run(recorder: &mut Recorder, request: &HttpRequest<'_>) -> Result<HttpOut
             version,
             redirect,
             body_bytes,
+            body_preview,
             tls_verified,
             error,
             matches,
@@ -452,11 +460,15 @@ pub fn run(recorder: &mut Recorder, request: &HttpRequest<'_>) -> Result<HttpOut
                     .map(|index| index + 4)
                     .unwrap_or(head.len());
                 body_bytes = head.len().saturating_sub(body_start);
+                body_preview.extend_from_slice(&head[body_start..]);
+                body_preview.truncate(request.max_body);
                 let mut remaining = request.max_body.saturating_sub(body_bytes);
                 while remaining > 0 {
                     match channel.as_rw().read(&mut buffer) {
                         Ok(0) => break,
                         Ok(read) => {
+                            let room = request.max_body.saturating_sub(body_preview.len());
+                            body_preview.extend_from_slice(&buffer[..read.min(room)]);
                             body_bytes += read;
                             remaining = remaining.saturating_sub(read);
                         }
@@ -495,6 +507,7 @@ pub fn run(recorder: &mut Recorder, request: &HttpRequest<'_>) -> Result<HttpOut
         version,
         redirect,
         body_bytes,
+        body_preview,
         tls_verified,
         error,
         matches,
@@ -514,6 +527,7 @@ fn finish(
     version: Option<String>,
     redirect: Option<String>,
     body_bytes: usize,
+    body_preview: Vec<u8>,
     tls_verified: Option<bool>,
     error: Option<NetError>,
     matches: Option<bool>,
@@ -564,6 +578,7 @@ fn finish(
         http_version: version,
         redirect,
         body_bytes,
+        body_preview,
         tls_verified,
         timings,
         error,

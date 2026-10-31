@@ -7,8 +7,8 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-/// Version of the report schema. 1.5.0 adds the `quic` probe kind and detail.
-pub const SCHEMA_VERSION: &str = "1.5.0";
+/// Version of the report schema. 1.6.0 adds the primary `probe_id` on findings.
+pub const SCHEMA_VERSION: &str = "1.6.0";
 
 /// Uniform status vocabulary for stages and findings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -144,6 +144,7 @@ impl NetError {
 /// Certificate facts gathered during a TLS probe.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CertInfo {
+    pub cert_sha256: Option<String>,
     pub subject: Option<String>,
     pub issuer: Option<String>,
     pub not_before: Option<String>,
@@ -409,6 +410,7 @@ pub struct Finding {
     pub severity: Severity,
     pub status: Status,
     pub evidence: Vec<String>,
+    pub probe_id: String,
     pub not_established: Vec<String>,
     pub confidence: Confidence,
     pub limits: Vec<String>,

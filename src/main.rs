@@ -33,6 +33,15 @@ fn main() -> ExitCode {
                 print!("{}", include_str!("../schemas/collect.schema.json"));
             } else if args.correlate {
                 print!("{}", include_str!("../schemas/correlate.schema.json"));
+            } else if args.fingerprint {
+                print!("{}", include_str!("../schemas/fingerprint.schema.json"));
+            } else if args.evidence {
+                print!("{}", include_str!("../schemas/evidence.schema.json"));
+            } else if args.fingerprint_diff {
+                print!(
+                    "{}",
+                    include_str!("../schemas/fingerprint-diff.schema.json")
+                );
             } else {
                 print!("{}", include_str!("../schemas/report.schema.json"));
             }
@@ -139,6 +148,20 @@ fn main() -> ExitCode {
             }
         },
         Command::Compare(args) => match pathtrial::compare::run(&args) {
+            Ok(code) => ExitCode::from(code),
+            Err(message) => {
+                eprintln!("error: {message}");
+                ExitCode::from(EXIT_TOOL_ERROR)
+            }
+        },
+        Command::Fingerprint(args) => match pathtrial::fingerprint::run(&args) {
+            Ok(code) => ExitCode::from(code),
+            Err(message) => {
+                eprintln!("error: {message}");
+                ExitCode::from(EXIT_TOOL_ERROR)
+            }
+        },
+        Command::FingerprintDiff(args) => match pathtrial::fingerprint::diff_run(&args) {
             Ok(code) => ExitCode::from(code),
             Err(message) => {
                 eprintln!("error: {message}");

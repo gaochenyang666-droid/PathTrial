@@ -12,6 +12,7 @@ use rustls::pki_types::{CertificateDer, ServerName as PkiServerName, UnixTime};
 use rustls::{
     ClientConfig, ClientConnection, DigitallySignedStruct, RootCertStore, SignatureScheme,
 };
+use sha2::{Digest, Sha256};
 use x509_parser::prelude::*;
 
 use crate::models::{
@@ -130,6 +131,10 @@ fn classify(error: &rustls::Error) -> (NetError, String) {
 
 fn cert_info(chain: &[CertificateDer<'_>]) -> Option<CertInfo> {
     let leaf = chain.first()?;
+    let cert_sha256 = Sha256::digest(leaf.as_ref())
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
     let (_, parsed) = X509Certificate::from_der(leaf.as_ref()).ok()?;
     let not_before = parsed.validity().not_before.timestamp();
     let not_after = parsed.validity().not_after.timestamp();
@@ -152,6 +157,7 @@ fn cert_info(chain: &[CertificateDer<'_>]) -> Option<CertInfo> {
         })
         .unwrap_or_default();
     Some(CertInfo {
+        cert_sha256: Some(cert_sha256),
         subject: Some(parsed.subject().to_string()),
         issuer: Some(parsed.issuer().to_string()),
         not_before: Some(format_timestamp(not_before)),

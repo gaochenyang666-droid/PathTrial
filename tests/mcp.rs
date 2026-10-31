@@ -152,9 +152,11 @@ fn initialize_list_tools_and_capabilities() {
         .iter()
         .filter_map(|tool| tool["name"].as_str())
         .collect();
-    assert_eq!(names.len(), 10);
+    assert_eq!(names.len(), 12);
     assert!(names.contains(&"pathtrial_capabilities"));
     assert!(names.contains(&"pathtrial_diagnose"));
+    assert!(names.contains(&"pathtrial_fingerprint"));
+    assert!(names.contains(&"pathtrial_fingerprint_diff"));
     assert!(names.contains(&"pathtrial_explain_report"));
     let caps = client.call(3, "pathtrial_capabilities", json!({}));
     assert_eq!(caps["result"]["isError"], false);
@@ -281,6 +283,35 @@ fn diagnose_local_runs_without_allowlist_and_network_is_denied() {
     );
     assert_eq!(
         denied["result"]["structuredContent"]["error"]["code"],
+        "target_not_allowed"
+    );
+    client.close();
+}
+
+#[test]
+fn new_diagnose_scenarios_and_fingerprint_require_allowlist() {
+    let mut client = McpClient::start(&[]);
+    let cases = [
+        json!({"scenario":"vps-unreachable","target":"127.0.0.1","port":22,"max_seconds":5}),
+        json!({"scenario":"proxy-split","url":"http://127.0.0.1:9/","proxy":"socks5://127.0.0.1:1080","max_seconds":5}),
+        json!({"scenario":"http3-fallback","url":"https://127.0.0.1:9/","max_seconds":5}),
+    ];
+    for (offset, arguments) in cases.into_iter().enumerate() {
+        let denied = client.call(2 + offset as u64, "pathtrial_diagnose", arguments);
+        assert_eq!(denied["result"]["isError"], true, "{denied}");
+        assert_eq!(
+            denied["result"]["structuredContent"]["error"]["code"],
+            "target_not_allowed"
+        );
+    }
+    let fingerprint = client.call(
+        10,
+        "pathtrial_fingerprint",
+        json!({"target":"https://127.0.0.1:9/","max_seconds":5}),
+    );
+    assert_eq!(fingerprint["result"]["isError"], true, "{fingerprint}");
+    assert_eq!(
+        fingerprint["result"]["structuredContent"]["error"]["code"],
         "target_not_allowed"
     );
     client.close();

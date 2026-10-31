@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pathtrial.dev/schemas/diagnose-1.0.0.json",
+  "$id": "https://pathtrial.dev/schemas/diagnose-1.1.0.json",
   "title": "PathTrial guided diagnosis",
-  "description": "Scenario-oriented diagnosis with user-facing checks, possible causes, unproven causes and next checks. Every check evidence reference is prefixed with its source report name.",
+  "description": "Scenario-oriented evidence report. Every check carries claim, evidence, probe_id, confidence, limits and explicit unknowns.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -21,7 +21,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "1.0.0"
+      "const": "1.1.0"
     },
     "tool_version": {
       "type": "string"
@@ -43,7 +43,10 @@
         "tls",
         "http",
         "dual-stack",
-        "udp-quic"
+        "udp-quic",
+        "vps-unreachable",
+        "proxy-split",
+        "http3-fallback"
       ]
     },
     "target": {
@@ -118,10 +121,14 @@
         "name",
         "status",
         "summary",
+        "claim",
         "evidence",
+        "probe_id",
         "observed",
         "possible",
         "not_established",
+        "confidence",
+        "limits",
         "next_checks"
       ],
       "properties": {
@@ -139,12 +146,22 @@
         "summary": {
           "type": "string"
         },
+        "claim": {
+          "type": "string",
+          "minLength": 1
+        },
         "evidence": {
           "type": "array",
           "items": {
             "type": "string",
             "pattern": "^[a-z0-9-]+:[A-Za-z0-9_.-]+$"
           }
+        },
+        "probe_id": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "observed": {
           "type": "array",
@@ -159,6 +176,20 @@
           }
         },
         "not_established": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "low",
+            "moderate",
+            "high"
+          ]
+        },
+        "limits": {
           "type": "array",
           "items": {
             "type": "string"

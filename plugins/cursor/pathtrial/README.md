@@ -1,6 +1,6 @@
 # PathTrial for Cursor
 
-Cursor plugin package for the local PathTrial MCP server. It starts `pathtrial mcp` and does not embed an allowlist.
+PathTrial is a local-evidence-first network diagnostics MCP. This Cursor package starts `pathtrial mcp`, exposes twelve tools and does not embed an allowlist.
 
 The public Cursor Marketplace does not list this package until it is submitted and reviewed. Load it locally, import the repository as a team marketplace, or copy `mcp.json` into Cursor's MCP config.
 

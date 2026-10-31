@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathtrial.dev/schemas/evidence-1.0.0.json",
+  "title": "PathTrial evidence finding",
+  "description": "Canonical evidence object used by scan findings, diagnosis checks and fingerprint findings.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "claim",
+    "status",
+    "evidence",
+    "probe_id",
+    "not_established",
+    "confidence",
+    "limits"
+  ],
+  "properties": {
+    "claim": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "WARN",
+        "FAIL",
+        "SKIP",
+        "INCONCLUSIVE"
+      ]
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "probe_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "not_established": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "low",
+        "moderate",
+        "high"
+      ]
+    },
+    "limits": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

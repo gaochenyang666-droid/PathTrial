@@ -55,3 +55,24 @@ fn schema_rejects_reports_without_evidence() {
     let value = serde_json::to_value(&report).expect("serializes");
     assert!(!validator().is_valid(&value), "evidence must be required");
 }
+
+#[test]
+fn canonical_evidence_schema_requires_probe_identity() {
+    let schema: serde_json::Value =
+        serde_json::from_str(include_str!("../schemas/evidence.schema.json"))
+            .expect("evidence schema parses");
+    let validator = jsonschema::validator_for(&schema).expect("evidence schema compiles");
+    let valid = serde_json::json!({
+        "claim": "example",
+        "status": "PASS",
+        "evidence": ["tcp_ipv4_001"],
+        "probe_id": "tcp_ipv4_001",
+        "not_established": ["remote cause"],
+        "confidence": "moderate",
+        "limits": ["one sample"]
+    });
+    assert!(validator.is_valid(&valid));
+    let mut missing = valid.clone();
+    missing.as_object_mut().unwrap().remove("probe_id");
+    assert!(!validator.is_valid(&missing));
+}

@@ -15,7 +15,7 @@ use serde_json::{json, Value};
 
 use crate::cli::McpArgs;
 use crate::util::IpMasker;
-pub const PLUGIN_VERSION: &str = "0.3.0";
+pub const PLUGIN_VERSION: &str = "0.4.0";
 const MCP_PROTOCOL_VERSION: &str = "2025-06-18";
 const MAX_ROUNDS: u32 = 50;
 const MAX_TIMEOUT_MS: u64 = 15_000;
@@ -396,7 +396,7 @@ fn tool_definitions() -> Vec<Value> {
         ),
         tool(
             "pathtrial_diagnose",
-            "Run a guided diagnosis scenario using authorized targets. Use http for a concrete HTTP or HTTPS URL, web for a TLS web endpoint expressed as host and port, dns when the question is name resolution, and local for machine-only interface, route, DHCP and Wi-Fi facts. The result contains checks with evidence, observed and not_established fields; explain those checks directly.",
+            "Run a guided diagnosis scenario using authorized targets. Use http for a concrete HTTP or HTTPS URL, web for a TLS web endpoint, dns for name resolution, local for machine-only facts, vps-unreachable for host versus service reachability, proxy-split for direct versus proxy behavior, and http3-fallback for HTTP/3 versus HTTPS fallback. The result contains checks with claim, evidence, probe_id, confidence, limits and not_established fields.",
             json!({
                 "type": "object",
                 "additionalProperties": false,
@@ -404,7 +404,7 @@ fn tool_definitions() -> Vec<Value> {
                 "properties": {
                     "scenario": {
                         "type": "string",
-                        "enum": ["web", "vps", "latency", "proxy", "local", "dns", "tcp", "tls", "http", "dual-stack", "udp-quic"],
+                        "enum": ["web", "vps", "latency", "proxy", "local", "dns", "tcp", "tls", "http", "dual-stack", "udp-quic", "vps-unreachable", "proxy-split", "http3-fallback"],
                         "description": "Scenario that matches the question. local performs no network probe."
                     },
                     "target": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "Hostname or literal IP unless the scenario is local or a full URL is supplied."},
@@ -434,6 +434,35 @@ fn tool_definitions() -> Vec<Value> {
             }),
         ),
         tool(
+            "pathtrial_fingerprint",
+            "Capture a local path fingerprint using authorized targets. Records IPv4 and IPv6 exit IP, DNS chain, TLS certificate identity, local proxy hops and the address-family fork.",
+            json!({
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["target"],
+                "properties": {
+                    "target": {"type": "string", "minLength": 8, "maxLength": 2048, "description": "Absolute HTTPS URL used for exit IP and TLS identity capture."},
+                    "proxy": {"type": "string", "minLength": 3, "maxLength": 512, "description": "Optional proxy endpoint recorded as one local hop."},
+                    "timeout_ms": {"type": "integer", "minimum": 100, "maximum": MAX_TIMEOUT_MS, "default": 5000},
+                    "max_seconds": {"type": "integer", "minimum": 5, "maximum": MAX_SECONDS, "default": 30},
+                    "bind_interface": {"type": "string", "minLength": 1, "maxLength": 128}
+                }
+            }),
+        ),
+        tool(
+            "pathtrial_fingerprint_diff",
+            "Compare two local path fingerprint reports and return deterministic changed components with evidence.",
+            json!({
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["before", "after"],
+                "properties": {
+                    "before": {"type": "object"},
+                    "after": {"type": "object"}
+                }
+            }),
+        ),
+        tool(
             "pathtrial_explain_report",
             "Extract a deterministic, evidence-checked summary from a scan, probe or guided diagnose report; includes check statuses, observations, hypotheses, limits and next steps. Never calls an external AI API.",
             json!({
@@ -457,9 +486,11 @@ fn tool(name: &str, description: &str, input_schema: Value) -> Value {
         "annotations": {
             "readOnlyHint": name == "pathtrial_capabilities"
                 || name == "pathtrial_compare_reports"
+                || name == "pathtrial_fingerprint_diff"
                 || name == "pathtrial_explain_report",
             "openWorldHint": name != "pathtrial_capabilities"
                 && name != "pathtrial_compare_reports"
+                && name != "pathtrial_fingerprint_diff"
                 && name != "pathtrial_explain_report",
             "destructiveHint": false
         }
@@ -493,6 +524,8 @@ fn call_tool(
         "pathtrial_proxy_test" => tool_proxy(&arguments, allowlist, cancelled),
         "pathtrial_udp_echo" => tool_udp(&arguments, allowlist, cancelled),
         "pathtrial_diagnose" => tool_diagnose(&arguments, allowlist, cancelled),
+        "pathtrial_fingerprint" => tool_fingerprint(&arguments, allowlist, cancelled),
+        "pathtrial_fingerprint_diff" => tool_fingerprint_diff(&arguments),
         "pathtrial_compare_reports" => tool_compare(&arguments),
         "pathtrial_explain_report" => tool_explain(&arguments),
         _ => Err(ToolError::invalid(format!("unknown tool {name}"))),
@@ -562,6 +595,8 @@ fn capabilities(allowlist: &[AllowRule], file_loaded: bool) -> Value {
         ("diagnose", true),
         ("quic", true),
         ("http3", true),
+        ("fingerprint", true),
+        ("fingerprint_diff", true),
         ("dual_end_cli", true),
         ("dual_end_mcp", false),
         ("windows", cfg!(windows)),
@@ -941,6 +976,9 @@ fn plan_diagnose(
             "http",
             "dual-stack",
             "udp-quic",
+            "vps-unreachable",
+            "proxy-split",
+            "http3-fallback",
         ],
         "web",
     )?;
@@ -982,14 +1020,19 @@ fn plan_diagnose(
             .as_deref()
             .or_else(|| parsed_url.as_ref().map(|url| url.host.as_str()))
             .ok_or_else(|| ToolError::invalid("target or url is required for this scenario"))?;
-        if parsed_url.is_some() && scenario != "http" && scenario != "proxy" {
+        if parsed_url.is_some()
+            && !matches!(
+                scenario.as_str(),
+                "http" | "proxy" | "proxy-split" | "http3-fallback"
+            )
+        {
             return Err(ToolError::invalid(
                 "url is supported only for http and proxy scenarios",
             ));
         }
         let target_port = explicit_port.unwrap_or_else(|| {
             parsed_url.as_ref().map(|url| url.port).unwrap_or(
-                if scenario == "vps" || scenario == "tcp" {
+                if scenario == "vps" || scenario == "vps-unreachable" || scenario == "tcp" {
                     22
                 } else {
                     443
@@ -1084,7 +1127,7 @@ fn plan_diagnose(
                     command.push(normalized_host.clone());
                 }
             }
-            "http" => {
+            "http" | "http3-fallback" => {
                 let authorized = authorize_and_resolve_with(
                     &normalized_host,
                     target_port,
@@ -1113,7 +1156,7 @@ fn plan_diagnose(
                 command.push(url.host_header());
                 connect_ip = Some(authorized.ip);
             }
-            "proxy" => {
+            "proxy" | "proxy-split" => {
                 let authorized = authorize_and_resolve_with(
                     &normalized_host,
                     target_port,
@@ -1205,6 +1248,11 @@ fn tool_diagnose(
 ) -> Result<Value, ToolError> {
     let plan = plan_diagnose(arguments, allowlist, &resolve_host)?;
     let report = run_cli_json(&plan.command, cancelled)?;
+    let typed: crate::diagnose::DiagnoseReport = serde_json::from_value(report.clone())
+        .map_err(|error| ToolError::failed(format!("diagnose report schema: {error}")))?;
+    typed
+        .validate_evidence()
+        .map_err(|error| ToolError::failed(format!("diagnose evidence schema: {error}")))?;
     let status = report
         .get("status")
         .and_then(Value::as_str)
@@ -1230,6 +1278,128 @@ fn tool_diagnose(
         result["connect_ipv6"] = json!(ip.to_string());
     }
     Ok(result)
+}
+
+fn tool_fingerprint(
+    arguments: &Value,
+    allowlist: &[AllowRule],
+    cancelled: &Arc<AtomicBool>,
+) -> Result<Value, ToolError> {
+    let target = arguments
+        .get("target")
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty() && value.len() <= 2048)
+        .ok_or_else(|| ToolError::invalid("target must be a non-empty URL"))?
+        .to_string();
+    let url = crate::probes::http::parse_url(&target)
+        .map_err(|error| ToolError::invalid(format!("invalid URL: {error}")))?;
+    if !url.is_tls() {
+        return Err(ToolError::invalid(
+            "fingerprint target must be an HTTPS URL",
+        ));
+    }
+    let (_, candidates) = authorize_candidates_with(&url.host, url.port, allowlist, resolve_host)?;
+    if candidates.is_empty() {
+        return Err(ToolError::denied(
+            "fingerprint target has no authorized address",
+        ));
+    }
+    let mut command = vec![
+        "fingerprint".to_string(),
+        target,
+        "--timeout-ms".to_string(),
+        bounded_u64(arguments, "timeout_ms", 100, MAX_TIMEOUT_MS, 5000)?.to_string(),
+        "--max-seconds".to_string(),
+        bounded_u64(arguments, "max_seconds", 5, MAX_SECONDS, 30)?.to_string(),
+        "--format".to_string(),
+        "json".to_string(),
+    ];
+    if let Some(proxy) = arguments.get("proxy").and_then(Value::as_str) {
+        let spec = crate::probes::proxy::parse_proxy(proxy)
+            .map_err(|error| ToolError::invalid(format!("invalid proxy: {error}")))?;
+        let proxy_ip = authorize_and_resolve(&spec.host, spec.port, None, allowlist)?;
+        command.push("--proxy".to_string());
+        command.push(proxy_literal(&spec, proxy_ip.ip));
+    }
+    if let Some(interface) = arguments.get("bind_interface").and_then(Value::as_str) {
+        if interface.is_empty() || interface.len() > 128 {
+            return Err(ToolError::invalid("bind_interface is invalid"));
+        }
+        command.push("--bind-interface".to_string());
+        command.push(interface.to_string());
+    }
+    let report = run_cli_json(&command, cancelled)?;
+    let typed: crate::fingerprint::FingerprintReport = serde_json::from_value(report.clone())
+        .map_err(|error| ToolError::failed(format!("fingerprint report schema: {error}")))?;
+    let known = typed
+        .probes
+        .iter()
+        .map(|probe| probe.id.as_str())
+        .collect::<std::collections::BTreeSet<_>>();
+    validate_finding_evidence(&typed.findings, &known)?;
+    Ok(json!({
+        "summary": format!(
+            "fingerprint {} with ip fork {}",
+            typed.fingerprint, typed.components.ip_fork
+        ),
+        "fingerprint": typed.fingerprint,
+        "report": report
+    }))
+}
+
+fn tool_fingerprint_diff(arguments: &Value) -> Result<Value, ToolError> {
+    let before = arguments
+        .get("before")
+        .ok_or_else(|| ToolError::invalid("before fingerprint is required"))?;
+    let after = arguments
+        .get("after")
+        .ok_or_else(|| ToolError::invalid("after fingerprint is required"))?;
+    let before_report: crate::fingerprint::FingerprintReport =
+        serde_json::from_value(before.clone())
+            .map_err(|error| ToolError::invalid(format!("before fingerprint schema: {error}")))?;
+    let after_report: crate::fingerprint::FingerprintReport = serde_json::from_value(after.clone())
+        .map_err(|error| ToolError::invalid(format!("after fingerprint schema: {error}")))?;
+    let diff = crate::fingerprint::diff_reports(&before_report, &after_report);
+    Ok(json!({
+        "summary": format!("fingerprint comparison {}", diff.verdict),
+        "verdict": diff.verdict,
+        "comparison": serde_json::to_value(diff)
+            .map_err(|error| ToolError::failed(format!("serialize fingerprint diff: {error}")))?
+    }))
+}
+
+fn validate_finding_evidence(
+    findings: &[crate::models::Finding],
+    known: &std::collections::BTreeSet<&str>,
+) -> Result<(), ToolError> {
+    for finding in findings {
+        if finding.claim.trim().is_empty() || finding.limits.is_empty() {
+            return Err(ToolError::failed(format!(
+                "finding {} has incomplete evidence fields",
+                finding.id
+            )));
+        }
+        for evidence in &finding.evidence {
+            if !known.contains(evidence.as_str()) {
+                return Err(ToolError::failed(format!(
+                    "finding {} cites unknown probe {}",
+                    finding.id, evidence
+                )));
+            }
+        }
+        if finding.probe_id != "none"
+            && !finding
+                .evidence
+                .iter()
+                .any(|evidence| evidence == &finding.probe_id)
+        {
+            return Err(ToolError::failed(format!(
+                "finding {} probe_id is absent from evidence",
+                finding.id
+            )));
+        }
+    }
+    Ok(())
 }
 
 fn tool_compare(arguments: &Value) -> Result<Value, ToolError> {

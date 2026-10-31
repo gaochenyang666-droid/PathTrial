@@ -12,11 +12,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use crate::cli::{DiagnoseArgs, DiagnoseScenario, OutputFormat};
-use crate::models::{LocalLinkInfo, Status};
+use crate::models::{Confidence, LocalLinkInfo, Status};
 use crate::probes::{system, Recorder};
 use crate::util::{mean, median, new_run_id, now_rfc3339, percentile, IpMasker};
 
-pub const DIAGNOSE_SCHEMA_VERSION: &str = "1.0.0";
+pub const DIAGNOSE_SCHEMA_VERSION: &str = "1.1.0";
 const MAX_CHILD_OUTPUT: usize = 8 * 1024 * 1024;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,10 +25,14 @@ pub struct DiagnoseCheck {
     pub name: String,
     pub status: Status,
     pub summary: String,
+    pub claim: String,
     pub evidence: Vec<String>,
+    pub probe_id: Option<String>,
     pub observed: Vec<String>,
     pub possible: Vec<String>,
     pub not_established: Vec<String>,
+    pub confidence: Confidence,
+    pub limits: Vec<String>,
     pub next_checks: Vec<String>,
 }
 
@@ -80,6 +84,7 @@ impl DiagnoseReport {
     }
 
     fn finalize(mut self, redact: bool) -> Self {
+        self.normalize_evidence();
         self.status = self
             .checks
             .iter()
@@ -108,6 +113,67 @@ impl DiagnoseReport {
         }
         self.finished_at = now_rfc3339();
         self
+    }
+
+    fn normalize_evidence(&mut self) {
+        for check in &mut self.checks {
+            if check.claim.trim().is_empty() {
+                check.claim = check.summary.clone();
+            }
+            if check.probe_id.is_none() {
+                check.probe_id = check.evidence.first().cloned();
+            }
+            if check.limits.is_empty() {
+                check.limits = check.not_established.clone();
+            }
+            if check.limits.is_empty() {
+                check.limits.push(
+                    "Only the listed probes and their recorded samples were evaluated.".to_string(),
+                );
+            }
+            check.confidence = match (check.evidence.len(), check.status) {
+                (0, _) => Confidence::Low,
+                (_, Status::Skip | Status::Inconclusive) => Confidence::Low,
+                (1, _) => Confidence::Moderate,
+                (_, _) => Confidence::High,
+            };
+        }
+    }
+
+    pub fn validate_evidence(&self) -> Result<(), String> {
+        for check in &self.checks {
+            if check.claim.trim().is_empty() {
+                return Err(format!("check {} has an empty claim", check.id));
+            }
+            if check.limits.is_empty() {
+                return Err(format!("check {} has no limits", check.id));
+            }
+            for evidence in &check.evidence {
+                let (source, probe) = evidence.split_once(':').ok_or_else(|| {
+                    format!("check {} evidence {evidence} lacks a source", check.id)
+                })?;
+                if source.is_empty() || probe.is_empty() {
+                    return Err(format!(
+                        "check {} evidence {evidence} is malformed",
+                        check.id
+                    ));
+                }
+            }
+            if let Some(probe_id) = &check.probe_id {
+                if !check.evidence.iter().any(|item| item == probe_id) {
+                    return Err(format!(
+                        "check {} probe_id {probe_id} is absent from evidence",
+                        check.id
+                    ));
+                }
+            } else if check.status != Status::Skip && !check.evidence.is_empty() {
+                return Err(format!(
+                    "check {} has evidence but no primary probe_id",
+                    check.id
+                ));
+            }
+        }
+        Ok(())
     }
 
     pub fn emit(&self, format: OutputFormat) -> u8 {
@@ -215,6 +281,9 @@ pub fn run(args: &DiagnoseArgs) -> Result<u8, String> {
             }
         }
         DiagnoseScenario::UdpQuic => run_udp_quic(args, &mut report, deadline),
+        DiagnoseScenario::VpsUnreachable => run_vps_unreachable(args, &mut report, deadline),
+        DiagnoseScenario::ProxySplit => run_proxy_split(args, &mut report, deadline),
+        DiagnoseScenario::Http3Fallback => run_http3_fallback(args, &mut report, deadline),
     };
     if let Err(error) = outcome {
         if !is_budget_error(&error) {
@@ -276,6 +345,85 @@ fn run_vps(
     Ok(())
 }
 
+fn run_vps_unreachable(
+    args: &DiagnoseArgs,
+    report: &mut DiagnoseReport,
+    deadline: Instant,
+) -> Result<(), String> {
+    run_vps(args, report, deadline)?;
+    let tcp = report
+        .checks
+        .iter()
+        .find(|check| check.id == "scan-tcp_tls")
+        .map(|check| (check.status, check.evidence.clone()));
+    let icmp = report
+        .checks
+        .iter()
+        .find(|check| check.id == "icmp")
+        .map(|check| (check.status, check.evidence.clone()));
+    let trace = report
+        .checks
+        .iter()
+        .find(|check| check.id == "trace")
+        .map(|check| (check.status, check.evidence.clone()));
+    let mut evidence = Vec::new();
+    for item in [&tcp, &icmp, &trace].into_iter().flatten() {
+        evidence.extend(item.1.clone());
+    }
+    let (status, claim) = match (&tcp, &icmp) {
+        (Some((Status::Pass, _)), _) => (
+            Status::Pass,
+            "The configured VPS TCP port accepted a connection.".to_string(),
+        ),
+        (Some((Status::Fail, _)), Some((Status::Pass, _))) => (
+            Status::Fail,
+            "The host answered ICMP, but the configured TCP port failed.".to_string(),
+        ),
+        (Some((Status::Fail, _)), _) => (
+            Status::Inconclusive,
+            "ICMP and TCP did not establish whether the VPS or only its service path is unavailable."
+                .to_string(),
+        ),
+        _ => (
+            Status::Inconclusive,
+            "The scenario did not collect a complete TCP reachability result.".to_string(),
+        ),
+    };
+    report.checks.push(DiagnoseCheck {
+        id: "vps-reachability".to_string(),
+        name: "VPS reachability".to_string(),
+        status,
+        summary: claim.clone(),
+        claim,
+        evidence,
+        probe_id: None,
+        observed: Vec::new(),
+        possible: if status == Status::Fail {
+            vec![
+                "The host may be reachable while the selected service is stopped or filtered."
+                    .to_string(),
+            ]
+        } else {
+            Vec::new()
+        },
+        not_established: vec![
+            "ICMP filtering and TCP service state are separate observations.".to_string(),
+            "The exact failing network device is not established.".to_string(),
+        ],
+        confidence: Confidence::Moderate,
+        limits: vec!["Only the configured TCP port and ICMP behavior were measured.".to_string()],
+        next_checks: if status == Status::Fail {
+            vec![
+                "Confirm the service listener and provider firewall for the selected port."
+                    .to_string(),
+            ]
+        } else {
+            Vec::new()
+        },
+    });
+    Ok(())
+}
+
 fn run_latency(
     args: &DiagnoseArgs,
     report: &mut DiagnoseReport,
@@ -334,6 +482,152 @@ fn run_proxy(
     Ok(())
 }
 
+fn run_proxy_split(
+    args: &DiagnoseArgs,
+    report: &mut DiagnoseReport,
+    deadline: Instant,
+) -> Result<(), String> {
+    run_proxy(args, report, deadline)?;
+    let Some(source) = report
+        .sources
+        .iter()
+        .find(|source| source.name == "proxy")
+        .map(|source| &source.report)
+    else {
+        return Ok(());
+    };
+    let comparison = source
+        .get("probes")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .find_map(|probe| match probe.get("detail") {
+            Some(detail)
+                if detail.get("type").and_then(Value::as_str) == Some("path_comparison") =>
+            {
+                Some(detail)
+            }
+            _ => None,
+        });
+    let mut evidence = source
+        .get("probes")
+        .and_then(Value::as_array)
+        .map(|probes| {
+            probes
+                .iter()
+                .filter_map(|probe| probe.get("id").and_then(Value::as_str))
+                .map(|id| format!("proxy:{id}"))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let Some(detail) = comparison else {
+        report.checks.push(DiagnoseCheck {
+            id: "proxy-split".to_string(),
+            name: "Direct / proxy split".to_string(),
+            status: Status::Inconclusive,
+            summary: "No direct-versus-proxy comparison record was produced.".to_string(),
+            claim: "A path split cannot be determined without both direct and proxied samples."
+                .to_string(),
+            evidence,
+            probe_id: None,
+            observed: Vec::new(),
+            possible: Vec::new(),
+            not_established: vec!["No comparison sample exists for at least one path.".to_string()],
+            confidence: Confidence::Low,
+            limits: vec!["Only the proxy command's recorded probes were inspected.".to_string()],
+            next_checks: vec![
+                "Run with a reachable target and authorized proxy endpoint.".to_string()
+            ],
+        });
+        return Ok(());
+    };
+    let direct_success = detail
+        .get("direct_success")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let direct_total = detail
+        .get("direct_total")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let proxy_success = detail
+        .get("proxy_success")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let proxy_total = detail
+        .get("proxy_total")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let direct_rate = ratio(direct_success, direct_total);
+    let proxy_rate = ratio(proxy_success, proxy_total);
+    let (status, claim) = if direct_total == 0 || proxy_total == 0 {
+        (
+            Status::Inconclusive,
+            "Direct and proxy samples were not both available.".to_string(),
+        )
+    } else if (direct_rate - proxy_rate).abs() < 0.25 {
+        (
+            Status::Pass,
+            "Direct and proxy paths showed similar request success.".to_string(),
+        )
+    } else {
+        (
+            Status::Fail,
+            format!(
+                "Direct success {direct_success}/{direct_total} diverged from proxy success {proxy_success}/{proxy_total}."
+            ),
+        )
+    };
+    report.checks.push(DiagnoseCheck {
+        id: "proxy-split".to_string(),
+        name: "Direct / proxy split".to_string(),
+        status,
+        summary: claim.clone(),
+        claim,
+        evidence: std::mem::take(&mut evidence),
+        probe_id: None,
+        observed: vec![format!(
+            "direct={direct_success}/{direct_total} proxy={proxy_success}/{proxy_total}"
+        )],
+        possible: if status == Status::Fail {
+            vec![
+                "DNS, egress, proxy authentication or upstream policy may differ between paths."
+                    .to_string(),
+            ]
+        } else {
+            Vec::new()
+        },
+        not_established: vec![
+            "A split does not identify the responsible proxy or network device.".to_string(),
+        ],
+        confidence: if status == Status::Fail {
+            Confidence::Moderate
+        } else {
+            Confidence::Low
+        },
+        limits: vec![
+            "Direct and proxied requests can use different DNS and destination addresses."
+                .to_string(),
+        ],
+        next_checks: if status == Status::Fail {
+            vec![
+                "Compare proxy endpoint reachability and authentication with the direct path."
+                    .to_string(),
+            ]
+        } else {
+            Vec::new()
+        },
+    });
+    Ok(())
+}
+
+fn ratio(success: u64, total: u64) -> f64 {
+    if total == 0 {
+        0.0
+    } else {
+        success as f64 / total as f64
+    }
+}
+
 fn run_local(report: &mut DiagnoseReport) -> Result<(), String> {
     let mut recorder = Recorder::new();
     let system_probe = system::collect(&mut recorder, None);
@@ -356,7 +650,9 @@ fn run_local(report: &mut DiagnoseReport) -> Result<(), String> {
             system_probe.environment.ipv4_local,
             system_probe.environment.ipv6_local
         ),
+        claim: String::new(),
         evidence: local_evidence(&system_probe.probe_ids),
+        probe_id: None,
         observed: interfaces
             .iter()
             .map(|interface| {
@@ -371,6 +667,8 @@ fn run_local(report: &mut DiagnoseReport) -> Result<(), String> {
             .collect(),
         possible: Vec::new(),
         not_established: vec!["Interface presence does not prove upstream ISP health.".to_string()],
+        confidence: Confidence::Low,
+        limits: Vec::new(),
         next_checks: vec![
             "If no interface is up, inspect physical link, Wi-Fi association or VM networking."
                 .to_string(),
@@ -388,6 +686,7 @@ fn run_local(report: &mut DiagnoseReport) -> Result<(), String> {
         } else {
             "No IPv4 or IPv6 default route was reported.".to_string()
         },
+        claim: String::new(),
         evidence: local_evidence(
             &system_probe
                 .probe_ids
@@ -396,6 +695,7 @@ fn run_local(report: &mut DiagnoseReport) -> Result<(), String> {
                 .cloned()
                 .collect::<Vec<_>>(),
         ),
+        probe_id: None,
         observed: vec![format!(
             "IPv4 default route present={}, IPv6 default route present={}",
             system_probe.environment.default_route_v4.is_some(),
@@ -409,6 +709,8 @@ fn run_local(report: &mut DiagnoseReport) -> Result<(), String> {
         not_established: vec![
             "A missing route does not identify which local device or service failed.".to_string(),
         ],
+        confidence: Confidence::Low,
+        limits: Vec::new(),
         next_checks: if route_ok {
             Vec::new()
         } else {
@@ -451,13 +753,17 @@ fn run_local(report: &mut DiagnoseReport) -> Result<(), String> {
                 .collect::<Vec<_>>()
                 .join("; ")
         },
+        claim: String::new(),
         evidence: local_evidence(&system_probe.probe_ids),
+        probe_id: None,
         observed: wifi.iter().flat_map(|link| link.notes.clone()).collect(),
         possible: Vec::new(),
         not_established: vec![
             "Wi-Fi interference or router radio faults cannot be established from one snapshot."
                 .to_string(),
         ],
+        confidence: Confidence::Low,
+        limits: Vec::new(),
         next_checks: if wifi_status == Status::Pass {
             Vec::new()
         } else {
@@ -485,13 +791,17 @@ fn run_local(report: &mut DiagnoseReport) -> Result<(), String> {
         } else {
             dhcp.join("; ")
         },
+        claim: String::new(),
         evidence: local_evidence(&system_probe.probe_ids),
+        probe_id: None,
         observed: links.iter().flat_map(|link| link.notes.clone()).collect(),
         possible: Vec::new(),
         not_established: vec![
             "DHCP server failure or lease expiry cannot be proven from missing read-only data."
                 .to_string(),
         ],
+        confidence: Confidence::Low,
+        limits: Vec::new(),
         next_checks: if dhcp.is_empty() {
             vec!["Inspect the router lease table or run the OS network diagnostic UI.".to_string()]
         } else {
@@ -564,6 +874,98 @@ fn run_http(
     let result = run_json(&command, deadline)?;
     add_report_check(report, "http", "HTTP", &result, "http");
     classify_http(report, &result);
+    Ok(())
+}
+
+fn run_http3_fallback(
+    args: &DiagnoseArgs,
+    report: &mut DiagnoseReport,
+    deadline: Instant,
+) -> Result<(), String> {
+    if Instant::now() < deadline {
+        let mut command = vec![
+            "http3".to_string(),
+            scenario_url(args),
+            "--family".to_string(),
+            family_name(args.family).to_string(),
+            "--timeout-ms".to_string(),
+            args.timeout_ms.to_string(),
+            "--max-seconds".to_string(),
+            remaining_seconds(deadline).to_string(),
+            "--format".to_string(),
+            "json".to_string(),
+        ];
+        append_common_target_options(args, &mut command);
+        let result = run_json(&command, deadline)?;
+        add_report_check(report, "http3", "HTTP/3", &result, "http3");
+    } else {
+        report.checks.push(timeout_check("http3"));
+    }
+    if Instant::now() < deadline {
+        run_http(args, report, deadline)?;
+    } else {
+        report.checks.push(timeout_check("http"));
+    }
+    let http3 = report
+        .checks
+        .iter()
+        .find(|check| check.id == "http3")
+        .map(|check| (check.status, check.evidence.clone()));
+    let https = report
+        .checks
+        .iter()
+        .find(|check| check.id == "http")
+        .map(|check| (check.status, check.evidence.clone()));
+    let mut evidence = Vec::new();
+    for item in [&http3, &https].into_iter().flatten() {
+        evidence.extend(item.1.clone());
+    }
+    let (status, claim) = match (&http3, &https) {
+        (Some((Status::Pass, _)), _) => (
+            Status::Pass,
+            "HTTP/3 completed without requiring the HTTPS fallback.".to_string(),
+        ),
+        (_, Some((Status::Pass, _))) => (
+            Status::Warn,
+            "HTTP/3 was unavailable, but HTTPS over TCP completed successfully.".to_string(),
+        ),
+        (Some((Status::Fail, _)), Some((Status::Fail, _))) => (
+            Status::Fail,
+            "Both HTTP/3 and the HTTPS fallback failed.".to_string(),
+        ),
+        _ => (
+            Status::Inconclusive,
+            "The scenario did not establish both HTTP/3 and HTTPS outcomes.".to_string(),
+        ),
+    };
+    report.checks.push(DiagnoseCheck {
+        id: "http3-fallback".to_string(),
+        name: "HTTP/3 fallback".to_string(),
+        status,
+        summary: claim.clone(),
+        claim,
+        evidence,
+        probe_id: None,
+        observed: Vec::new(),
+        possible: if status == Status::Warn {
+            vec![
+                "UDP/443 may be blocked, filtered, or the endpoint may not advertise h3."
+                    .to_string(),
+            ]
+        } else {
+            Vec::new()
+        },
+        not_established: vec![
+            "HTTP/3 failure does not identify UDP blocking on a specific device.".to_string(),
+        ],
+        confidence: Confidence::Moderate,
+        limits: vec!["The HTTPS fallback uses TCP and can follow a different path.".to_string()],
+        next_checks: if status == Status::Warn {
+            vec!["Compare UDP and TCP paths only when the endpoint advertises HTTP/3.".to_string()]
+        } else {
+            Vec::new()
+        },
+    });
     Ok(())
 }
 
@@ -761,10 +1163,14 @@ fn add_scan_checks(report: &mut DiagnoseReport, scan: &Value, tls: bool) {
                 name: name.to_string(),
                 status,
                 summary,
+                claim: String::new(),
                 evidence,
+                probe_id: None,
                 observed: Vec::new(),
                 possible: Vec::new(),
                 not_established: Vec::new(),
+                confidence: Confidence::Low,
+                limits: Vec::new(),
                 next_checks: Vec::new(),
             };
             add_generic_guidance(&mut check);
@@ -867,10 +1273,14 @@ fn add_report_check(
         name: name.to_string(),
         status,
         summary,
+        claim: String::new(),
         evidence,
+        probe_id: None,
         observed: Vec::new(),
         possible: Vec::new(),
         not_established: Vec::new(),
+        confidence: Confidence::Low,
+        limits: Vec::new(),
         next_checks: Vec::new(),
     };
     add_generic_guidance(&mut check);
@@ -917,12 +1327,16 @@ fn add_latency_stats(args: &DiagnoseArgs, report: &mut DiagnoseReport) {
             name: "Latency statistics".to_string(),
             status,
             summary: "No successful TCP timing samples were available.".to_string(),
+            claim: String::new(),
             evidence: Vec::new(),
+            probe_id: None,
             observed: vec![format!("TCP success {success}/{total}")],
             possible: Vec::new(),
             not_established: vec![
                 "P50 and P95 are unavailable without successful samples.".to_string()
             ],
+            confidence: Confidence::Low,
+            limits: Vec::new(),
             next_checks: vec!["Confirm TCP reachability before interpreting latency.".to_string()],
         });
         return;
@@ -949,10 +1363,14 @@ fn add_latency_stats(args: &DiagnoseArgs, report: &mut DiagnoseReport) {
             fmt_opt(p95),
             fmt_opt(max)
         ),
+        claim: String::new(),
         evidence: Vec::new(),
+        probe_id: None,
         observed: vec![format!("{} successful timing samples", samples.len())],
         possible: Vec::new(),
         not_established: Vec::new(),
+        confidence: Confidence::Low,
+        limits: Vec::new(),
         next_checks: Vec::new(),
     };
     if samples.len() < crate::util::MIN_SAMPLES_FOR_PERCENTILE {
@@ -1207,13 +1625,17 @@ fn add_dual_stack_check(report: &mut DiagnoseReport) {
         } else {
             "Both address families were measured under the same command budget.".to_string()
         },
+        claim: String::new(),
         evidence,
+        probe_id: None,
         observed,
         possible: Vec::new(),
         not_established: vec![
             "A difference between families does not prove the cause without route and server-side evidence."
                 .to_string(),
         ],
+        confidence: Confidence::Low,
+        limits: Vec::new(),
         next_checks: Vec::new(),
     });
 }
@@ -1314,7 +1736,9 @@ fn run_dual_stack_scans(
         } else {
             "IPv4 and IPv6 used separately authorized literal addresses.".to_string()
         },
+        claim: String::new(),
         evidence,
+        probe_id: None,
         observed,
         possible: if failed_families > 0 {
             vec!["One family may be unreachable on this path.".to_string()]
@@ -1325,6 +1749,8 @@ fn run_dual_stack_scans(
             "A difference between families does not prove the cause without route and server-side evidence."
                 .to_string(),
         ],
+        confidence: Confidence::Low,
+        limits: Vec::new(),
         next_checks: Vec::new(),
     });
     Ok(())
@@ -1336,10 +1762,14 @@ fn timeout_check(name: &str) -> DiagnoseCheck {
         name: name.to_string(),
         status: Status::Skip,
         summary: "The scenario budget was exhausted before this check started.".to_string(),
+        claim: String::new(),
         evidence: Vec::new(),
+        probe_id: None,
         observed: Vec::new(),
         possible: Vec::new(),
         not_established: vec!["No measurement was collected for this check.".to_string()],
+        confidence: Confidence::Low,
+        limits: Vec::new(),
         next_checks: vec!["Increase --max-seconds or reduce --rounds.".to_string()],
     }
 }
@@ -1354,12 +1784,16 @@ fn budget_check(error: &str) -> DiagnoseCheck {
         name: "Scenario budget".to_string(),
         status: Status::Inconclusive,
         summary: "The wall-clock budget ended before this stage returned evidence.".to_string(),
+        claim: String::new(),
         evidence: Vec::new(),
+        probe_id: None,
         observed: vec![format!("stopped with: {error}")],
         possible: Vec::new(),
         not_established: vec![
             "Checks that did not finish carry no success or failure conclusion.".to_string(),
         ],
+        confidence: Confidence::Low,
+        limits: Vec::new(),
         next_checks: vec![
             "Increase --max-seconds, reduce --rounds, or lower --timeout-ms and re-run."
                 .to_string(),
