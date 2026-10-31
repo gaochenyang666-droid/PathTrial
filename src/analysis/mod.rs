@@ -88,6 +88,10 @@ fn add_finding(
     limits: Vec<String>,
 ) {
     let id = format!("F{:03}", findings.len() + 1);
+    let probe_id = evidence
+        .first()
+        .cloned()
+        .unwrap_or_else(|| "none".to_string());
     findings.push(Finding {
         id,
         rule_id: rule_id.to_string(),
@@ -95,6 +99,7 @@ fn add_finding(
         severity,
         status,
         evidence,
+        probe_id,
         not_established,
         confidence,
         limits,

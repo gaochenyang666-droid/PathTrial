@@ -168,6 +168,10 @@ pub enum Command {
     Report(ReportArgs),
     /// Store or compare a local baseline for one target.
     Baseline(BaselineArgs),
+    /// Capture a stable local-path fingerprint for one HTTPS target.
+    Fingerprint(FingerprintArgs),
+    /// Compare two fingerprint reports.
+    FingerprintDiff(FingerprintDiffArgs),
     /// Run a temporary local endpoint for repeatable tests.
     Endpoint(EndpointArgs),
     /// Print a JSON Schema to stdout.
@@ -191,6 +195,82 @@ pub struct SchemaArgs {
     /// Print the correlation report schema.
     #[arg(long, conflicts_with_all = ["command", "diagnose", "collect"])]
     pub correlate: bool,
+
+    /// Print the fingerprint report schema.
+    #[arg(
+        long,
+        conflicts_with_all = [
+            "command",
+            "diagnose",
+            "collect",
+            "correlate",
+            "evidence",
+            "fingerprint_diff"
+        ]
+    )]
+    pub fingerprint: bool,
+
+    /// Print the canonical evidence finding schema.
+    #[arg(
+        long,
+        conflicts_with_all = [
+            "command",
+            "diagnose",
+            "collect",
+            "correlate",
+            "fingerprint",
+            "fingerprint_diff"
+        ]
+    )]
+    pub evidence: bool,
+
+    /// Print the fingerprint comparison schema.
+    #[arg(
+        long,
+        conflicts_with_all = ["command", "diagnose", "collect", "correlate", "fingerprint", "evidence"]
+    )]
+    pub fingerprint_diff: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct FingerprintArgs {
+    /// Absolute HTTPS URL used for exit IP and TLS identity capture.
+    pub target: String,
+
+    /// Optional local proxy endpoint recorded as one path hop.
+    #[arg(long)]
+    pub proxy: Option<String>,
+
+    /// Per-request timeout in milliseconds.
+    #[arg(long, default_value_t = 5000)]
+    pub timeout_ms: u64,
+
+    /// Hard wall-clock budget in seconds.
+    #[arg(long, default_value_t = 30)]
+    pub max_seconds: u64,
+
+    /// Pin probes to a physical interface.
+    #[arg(long)]
+    pub bind_interface: Option<String>,
+
+    /// Output format on stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Json)]
+    pub format: OutputFormat,
+
+    /// Write the JSON fingerprint to this path.
+    #[arg(long)]
+    pub out: Option<PathBuf>,
+}
+
+#[derive(Debug, Args)]
+pub struct FingerprintDiffArgs {
+    /// Earlier fingerprint JSON.
+    pub before: PathBuf,
+    /// Later fingerprint JSON.
+    pub after: PathBuf,
+    /// Output format on stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Summary)]
+    pub format: OutputFormat,
 }
 
 #[derive(Debug, Args)]
@@ -320,6 +400,9 @@ pub enum DiagnoseScenario {
     Http,
     DualStack,
     UdpQuic,
+    VpsUnreachable,
+    ProxySplit,
+    Http3Fallback,
 }
 
 impl DiagnoseScenario {
@@ -336,12 +419,15 @@ impl DiagnoseScenario {
             DiagnoseScenario::Http => "http",
             DiagnoseScenario::DualStack => "dual-stack",
             DiagnoseScenario::UdpQuic => "udp-quic",
+            DiagnoseScenario::VpsUnreachable => "vps-unreachable",
+            DiagnoseScenario::ProxySplit => "proxy-split",
+            DiagnoseScenario::Http3Fallback => "http3-fallback",
         }
     }
 
     pub fn default_port(self) -> u16 {
         match self {
-            DiagnoseScenario::Vps | DiagnoseScenario::Tcp => 22,
+            DiagnoseScenario::Vps | DiagnoseScenario::VpsUnreachable | DiagnoseScenario::Tcp => 22,
             _ => 443,
         }
     }
@@ -451,14 +537,22 @@ impl DiagnoseArgs {
             } else if self.url.as_deref().is_none_or(str::is_empty)
                 || !matches!(
                     self.scenario,
-                    DiagnoseScenario::Http | DiagnoseScenario::Proxy
+                    DiagnoseScenario::Http
+                        | DiagnoseScenario::Proxy
+                        | DiagnoseScenario::ProxySplit
+                        | DiagnoseScenario::Http3Fallback
                 )
             {
-                return Err("target is required, or --url for http/proxy scenarios".to_string());
+                return Err(
+                    "target is required, or --url for http, proxy and http3-fallback scenarios"
+                        .to_string(),
+                );
             }
         }
-        if self.scenario == DiagnoseScenario::Proxy
-            && self.proxy.as_deref().is_none_or(str::is_empty)
+        if matches!(
+            self.scenario,
+            DiagnoseScenario::Proxy | DiagnoseScenario::ProxySplit
+        ) && self.proxy.as_deref().is_none_or(str::is_empty)
         {
             return Err("--proxy is required for --scenario proxy".to_string());
         }

@@ -12,6 +12,7 @@ pub mod commands;
 pub mod compare;
 pub mod diagnose;
 pub mod endpoint;
+pub mod fingerprint;
 pub mod mcp;
 pub mod models;
 pub mod net;

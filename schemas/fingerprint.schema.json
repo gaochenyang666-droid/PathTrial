@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathtrial.dev/schemas/fingerprint-1.0.0.json",
+  "title": "PathTrial local path fingerprint",
+  "description": "Exit IP, DNS chain, TLS identity, proxy hops and IPv4/IPv6 fork captured from one HTTPS target.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "run_id",
+    "captured_at",
+    "target",
+    "fingerprint",
+    "components",
+    "probes",
+    "findings",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "tool_version": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "target": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "components": {
+      "$ref": "#/$defs/components"
+    },
+    "probes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "exit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ip", "probe_id", "error"],
+      "properties": {
+        "ip": {"type": ["string", "null"]},
+        "probe_id": {"type": ["string", "null"]},
+        "error": {"type": ["string", "null"]}
+      }
+    },
+    "dns": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resolvers", "ipv4", "ipv6", "cname_chain", "fake_ip_suspected", "probe_ids"],
+      "properties": {
+        "resolvers": {"type": "array", "items": {"type": "string"}},
+        "ipv4": {"type": "array", "items": {"type": "string"}},
+        "ipv6": {"type": "array", "items": {"type": "string"}},
+        "cname_chain": {"type": "array", "items": {"type": "string"}},
+        "fake_ip_suspected": {"type": "boolean"},
+        "probe_ids": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "tls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "cipher_suite", "cert_sha256", "issuer", "transport_ok", "verified", "probe_id"],
+      "properties": {
+        "protocol": {"type": ["string", "null"]},
+        "cipher_suite": {"type": ["string", "null"]},
+        "cert_sha256": {"type": ["string", "null"]},
+        "issuer": {"type": ["string", "null"]},
+        "transport_ok": {"type": "boolean"},
+        "verified": {"type": "boolean"},
+        "probe_id": {"type": "string"}
+      }
+    },
+    "proxy_hop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "endpoint"],
+      "properties": {
+        "source": {"type": "string"},
+        "endpoint": {"type": "string"}
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interface_count", "ipv4_local", "ipv6_local", "vpn_like_interfaces", "proxy_hops", "system_probe_id"],
+      "properties": {
+        "interface_count": {"type": "integer", "minimum": 0},
+        "ipv4_local": {"type": "boolean"},
+        "ipv6_local": {"type": "boolean"},
+        "vpn_like_interfaces": {"type": "array", "items": {"type": "string"}},
+        "proxy_hops": {"type": "array", "items": {"$ref": "#/$defs/proxy_hop"}},
+        "system_probe_id": {"type": ["string", "null"]}
+      }
+    },
+    "components": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component_version", "exit_ipv4", "exit_ipv6", "dns", "tls", "ip_fork", "environment"],
+      "properties": {
+        "component_version": {"type": "string"},
+        "exit_ipv4": {"$ref": "#/$defs/exit"},
+        "exit_ipv6": {"$ref": "#/$defs/exit"},
+        "dns": {"$ref": "#/$defs/dns"},
+        "tls": {"anyOf": [{"$ref": "#/$defs/tls"}, {"type": "null"}]},
+        "ip_fork": {"type": "string", "enum": ["dual_stack", "same_exit", "cross_family", "ipv4_only", "ipv6_only", "unavailable"]},
+        "environment": {"$ref": "#/$defs/environment"}
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "rule_id", "claim", "severity", "status", "evidence", "probe_id", "not_established", "confidence", "limits"],
+      "properties": {
+        "id": {"type": "string"},
+        "rule_id": {"type": "string", "pattern": "^R\\d{3}$"},
+        "claim": {"type": "string", "minLength": 1},
+        "severity": {"type": "string", "enum": ["info", "warn", "fail"]},
+        "status": {"type": "string", "enum": ["PASS", "WARN", "FAIL", "SKIP", "INCONCLUSIVE"]},
+        "evidence": {"type": "array", "items": {"type": "string"}},
+        "probe_id": {"type": "string", "minLength": 1},
+        "not_established": {"type": "array", "items": {"type": "string"}},
+        "confidence": {"type": "string", "enum": ["low", "moderate", "high"]},
+        "limits": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}

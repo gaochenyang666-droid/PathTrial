@@ -162,6 +162,19 @@ fn probe_ids(report: &Value) -> Vec<String> {
 fn assert_evidence_refs_exist(report: &Value) {
     let sources = report["sources"].as_array().expect("sources array");
     for item in checks(report) {
+        assert!(!item["claim"].as_str().unwrap_or_default().is_empty());
+        assert!(!item["limits"].as_array().unwrap().is_empty());
+        assert!(["low", "moderate", "high"].contains(&item["confidence"].as_str().unwrap()));
+        if let Some(probe_id) = item["probe_id"].as_str() {
+            assert!(
+                item["evidence"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|evidence| evidence.as_str() == Some(probe_id)),
+                "probe_id {probe_id} is absent from evidence"
+            );
+        }
         for evidence in item["evidence"].as_array().expect("evidence array") {
             let evidence = evidence.as_str().expect("evidence string");
             let (source, id) = evidence
@@ -561,6 +574,82 @@ fn proxy_scenario_uses_direct_comparison() {
 }
 
 #[test]
+fn vps_unreachable_emits_reachability_evidence() {
+    let port = tcp_stub();
+    let (_, value) = run(&[
+        "diagnose",
+        "127.0.0.1",
+        "--scenario",
+        "vps-unreachable",
+        "--port",
+        &port.to_string(),
+        "--rounds",
+        "1",
+        "--max-seconds",
+        "10",
+        "--format",
+        "json",
+    ]);
+    let reachability = check(&value, "VPS reachability");
+    assert_eq!(reachability["status"], "PASS");
+    assert!(!reachability["evidence"].as_array().unwrap().is_empty());
+}
+
+#[test]
+fn proxy_split_emits_direct_and_proxy_evidence() {
+    let target = http_stub(200);
+    let proxy = connect_stub();
+    let url = format!("http://127.0.0.1:{target}/");
+    let proxy_url = format!("http://127.0.0.1:{proxy}");
+    let (_, value) = run(&[
+        "diagnose",
+        "--scenario",
+        "proxy-split",
+        "--url",
+        &url,
+        "--proxy",
+        &proxy_url,
+        "--rounds",
+        "1",
+        "--max-seconds",
+        "10",
+        "--format",
+        "json",
+    ]);
+    let split = check(&value, "Direct / proxy split");
+    assert_eq!(split["status"], "PASS");
+    assert!(!split["evidence"].as_array().unwrap().is_empty());
+}
+
+#[test]
+fn http3_fallback_reports_https_after_h3_failure() {
+    let port = free_port();
+    let url = format!("https://127.0.0.1:{port}/");
+    let (status, value) = run(&[
+        "diagnose",
+        "--scenario",
+        "http3-fallback",
+        "--url",
+        &url,
+        "--rounds",
+        "1",
+        "--timeout-ms",
+        "500",
+        "--max-seconds",
+        "10",
+        "--format",
+        "json",
+    ]);
+    assert_eq!(status.code(), Some(2));
+    let fallback = check(&value, "HTTP/3 fallback");
+    assert_eq!(fallback["status"], "FAIL");
+    assert!(fallback["claim"]
+        .as_str()
+        .unwrap()
+        .contains("Both HTTP/3 and the HTTPS fallback failed"));
+}
+
+#[test]
 fn dns_timeout_is_reported_without_poisoning_claim() {
     let port = free_port();
     let (status, value) = run(&[
@@ -646,7 +735,7 @@ fn diagnose_schema_is_available_and_validates_report() {
     let schema: Value = serde_json::from_slice(&schema_output.stdout).expect("schema json");
     assert_eq!(
         schema["$id"],
-        "https://pathtrial.dev/schemas/diagnose-1.0.0.json"
+        "https://pathtrial.dev/schemas/diagnose-1.1.0.json"
     );
 
     let port = tcp_stub();

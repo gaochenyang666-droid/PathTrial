@@ -51,6 +51,10 @@ impl Recorder {
     pub fn into_probes(self) -> Vec<Probe> {
         self.probes
     }
+
+    pub fn probes(&self) -> &[Probe] {
+        &self.probes
+    }
 }
 
 #[cfg(test)]
