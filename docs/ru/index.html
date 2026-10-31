@@ -19,7 +19,7 @@
   <meta property="og:url" content="https://gaochenyang666-droid.github.io/PathTrial/ru/">
   <meta name="twitter:card" content="summary">
   <title>PathTrial | Диагностика сети с проверяемыми данными и MCP-плагинами</title>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"PathTrial","softwareVersion":"1.5.0-rc.1","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux","downloadUrl":"https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1","codeRepository":"https://github.com/gaochenyang666-droid/PathTrial","license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"PathTrial","softwareVersion":"1.6.0","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux","downloadUrl":"https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.6.0","codeRepository":"https://github.com/gaochenyang666-droid/PathTrial","license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
 </head>
 <body>
 <a class="skip" href="#main">К содержимому</a>
@@ -38,7 +38,7 @@
 <section class="container hero" aria-labelledby="hero-title">
 <span class="kicker">Open Source · Rust · Evidence First</span>
 <h1 id="hero-title">Узнайте, на каком уровне возникает сбой сети.</h1><p class="lead">Проверяйте DNS, TCP, TLS, HTTP, UDP, QUIC и HTTP/3 по отдельности. Анализируйте недоступность сайтов, портов VPS, прокси и различия IPv4/IPv6 на основе реальных измерений.</p>
-<div class="actions"><a class="btn primary" href="./download.html">Скачать v1.5 RC ↗</a><a class="btn secondary" href="https://github.com/gaochenyang666-droid/PathTrial">Исходный код и README ↗</a></div>
+<div class="actions"><a class="btn primary" href="./download.html">Скачать v1.6.0 ↗</a><a class="btn secondary" href="https://github.com/gaochenyang666-droid/PathTrial">Исходный код и README ↗</a></div>
 <div class="metrics"><span class="metric">Готовые сборки без Rust</span><span class="metric">MCP-плагины Codex и Claude Code</span><span class="metric">JSON-отчёты с доказательствами</span><span class="metric">Запрет проверок без разрешения</span></div>
 </section>
 <section id="features" class="section"><div class="container">
@@ -46,25 +46,25 @@
 <div class="grid"><article class="card"><h3>Сайты и DNS</h3><p>Отделяйте ошибки DNS, TCP-подключения, TLS и HTTP-ответа.</p></article><article class="card"><h3>VPS и прокси</h3><p>Проверяйте порты, SOCKS5 / HTTP CONNECT, UDP Echo, QUIC и HTTP/3 раздельно.</p></article><article class="card"><h3>IPv4 и IPv6</h3><p>Сравнивайте два стека при одинаковых целях, портах, числе попыток и тайм-аутах.</p></article></div>
 </div></section>
 <section id="guided-diagnosis" class="section"><div class="container">
-<div class="section-head"><h2>Диагностика v1.5 доступна в открытой предварительной версии</h2><p>Команда diagnose поддерживает 11 сценариев для 10 типов сетевых проблем. Отчёты разделяют наблюдения, возможные причины, неподтверждённые выводы и следующие проверки.</p></div>
+<div class="section-head"><h2>Диагностика v1.6 доступна в стабильном выпуске</h2><p>Команда diagnose и path fingerprint поддерживают 14 сценариев. Отчёты разделяют наблюдения, возможные причины, неподтверждённые выводы и следующие проверки.</p></div>
 <div class="codebox"><pre>pathtrial diagnose --scenario web example.com
 pathtrial diagnose --scenario vps YOUR_VPS_IP --port 22
 pathtrial diagnose --scenario latency example.com --rounds 10
 pathtrial diagnose --scenario proxy --url https://example.com/ --proxy socks5://127.0.0.1:1080
 pathtrial diagnose --scenario local</pre></div>
-<div class="notice">Предварительный выпуск: v1.5.0-rc.1 содержит diagnose и 10 инструментов MCP. Сборки трёх платформ и проверки MCP прошли успешно. Windows пока не поддерживается.</div>
+<div class="notice">Стабильный выпуск v1.6.0 содержит diagnose, path fingerprint и 12 инструментов MCP. Пакеты проверены для macOS, Linux и Windows x86_64.</div>
 <p style="margin-top:18px"><a href="https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/cli.md">Руководство CLI →</a></p>
 </div></section>
 <section class="section"><div class="container pair"><div>
 <h2>CLI работает без аккаунта ИИ</h2><p class="lead">Запускайте проверки на macOS или Linux без облачного сервиса. PathTrial не меняет DNS, маршруты, прокси и брандмауэр автоматически.</p><p>В отчётах используются PASS, WARN, FAIL, SKIP и INCONCLUSIVE; выводы ссылаются на реальные идентификаторы проб.</p>
 <a href="https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/cli.md">Руководство CLI →</a>
-</div><div class="codebox"><pre><span class="comment"># PathTrial v1.5.0-rc.1</span>
+</div><div class="codebox"><pre><span class="comment"># PathTrial v1.6.0</span>
 pathtrial --version
 pathtrial scan example.com \
   --profile web --rounds 5 --redact-ips</pre></div></div></section>
 <section id="guides" class="section"><div class="container"><div class="section-head"><h2>Руководства по диагностике</h2><p>Три англоязычные статьи о портах VPS, QUIC/HTTP3 и IPv4/IPv6.</p></div><div class="grid"><article class="card"><h3><a href="https://gaochenyang666-droid.github.io/PathTrial/en/guides/vps-port-unreachable.html">Порты VPS</a></h3></article><article class="card"><h3><a href="https://gaochenyang666-droid.github.io/PathTrial/en/guides/http3-udp443-timeout.html">QUIC / HTTP3</a></h3></article><article class="card"><h3><a href="https://gaochenyang666-droid.github.io/PathTrial/en/guides/ipv4-works-ipv6-fails.html">IPv4 / IPv6</a></h3></article></div><p style="margin-top:20px"><a href="https://gaochenyang666-droid.github.io/PathTrial/en/guides/">Руководства (EN) →</a></p></div></section>
 <section id="integrations" class="section"><div class="container">
-<div class="section-head"><h2>Интеграция с Codex и Claude Code</h2><p>Локальные MCP-плагины версии 0.3.0 предоставляют десять инструментов, включая диагностику и объяснение отчётов.</p></div>
+<div class="section-head"><h2>Интеграция с Codex и Claude Code</h2><p>Локальные MCP-плагины версии 0.4.0 предоставляют двенадцать инструментов, включая диагностику и объяснение отчётов.</p></div>
 <div class="grid two">
 <article class="card"><h3>OpenAI Codex</h3><p>Установите плагин через Marketplace и проверьте локальное MCP-подключение.</p><div class="codebox"><pre>codex plugin marketplace add \
   gaochenyang666-droid/PathTrial
@@ -84,7 +84,7 @@ codex plugin add pathtrial@pathtrial</pre></div></article>
 </div></section>
 </main>
 <footer><div class="container">
-<span>© PathTrial Contributors · MIT License · v1.5.0-rc.1 (Prerelease)</span>
+<span>© PathTrial Contributors · MIT License · v1.6.0 (Stable)</span>
 <span><a href="https://github.com/gaochenyang666-droid/PathTrial">GitHub</a> · <a href="https://github.com/gaochenyang666-droid/PathTrial/issues">Issues</a> · <a href="./download.html">Загрузка и установка</a></span>
 </div></footer>
 </body></html>

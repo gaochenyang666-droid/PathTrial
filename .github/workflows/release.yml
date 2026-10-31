@@ -54,7 +54,7 @@ jobs:
           set -euo pipefail
           version=$(cargo metadata --format-version 1 --no-deps | python3 -c "import json,sys; print(json.load(sys.stdin)['packages'][0]['version'])")
           if [ "$GITHUB_REF" = "refs/heads/main" ]; then
-            tag="1.5.0-rc.1"
+            tag="1.6.0"
           else
             tag="${GITHUB_REF_NAME#v}"
           fi
@@ -82,7 +82,7 @@ jobs:
               text=True, capture_output=True, check=True)
           responses = [json.loads(line) for line in proc.stdout.splitlines()]
           assert responses[0]["result"]["serverInfo"]["name"] == "pathtrial"
-          assert len(responses[1]["result"]["tools"]) == 10
+          assert len(responses[1]["result"]["tools"]) == 12
           PY
       - name: Package
         shell: bash
@@ -157,7 +157,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$GITHUB_REF" = "refs/heads/main" ]; then
-            tag="v1.5.0-rc.1"
+            tag="v1.6.0"
           else
             tag="${GITHUB_REF_NAME}"
           fi
@@ -178,6 +178,9 @@ jobs:
           elif [ "$tag" = "v1.5.0-rc.2" ]; then
             gh release create "$tag" assets/* --title "$tag" \
               --target "$GITHUB_SHA" --notes-file docs/releases/v1.5.0-rc.2.md $prerelease
+          elif [ "$tag" = "v1.6.0" ]; then
+            gh release create "$tag" assets/* --title "$tag" \
+              --target "$GITHUB_SHA" --notes-file docs/releases/v1.6.0.md
           else
             gh release create "$tag" assets/* --title "$tag" \
               --target "$GITHUB_SHA" --generate-notes $prerelease

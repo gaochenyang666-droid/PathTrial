@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0b101a">
-  <meta name="description" content="PathTrial 是开源 Rust 网络诊断 CLI 与 MCP 插件，检查 DNS、TCP、TLS、QUIC、HTTP/3、IPv4/IPv6、代理和 VPS 连通性。支持 Codex、Claude Code，macOS 与 Linux 免 Rust 安装。">
+  <meta name="description" content="PathTrial 是本机证据优先的网络诊断 MCP，检查出口 IP、DNS、TLS、代理跳与 IPv4/IPv6 分叉。支持 Codex、Claude Code、Cursor 及 macOS、Linux、Windows。">
   <meta name="robots" content="index,follow">
   <link rel="canonical" href="https://gaochenyang666-droid.github.io/PathTrial/">
     <link rel="alternate" hreflang="zh-CN" href="https://gaochenyang666-droid.github.io/PathTrial/">
@@ -15,13 +15,13 @@
   <link rel="stylesheet" href="./site.css">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect rx='12' width='64' height='64' fill='%230b101a'/%3E%3Cpath d='M15 21l13 11-13 11m18 0h16' stroke='%236bd5b6' stroke-width='6' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="PathTrial — 开源网络诊断 CLI 与 Codex / Claude Code MCP 插件">
-  <meta property="og:description" content="从 DNS、TCP、TLS 到 QUIC 和 HTTP/3，基于真实证据的网络排障。免费下载 macOS / Linux 测试版。">
+  <meta property="og:title" content="PathTrial — 本机证据优先的网络诊断 MCP">
+  <meta property="og:description" content="fingerprint、三项专项剧本和可追溯 probe 证据，支持 Codex、Claude Code 与 Cursor。">
   <meta property="og:url" content="https://gaochenyang666-droid.github.io/PathTrial/">
   <meta name="twitter:card" content="summary">
-  <title>PathTrial — 开源网络诊断、VPS 排障与 MCP 插件</title>
+  <title>PathTrial — 本机证据优先的网络诊断 MCP</title>
   <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"SoftwareApplication","name":"PathTrial","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux","softwareVersion":"1.5.0-rc.1","description":"Open-source evidence-first Rust network diagnostics CLI and MCP plugins for Codex and Claude Code.","downloadUrl":"https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.1","codeRepository":"https://github.com/gaochenyang666-droid/PathTrial","license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+  {"@context":"https://schema.org","@type":"SoftwareApplication","name":"PathTrial","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux, Windows","softwareVersion":"1.6.0","description":"Local-evidence-first network diagnostics MCP with a Rust CLI.","downloadUrl":"https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.6.0","codeRepository":"https://github.com/gaochenyang666-droid/PathTrial","license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
   </script>
 </head>
 <body>
@@ -30,7 +30,7 @@
   <a class="brand" href="./" aria-label="PathTrial 首页"><span class="brand-mark" aria-hidden="true">&gt;_</span>PathTrial</a>
   <nav aria-label="主要导航">
     <a href="#features">诊断能力</a>
-    <a href="#guided-diagnosis">v1.5 诊断</a>
+    <a href="#guided-diagnosis">v1.6 诊断</a>
     <a href="#integrations">AI / MCP</a>
     <a href="./download.html">下载</a>
     <a href="https://gaochenyang666-droid.github.io/PathTrial/guides/">排障指南</a><a href="https://github.com/gaochenyang666-droid/PathTrial">GitHub</a>
@@ -44,7 +44,7 @@
     <p class="lead">PathTrial 将 DNS、TCP、TLS、HTTP、UDP、QUIC 和 HTTP/3 检查分层执行，用真实测量证据解释网站打不开、VPS 端口异常、代理连接失败及 IPv4/IPv6 差异。</p>
     <p class="eyeline">Open-source network diagnostics CLI with local MCP integrations for Codex and Claude Code.</p>
     <div class="actions">
-      <a class="btn primary" href="./download.html">下载 v1.5.0-rc.1 测试版 ↗</a>
+      <a class="btn primary" href="./download.html">下载 v1.6.0 测试版 ↗</a>
       <a class="btn secondary" href="https://github.com/gaochenyang666-droid/PathTrial">查看源码与 README ↗</a>
     </div>
     <div class="metrics" aria-label="产品特性">
@@ -63,13 +63,13 @@
     </div>
   </div></section>
   <section id="guided-diagnosis" class="section"><div class="container">
-    <div class="section-head"><h2>v1.5 综合诊断已正式发布为 Release Candidate</h2><p>新增 <code class="inline-code">pathtrial diagnose</code>，提供 11 种引导式场景，覆盖 DNS、TCP、TLS、HTTP、延迟、丢包、IPv4/IPv6、UDP/QUIC、代理及本地网络状态。结果区分实际观察、可能原因、未证实项和下一步排障建议。</p></div>
-    <div class="codebox" aria-label="v1.5 命令示例"><pre><span class="comment"># v1.5.0-rc.1 预编译包直接支持 diagnose</span>
+    <div class="section-head"><h2>v1.6 综合诊断正式发布</h2><p>新增 <code class="inline-code">pathtrial diagnose</code>、path fingerprint 与 14 种引导式场景。结果区分实际观察、可能原因、未证实项和下一步排障建议。</p></div>
+    <div class="codebox" aria-label="v1.6 命令示例"><pre><span class="comment"># v1.6.0 预编译包直接支持 diagnose</span>
 pathtrial diagnose --scenario web example.com
 pathtrial diagnose --scenario latency example.com --rounds 10
 pathtrial diagnose --scenario local</pre></div>
-    <div class="notice" style="margin-top:18px"><strong>公开预发布版：</strong>v1.5.0-rc.1 已提供 macOS ARM64、macOS Intel 和 Linux x86_64 预编译安装包，包含 <code class="inline-code">diagnose</code> 及 10 个 MCP 工具。安装无需 Rust；三平台 Release 构建与 MCP smoke 已通过。历史 <a href="https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1">v1.4.0-rc.1</a> 仍可下载（9 个 MCP 工具）。</div>
-    <p><a href="https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/cli.md">查看 v1.5 命令与安装说明 →</a></p>
+    <div class="notice" style="margin-top:18px"><strong>公开预发布版：</strong>v1.6.0 已提供 macOS ARM64、macOS Intel 和 Linux x86_64 预编译安装包，包含 <code class="inline-code">diagnose</code> 及 12 个 MCP 工具。安装无需 Rust；三平台 Release 构建与 MCP smoke 已通过。历史 <a href="https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1">v1.4.0-rc.1</a> 仍可下载（9 个 MCP 工具）。</div>
+    <p><a href="https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/cli.md">查看 v1.6 命令与安装说明 →</a></p>
   </div></section>
   <section class="section"><div class="container pair">
     <div>
@@ -80,7 +80,7 @@ pathtrial diagnose --scenario local</pre></div>
     </div>
     <div class="codebox" aria-label="示例命令"><pre><span class="comment"># 下载并检查官方安装脚本后执行</span>
 <span class="prompt">$</span> pathtrial --version
-<span class="comment"># 1.5.0-rc.1</span>
+<span class="comment"># 1.6.0</span>
 
 <span class="prompt">$</span> pathtrial scan example.com \
     --profile web --rounds 5 \
@@ -91,7 +91,7 @@ pathtrial diagnose --scenario local</pre></div>
   </div></section>
   <section id="guides" class="section"><div class="container"><div class="section-head"><h2>常见网络故障排查</h2><p>从真实测量区分 VPS 端口故障、QUIC/HTTP3 超时与 IPv4/IPv6 问题。以下技术全文目前为英文。</p></div><div class="grid"><article class="card"><h3><a href="https://gaochenyang666-droid.github.io/PathTrial/en/guides/vps-port-unreachable.html">VPS 能 Ping 通但 TCP 端口不通</a></h3></article><article class="card"><h3><a href="https://gaochenyang666-droid.github.io/PathTrial/en/guides/http3-udp443-timeout.html">QUIC / HTTP3 UDP 443 超时</a></h3></article><article class="card"><h3><a href="https://gaochenyang666-droid.github.io/PathTrial/en/guides/ipv4-works-ipv6-fails.html">IPv4 正常而 IPv6 失败</a></h3></article></div><p style="margin-top:20px"><a href="https://gaochenyang666-droid.github.io/PathTrial/guides/">排障指南 →</a></p></div></section>
 <section id="integrations" class="section"><div class="container">
-    <div class="section-head"><h2>连接 Codex 和 Claude Code</h2><p>v1.5.0-rc.1 预编译核心通过本地 MCP 提供 10 个工具，包含引导式诊断与报告解释。插件版本 0.3.0，请使用与之匹配的核心二进制。</p></div>
+    <div class="section-head"><h2>连接 Codex、Claude Code 和 Cursor</h2><p>v1.6.0 预编译核心通过本地 MCP 提供 12 个工具，包含引导式诊断、path fingerprint 与报告解释。插件版本 0.4.0，请使用与之匹配的核心二进制。</p></div>
     <div class="grid two">
       <div class="card"><h3>OpenAI Codex 插件</h3><p>从 GitHub 默认分支添加 Marketplace，安装 PathTrial 插件并检查本地 MCP 连接。</p><div class="codebox"><pre>codex plugin marketplace add \
   gaochenyang666-droid/PathTrial
@@ -103,7 +103,7 @@ codex plugin add pathtrial@pathtrial</pre></div></div>
     <div class="notice" style="margin-top:22px"><strong>安全默认设置：</strong>网络目标必须明确授权。MCP 默认拒绝所有网络探测；解释和比较已有报告不需要网络目标授权。阅读 <a href="https://github.com/gaochenyang666-droid/PathTrial/blob/main/docs/ai-integrations.md">MCP 安装及授权指南</a>。</div>
   </div></section>
   <section class="section"><div class="container">
-    <div class="section-head"><h2>从下载到第一份报告</h2><p>最新公开版本为 Release Candidate，不是稳定正式版。预编译包附 SHA-256 校验文件。</p></div>
+    <div class="section-head"><h2>从下载到第一份报告</h2><p>最新公开版本为 正式稳定版。预编译包附 SHA-256 校验文件。</p></div>
     <div class="steps">
       <div class="step"><span class="number">01</span><div><h3>选择系统安装包</h3><p>提供 macOS Apple Silicon、macOS Intel、Linux x86_64；可以直接下载压缩包或审阅安装脚本。</p></div></div>
       <div class="step"><span class="number">02</span><div><h3>验证 CLI 和 MCP</h3><p>运行 <code class="inline-code">pathtrial --version</code>、<code class="inline-code">pathtrial mcp --help</code>，必要时安装 AI 客户端插件。</p></div></div>
@@ -114,12 +114,12 @@ codex plugin add pathtrial@pathtrial</pre></div></div>
   <section class="section"><div class="container">
     <div class="section-head"><h2>常见问题</h2></div>
     <details><summary>PathTrial 和 ping、curl 有什么不同？</summary><p>PathTrial 不只检查单一协议；它按 DNS、TCP、TLS、HTTP、UDP、QUIC 等阶段记录证据，并明确区分无法确认的原因。单次网络失败不等于准确的根因定位。</p></details>
-    <details><summary>安装 PathTrial 是否需要 Rust？</summary><p>macOS ARM64、macOS Intel、Linux x86_64 用户可以直接下载 v1.5.0-rc.1 预编译版本，不需要 Rust。v1.5 的引导式诊断已经包含在预编译包中，无需从源码构建。</p></details>
+    <details><summary>安装 PathTrial 是否需要 Rust？</summary><p>macOS ARM64、macOS Intel、Linux x86_64 和 Windows x86_64 用户可以直接下载 v1.6.0 预编译版本，不需要 Rust。</p></details>
     <details><summary>是否会主动探测未授权设备？</summary><p>本地 MCP 网络探测默认拒绝，必须显式授权目标。请仅测量你有权限访问的系统，分享诊断报告前移除 IP、令牌、代理凭据等敏感内容。</p></details>
   </div></section>
 </main>
 <footer><div class="container">
- <span>© PathTrial Contributors · MIT License · v1.5.0-rc.1 (Prerelease)</span>
+ <span>© PathTrial Contributors · MIT License · v1.6.0 (Stable)</span>
  <span><a href="https://github.com/gaochenyang666-droid/PathTrial">GitHub</a> · <a href="https://github.com/gaochenyang666-droid/PathTrial/issues">Issues</a> · <a href="https://github.com/gaochenyang666-droid/PathTrial/blob/main/README.en.md">English README</a> · <a href="./download.html">下载</a></span>
 </div></footer>
 </body></html>

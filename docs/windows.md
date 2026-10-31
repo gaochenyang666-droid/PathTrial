@@ -2,7 +2,7 @@
 
 PathTrial can be built for `x86_64-pc-windows-msvc`. The release workflow packages it like the macOS and Linux archives, with a SHA-256 file beside the `.tar.gz`. `scripts/install.ps1` checks that hash and copies `pathtrial.exe` into `%LOCALAPPDATA%\PathTrial`. It does not edit `PATH`, firewall rules, DNS, or routes.
 
-`v1.5.0-rc.2` is the prerelease whose release workflow publishes `pathtrial-x86_64-pc-windows-msvc.tar.gz` and `install.ps1`, each with a SHA-256 file. `v1.5.0-rc.1` does not contain a Windows archive. If `scripts/verify-release.ps1` prints `windows_published_asset=absent`, the download was not verified. A CI artifact is not a GitHub Release.
+`v1.6.0` is the stable release whose workflow publishes `pathtrial-x86_64-pc-windows-msvc.tar.gz` and `install.ps1`, each with a SHA-256 file. `v1.5.0-rc.1` does not contain a Windows archive. If `scripts/verify-release.ps1` prints `windows_published_asset=absent`, the download was not verified. A CI artifact is not a GitHub Release.
 
 ## What is measured
 

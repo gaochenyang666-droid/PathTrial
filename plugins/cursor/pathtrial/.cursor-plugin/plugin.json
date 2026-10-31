@@ -1,7 +1,7 @@
 {
   "name": "pathtrial",
-  "version": "0.3.0",
-  "description": "Evidence-first local network diagnostics for Cursor, backed by the PathTrial CLI and MCP server.",
+  "version": "0.4.0",
+  "description": "Local-evidence-first network diagnostics MCP for Cursor, backed by the PathTrial CLI.",
   "author": {
     "name": "gaochenyang666-droid"
   },

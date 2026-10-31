@@ -4,22 +4,22 @@ This guide covers the standalone command-line interface. For Codex and Claude Co
 
 ## Versions
 
-- Public prebuilt CLI: `v1.5.0-rc.2`
-- This release candidate publishes macOS Apple Silicon, macOS Intel, Linux x86_64, and Windows x86_64 archives. `v1.5.0-rc.1` remains available and has no Windows archive.
-- MCP core included in this prerelease: `1.5.0-rc.2`
-- AI Plugins: `0.3.0` (ten MCP tools)
-- Core `1.5.0-rc.2` and AI Plugin `0.3.0` are compatible. The older [v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) release remains available.
-- `v1.5.0-rc.2` includes `pathtrial mcp`; the older `v1.3.0-rc.1` does not.
+- Public prebuilt CLI: `v1.6.0`
+- This stable release publishes macOS Apple Silicon, macOS Intel, Linux x86_64, and Windows x86_64 archives.
+- MCP core included in this release: `1.6.0`
+- AI Plugins: `0.4.0` (twelve MCP tools)
+- Core `1.6.0` and AI Plugin `0.4.0` are compatible. The older [v1.4.0-rc.1](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.4.0-rc.1) release remains available.
+- `v1.6.0` includes `pathtrial mcp`; the older `v1.3.0-rc.1` does not.
 
 Run `pathtrial --help` or `pathtrial <command> --help` for the options supported by your installed binary.
 
 ## Installation
 
-Download an archive from the [v1.5.0-rc.2 release](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.5.0-rc.2), or review and run the release installer:
+Download an archive from the [v1.6.0 release](https://github.com/gaochenyang666-droid/PathTrial/releases/tag/v1.6.0), or review and run the release installer:
 
 ~~~bash
 curl -fsSLo pathtrial-install.sh \
-  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.5.0-rc.2/install.sh
+  https://github.com/gaochenyang666-droid/PathTrial/releases/download/v1.6.0/install.sh
 less pathtrial-install.sh
 sh pathtrial-install.sh
 
@@ -32,7 +32,7 @@ The installer uses `~/.local/bin/pathtrial` and does not require sudo. If `patht
 export PATH="$HOME/.local/bin:$PATH"
 ~~~
 
-`v1.5.0-rc.2` archives cover macOS Apple Silicon, macOS Intel, Linux x86_64, and Windows x86_64 (`pathtrial-x86_64-pc-windows-msvc.tar.gz` plus a SHA-256 file). Windows installs with the release `install.ps1`. See [Windows](windows.md). `v1.5.0-rc.1` does not contain that archive.
+`v1.6.0` archives cover macOS Apple Silicon, macOS Intel, Linux x86_64, and Windows x86_64 (`pathtrial-x86_64-pc-windows-msvc.tar.gz` plus a SHA-256 file). Windows installs with the release `install.ps1`. See [Windows](windows.md). `v1.5.0-rc.1` does not contain that archive.
 
 ## Status and exit codes
 
@@ -75,7 +75,7 @@ Use a target you own or have permission to test.
 
 ## Guided diagnosis
 
-The published v1.5 release candidate provides `diagnose` for common user-facing scenarios. It composes the existing scanners and keeps source probe IDs prefixed as `<source>:<probe_id>`.
+The published v1.6 stable release provides `diagnose` for common user-facing scenarios. It composes the existing scanners and keeps source probe IDs prefixed as `<source>:<probe_id>`.
 
 ~~~bash
 pathtrial diagnose --scenario web example.com
@@ -94,6 +94,9 @@ Focused scenarios:
 - `http`
 - `dual-stack`
 - `udp-quic`
+- `vps-unreachable`
+- `proxy-split`
+- `http3-fallback`
 
 Useful options:
 
@@ -113,6 +116,29 @@ Useful options:
 The diagnosis separates `observed`, `possible`, `not_established` and `next_checks`. A possible cause is a hypothesis. It is not reported as a confirmed root cause.
 
 The local scenario performs read-only inspection of interfaces, default routes, DHCP lease facts and available Wi-Fi metrics. Missing OS tools or permissions produce `SKIP` or `INCONCLUSIVE`, never a configuration change.
+
+Every check uses the canonical evidence fields `claim`, `evidence`, `probe_id`, `confidence`, `limits` and `not_established`. When probe-level evidence exists, `probe_id` must match one evidence reference. A check with no probe-level evidence uses `null` and must state that limit. Raw command output is not accepted as a finding.
+
+## Local path fingerprint
+
+`fingerprint` records a stable path identity for one authorized HTTPS target:
+
+```bash
+pathtrial fingerprint https://api64.ipify.org/ --out before.json
+pathtrial fingerprint https://api64.ipify.org/ --out after.json
+pathtrial fingerprint-diff before.json after.json
+```
+
+The fingerprint includes IPv4 and IPv6 exit IP, DNS A/AAAA answers and CNAME chain, TLS certificate SHA-256 and protocol, local proxy hops, and an IPv4/IPv6 fork classification: `dual_stack`, `same_exit`, `cross_family`, one-family, or unavailable. `fingerprint-diff` reports changed components and returns exit code 2 for a changed path.
+
+Fetch the schemas with:
+
+```bash
+pathtrial schema --evidence
+pathtrial schema --diagnose
+pathtrial schema --fingerprint
+pathtrial schema --fingerprint-diff
+```
 
 ## HTTP
 

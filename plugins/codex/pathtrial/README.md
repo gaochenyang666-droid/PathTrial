@@ -1,6 +1,7 @@
 # PathTrial for Codex
 
-This portable plugin bundles four skills and the local PathTrial MCP server.
+This portable plugin exposes PathTrial as a local-evidence-first network diagnostics MCP.
+It includes twelve tools covering guided diagnosis, path fingerprints, report comparison and explanation.
 
 ## Requirements
 
@@ -17,6 +18,14 @@ The MCP server denies all active probes unless targets are explicitly allowliste
 ```
 
 Repeat `--allow-target` for multiple targets. A desktop app that does not inherit the shell can use `~/.config/pathtrial/allow-targets` (or `%APPDATA%\pathtrial\allow-targets`). One explicit target per line, no wildcards. `pathtrial mcp --print-allow-path` prints the path only. Report explanation and report comparison work without network authorization.
+
+## Required order
+
+1. Call `pathtrial_capabilities`.
+2. Add the exact target with `--allow-target` and restart the MCP server when needed.
+3. Call `pathtrial_diagnose` or `pathtrial_fingerprint`.
+4. Treat `target_not_allowed` as `FAIL` and stop. Do not retry with another IP, spelling or redirect.
+5. Use the returned `claim`, `evidence`, `probe_id`, `confidence`, `not_established` and `limits`. Raw shell output is input to a probe, never a conclusion.
 
 ## Install
 

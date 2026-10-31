@@ -5,7 +5,7 @@
 $ErrorActionPreference = "Stop"
 
 $Repo = "gaochenyang666-droid/PathTrial"
-$Version = if ($env:PATHTRIAL_VERSION) { $env:PATHTRIAL_VERSION } else { "v1.5.0-rc.2" }
+$Version = if ($env:PATHTRIAL_VERSION) { $env:PATHTRIAL_VERSION } else { "v1.6.0" }
 $BaseUrl = if ($env:PATHTRIAL_BASE_URL) { $env:PATHTRIAL_BASE_URL } else { "https://github.com/$Repo/releases/download/$Version" }
 $InstallDir = if ($env:PATHTRIAL_INSTALL_DIR) { $env:PATHTRIAL_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA "PathTrial" }
 

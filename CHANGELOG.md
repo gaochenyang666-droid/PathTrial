@@ -3,6 +3,35 @@
 All notable changes to PathTrial. The format follows Keep a Changelog, and the
 project uses semantic versioning for both the binary and the report schema.
 
+## [1.6.0] - 2026-10-31
+
+Stable release. `v1.5.0-rc.2`, `v1.5.0-rc.1` and `v1.4.0-rc.1` tags and assets remain unchanged.
+
+### Added
+
+- Canonical evidence findings with `claim`, `evidence`, `probe_id`,
+  `confidence`, `limits` and `not_established` across scan and diagnosis
+  reports. The scan report schema is `1.6.0`; the diagnosis schema is `1.1.0`.
+- `pathtrial fingerprint` and `pathtrial fingerprint-diff` with IPv4/IPv6 exit
+  identity, DNS chain, TLS certificate SHA-256, local proxy hops and fork
+  classification.
+- MCP tools `pathtrial_fingerprint` and `pathtrial_fingerprint_diff`. The MCP
+  surface grows from ten to twelve tools while remaining default-deny.
+- Diagnosis scenarios `vps-unreachable`, `proxy-split` and `http3-fallback`.
+- Shared Skills now require `pathtrial_capabilities` first, an exact
+  allow-target second, and evidence fields instead of raw command output.
+
+### Changed
+
+- Core version is `1.6.0`; AI Plugin version is `0.4.0`.
+- README, plugin guidance and site copy use the category phrase
+  “本机证据优先的网络诊断 MCP” and its localized equivalents.
+
+### Fixed
+
+- MCP diagnose and fingerprint outputs are deserialized and checked against
+  the evidence model before returning to an AI client.
+
 ## [1.5.0-rc.2] - 2026-10-30
 
 Prerelease. `v1.5.0-rc.1` and `v1.4.0-rc.1` tags and assets stay as published.
