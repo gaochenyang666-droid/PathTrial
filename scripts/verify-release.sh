@@ -4,7 +4,7 @@
 set -euo pipefail
 
 REPO="gaochenyang666-droid/PathTrial"
-VERSION="${PATHTRIAL_VERSION:-v1.4.0-rc.1}"
+VERSION="${PATHTRIAL_VERSION:-v1.6.0}"
 EXPECTED_VERSION="${VERSION#v}"
 BASE_URL="https://github.com/${REPO}/releases/download/${VERSION}"
 
@@ -79,7 +79,7 @@ for command in scan http quic http3 proxy mcp; do
 done
 "$binary" --help >/dev/null
 
-BINARY="$binary" python3 - <<'PY'
+BINARY="$binary" EXPECTED_VERSION="$EXPECTED_VERSION" python3 - <<'PY'
 import json
 import os
 import socketserver
@@ -155,9 +155,9 @@ try:
     })
     assert initialized["result"]["protocolVersion"] == "2025-06-18"
     tools = listed["result"]["tools"]
-    assert len(tools) == 9
+    assert len(tools) == 12
     capabilities = capabilities_result["result"]["structuredContent"]
-    assert capabilities["core_version"] == "1.4.0-rc.1"
+    assert capabilities["core_version"] == os.environ["EXPECTED_VERSION"]
     denied = denied_result["result"]["structuredContent"]
     assert denied["error"]["code"] == "target_not_allowed"
     scan_result = scan_result_message["result"]["structuredContent"]
